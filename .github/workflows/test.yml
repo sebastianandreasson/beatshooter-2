@@ -1,0 +1,54 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  cheap:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["macos-15", "ubuntu-latest", "windows-latest"]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.3"
+      - run: bun install
+      - name: cheap tier
+        run: bun test --path-ignore-patterns '**/*.gpu.test.ts'
+
+  browser:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["macos-15", "ubuntu-latest", "windows-latest"]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.3"
+      - name: Install Mesa Vulkan driver
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mesa-vulkan-drivers
+      - run: bun install
+      - name: Install Playwright Chromium
+        run: bunx playwright install chromium
+      - name: browser tier
+        run: bunx playwright test
