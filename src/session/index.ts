@@ -17,9 +17,12 @@ import {
 } from "../settings";
 import { createPracticeTrack, DEMO_TRACK, TrackLoader, type LoadedTrack, type TrackManifest } from "../tracks";
 import { mountUI, type UIView } from "../ui";
+import { analyzeAudio } from "../analysis";
+import { createAnalyzedChart } from "../analysis/chart";
+import type { BeatAnalysis } from "../analysis/types";
 
 export type Phase = "menu" | "loading" | "playing" | "paused" | "results";
-export type Selection = { mode: "demo" } | { mode: "dojo"; bpm: number } | { mode: "local"; file: File; bpm: number; offset: number };
+export type Selection = { mode: "demo" } | { mode: "dojo"; bpm: number } | { mode: "local"; file: File; bpm: number; offset: number; useAnalysis?: boolean };
 export const SessionEntity = component("Beatshooter/SessionEntity", {});
 interface SessionData {
     phase: Phase; selection: Selection; track: TrackManifest; loaded?: LoadedTrack;
@@ -29,6 +32,8 @@ interface SessionData {
     completePending: boolean; loadingLostFocus: boolean; error?: string; pauseReason?: string; result?: "complete" | "defeat";
     ui?: ReturnType<typeof mountUI>; diagnostics: boolean; shotClip: number; hitClip: number;
     preview: boolean; previewLoading: boolean; previewLoaded?: LoadedTrack; previewUntil: number; fps: number;
+    analysis?: UIView["analysis"]; analysisController?: AbortController;
+    analyzedFile?: File; analyzedTrack?: BeatAnalysis;
 }
 export const Session: Resource<SessionData> = {
     create: () => ({
@@ -102,8 +107,87 @@ export function stopPreview(world: World): void {
     session.previewLoaded = undefined;
 }
 
+export function cancelAnalysis(world: World): void {
+    const session = world.resource(Session);
+    if (!session.analysisController) return;
+    session.analysisController.abort();
+    session.analysisController = undefined;
+    session.loader?.cancel();
+    session.analysis = { state: "idle", message: "Analysis cancelled. You can retry or use manual BPM." };
+    renderUI(world);
+}
+
+export function clearAnalysis(world: World): void {
+    cancelAnalysis(world);
+    const session = world.resource(Session);
+    session.analyzedFile = undefined;
+    session.analyzedTrack = undefined;
+    session.analysis = undefined;
+    session.loader?.clearLocalCache();
+    if (session.phase === "menu" && !session.preview) session.transport?.unload();
+    renderUI(world);
+}
+
+export async function analyzeLocal(world: World, file: File): Promise<void> {
+    const session = world.resource(Session);
+    if (session.phase !== "menu") return;
+    stopPreview(world);
+    clearAnalysis(world);
+    const controller = new AbortController();
+    session.analysisController = controller;
+    session.analysis = { state: "running", message: "Decoding your track…", fileName: file.name };
+    renderUI(world);
+    try {
+        const { loader } = audio(world);
+        const prepared = await loader.prepareLocal(file);
+        if (controller.signal.aborted) return;
+        const analysis = await analyzeAudio(prepared.buffer, {
+            signal: controller.signal,
+            onProgress(progress) {
+                if (controller.signal.aborted) return;
+                const percent = progress.total > 0
+                    ? ` ${Math.round(progress.completed / progress.total * 100)}%` : "";
+                session.analysis = {
+                    state: "running", fileName: file.name,
+                    message: `${progress.stage}${percent}`,
+                };
+                renderUI(world);
+            },
+        });
+        if (controller.signal.aborted) return;
+        const chart = createAnalyzedChart(analysis);
+        session.analyzedFile = file;
+        session.analyzedTrack = analysis;
+        session.analysis = {
+            state: "ready", fileName: file.name, message: "Detected beats ready. Preview the timing before you play.",
+            bpm: chart.bpm, beatCount: chart.summary.beatCount, downbeatCount: chart.summary.downbeatCount,
+            duration: analysis.duration, elapsedMs: analysis.elapsedMs, warnings: chart.warnings, barSource: chart.barSource,
+        };
+    } catch (error) {
+        if (controller.signal.aborted) return;
+        session.analysis = {
+            state: "error", fileName: file.name,
+            message: error instanceof Error ? error.message : "Analysis failed. Retry or use manual BPM.",
+        };
+    } finally {
+        if (session.analysisController === controller) {
+            session.analysisController = undefined;
+            renderUI(world);
+        }
+    }
+}
+
+function selectedAnalysis(session: SessionData, file: File, useAnalysis = false): BeatAnalysis | undefined {
+    if (!useAnalysis) return undefined;
+    if (session.analyzedFile !== file || !session.analyzedTrack) {
+        throw new Error("Analyze the selected file before using detected beats, or choose Manual BPM.");
+    }
+    return session.analyzedTrack;
+}
+
 export async function startSession(world: World, selection: Selection): Promise<void> {
     const session = world.resource(Session);
+    cancelAnalysis(world);
     stopPreview(world);
     const token = ++session.loadToken;
     clearSession(world);
@@ -124,13 +208,16 @@ export async function startSession(world: World, selection: Selection): Promise<
         await context.resume();
         if (token !== session.loadToken) return;
         const loaded = selection.mode === "demo" ? await loader.load(DEMO_TRACK)
-            : selection.mode === "local" ? await loader.loadLocal(selection.file, selection.bpm, selection.offset)
+            : selection.mode === "local" ? await loader.loadLocal(selection.file, selection.bpm, selection.offset,
+                selectedAnalysis(session, selection.file, selection.useAnalysis))
             : undefined;
         if (token !== session.loadToken) { loaded?.dispose(); return; }
         session.loaded = loaded;
         session.track = loaded?.manifest ?? createPracticeTrack(selection.mode === "dojo" ? selection.bpm : 120);
         if (selection.mode === "local") {
-            session.preferences.lastLocal = { name: selection.file.name, bpm: selection.bpm, offset: selection.offset };
+            session.preferences.lastLocal = {
+                name: selection.file.name, bpm: session.track.bpm, offset: session.track.firstBeatOffset,
+            };
             savePreferences(session.preferences);
         }
         await transport.start({ ...session.track, buffer: loaded?.buffer, metronome: selection.mode === "dojo" });
@@ -189,6 +276,7 @@ export async function resumeSession(world: World): Promise<void> {
 
 export function quitSession(world: World): void {
     const session = world.resource(Session);
+    cancelAnalysis(world);
     session.loadToken++;
     session.loader?.cancel();
     stopPreview(world);
@@ -219,7 +307,10 @@ function finishSession(world: World, result: "complete" | "defeat"): void {
     renderUI(world);
 }
 
-async function previewLocal(world: World, file: File, bpm: number, offset: number): Promise<void> {
+async function previewLocal(
+    world: World, file: File, bpm: number, offset: number, useAnalysis = false,
+    section: "start" | "middle" | "end" | "full" = "start",
+): Promise<void> {
     const session = world.resource(Session);
     if (session.phase !== "menu") return;
     stopPreview(world);
@@ -230,13 +321,21 @@ async function previewLocal(world: World, file: File, bpm: number, offset: numbe
         const { context, loader, transport } = audio(world);
         await context.resume();
         if (token !== session.loadToken) return;
-        const loaded = await loader.loadLocal(file, bpm, offset);
+        const loaded = await loader.loadLocal(file, bpm, offset, selectedAnalysis(session, file, useAnalysis));
         if (token !== session.loadToken) { loaded.dispose(); return; }
         session.previewLoading = false;
         session.previewLoaded = loaded;
         session.preview = true;
         await transport.start({ ...loaded.manifest, buffer: loaded.buffer, metronome: true, countInBeats: 0 });
-        session.previewUntil = Math.min(12, loaded.manifest.duration);
+        if (token !== session.loadToken) return;
+        // Include the first rhythmic passage when a track has a quiet introduction.
+        const duration = loaded.manifest.duration;
+        const previewStart = section === "middle" ? Math.max(0, duration / 2 - 6)
+            : section === "end" ? Math.max(0, duration - 12)
+            : section === "full" ? 0
+            : useAnalysis ? Math.max(0, loaded.manifest.firstBeatOffset - 1) : 0;
+        if (previewStart > 0) transport.seek(previewStart);
+        session.previewUntil = section === "full" ? duration : Math.min(previewStart + 12, duration);
     } catch (error) {
         if (token !== session.loadToken) return;
         session.previewLoading = false;
@@ -251,8 +350,11 @@ export function mountGameUI(container: HTMLElement, world: World): () => void {
     session.ui = mountUI({
         startDemo: () => void startSession(world, { mode: "demo" }),
         startDojo: bpm => void startSession(world, { mode: "dojo", bpm }),
-        startLocal: (file, bpm, offset) => void startSession(world, { mode: "local", file, bpm, offset }),
-        previewLocal: (file, bpm, offset) => void previewLocal(world, file, bpm, offset),
+        startLocal: (file, bpm, offset, useAnalysis) => startSession(world, { mode: "local", file, bpm, offset, useAnalysis }),
+        previewLocal: (file, bpm, offset, useAnalysis, section) => previewLocal(world, file, bpm, offset, useAnalysis, section),
+        analyzeLocal: file => analyzeLocal(world, file),
+        cancelAnalysis: () => cancelAnalysis(world),
+        clearAnalysis: () => clearAnalysis(world),
         stopPreview: () => { ++session.loadToken; session.loader?.cancel(); stopPreview(world); },
         pause: () => pauseSession(world),
         resume: () => void resumeSession(world),
@@ -269,12 +371,20 @@ export function mountGameUI(container: HTMLElement, world: World): () => void {
 export function renderUI(world: World): void {
     const s = world.resource(Session);
     if (!s.ui) return;
+    const currentBeat = beatAtPosition(s.track.beats, s.visualPosition);
+    let beatsPerBar = s.track.beatsPerBar;
+    if (currentBeat) {
+        let end = currentBeat.index;
+        while (s.track.beats[end + 1]?.bar === currentBeat.bar) end++;
+        beatsPerBar = s.track.beats[end]!.beatInBar + 1;
+    }
     const view: UIView = {
         phase: s.phase, mode: s.selection.mode, settings: s.preferences.settings,
         title: s.track.title, credit: s.track.artist, duration: s.track.duration, bpm: s.track.bpm,
         score: s.combat.score, kills: s.combat.kills, health: s.combat.health,
         maxHealth: s.combat.tuning.playerHealth, position: s.position,
-        beat: beatAtPosition(s.track.beats, s.visualPosition)?.index ?? -1,
+        beat: currentBeat?.index ?? -1, beatInBar: currentBeat?.beatInBar ?? -1,
+        beatsPerBar, downbeat: currentBeat?.downbeat ?? false, analysis: s.analysis,
         bar: Math.max(0, s.combat.lastBarIndex), result: s.result,
         bestScore: s.preferences.bestScores[s.track.id] ?? 0,
         error: s.error, pauseReason: s.pauseReason,
@@ -394,6 +504,9 @@ export const SessionPlugin: Plugin = {
         }
         world.onDispose(() => {
             s.loadToken++;
+            const analysisController = s.analysisController;
+            s.analysisController = undefined;
+            analysisController?.abort();
             s.transport?.dispose();
             s.loader?.dispose();
             s.ui?.dispose();

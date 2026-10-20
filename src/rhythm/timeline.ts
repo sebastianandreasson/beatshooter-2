@@ -4,6 +4,7 @@ export interface Beat {
     readonly index: number;
     readonly bar: number;
     readonly beatInBar: number;
+    /** An accented bar start. An inferred boundary can have beatInBar=0 without an accent. */
     readonly downbeat: boolean;
 }
 
@@ -51,6 +52,9 @@ export function validateTempo(bpm: number, firstBeatOffset = 0, beatsPerBar = 4)
 
 /** Validates authorship metadata, including explicit variable-tempo timelines. */
 export function validateTimeline(beats: readonly Beat[], duration: number): void {
+    if (!Number.isFinite(duration) || duration <= 0 || duration > 21_600) {
+        throw new Error("Track duration must be between 0 and 21,600 seconds.");
+    }
     if (!Array.isArray(beats) || beats.length === 0 || beats.length > 108_000) {
         throw new Error("A track needs between 1 and 108,000 ordered beat timestamps.");
     }
@@ -64,11 +68,11 @@ export function validateTimeline(beats: readonly Beat[], duration: number): void
         }
         if (beat.index !== index || !Number.isInteger(beat.bar) || beat.bar < 0 ||
             !Number.isInteger(beat.beatInBar) || beat.beatInBar < 0 || beat.beatInBar > 15 ||
-            beat.downbeat !== (beat.beatInBar === 0)) {
+            typeof beat.downbeat !== "boolean" || (beat.downbeat && beat.beatInBar !== 0)) {
             throw new Error(`Beat ${index + 1} has invalid index or bar information.`);
         }
-        if (index === 0 && (beat.bar !== 0 || beat.beatInBar !== 0)) {
-            throw new Error("The first authored beat must begin bar zero.");
+        if (index === 0 && beat.bar !== 0) {
+            throw new Error("The first authored beat must belong to bar zero; it may be a pickup.");
         }
         if (index > 0 && !(
             (beat.bar === previousBar && beat.beatInBar === previousBeatInBar + 1) ||

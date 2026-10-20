@@ -140,6 +140,26 @@
 .bs-settings-footer { border-top: 1px solid var(--bs-line); padding-top: 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }.bs-settings-footer > span { font-size: 8px; color: #638575; }.bs-settings-footer .bs-text-button { font-size: 9px; }
 .bs-import-dialog { max-width: 470px; }.bs-import-dialog h2 { font-size: 28px; }.bs-file-label { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 9px; border: 1px dashed #a8cbb943; border-radius: 6px; padding: 25px 15px; margin: 23px 0; cursor: pointer; background: #9ce6c604; color: #bad6c8; font-size: 12px; }.bs-file-label:hover { border-color: var(--bs-accent); background: #9ce6c60b; }.bs-file-label span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.bs-file-label small { color: #6f8e7f; font-size: 8px; }.bs-file-label input { display: block; width: 100%; font-size: 9px; color: #799988; margin-top: 8px; }.bs-file-label input::file-selector-button { padding: 6px 10px; background: #b2d8c515; border: 1px solid #a9d5bd30; color: #a4cdb8; font-size: 9px; border-radius: 3px; cursor: pointer; margin-right: 8px; }
 .bs-import-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 18px; }.bs-import-fields label { font: 8px ui-monospace, SFMono-Regular, Menlo, monospace; color: #88a995; letter-spacing: 1.4px; }.bs-import-fields input { display: block; width: 100%; border: 1px solid #a3c6b733; background: #0e191866; color: #c7dcd0; border-radius: 4px; padding: 10px 12px; margin: 8px 0; font-size: 16px; }.bs-import-fields small { color: #648573; font-size: 8px; letter-spacing: 0; }
+.bs-analysis { border: 1px solid #9ce6c624; background: #9ce6c605; border-radius: 6px; padding: 14px; margin: -7px 0 20px; min-width: 0; }
+.bs-analysis-actions { display: flex; flex-wrap: wrap; gap: 9px 14px; align-items: center; margin-bottom: 10px; }
+.bs-analysis-actions .bs-button { min-height: 36px; padding: 8px 12px; font-size: 11px; }
+.bs-analysis-actions .bs-text-button { font-size: 10px; }
+.bs-analysis-actions .bs-button:disabled { cursor: default; }
+.bs-analysis-status { color: #c5dfd1; font-size: 11px; line-height: 1.65; overflow-wrap: anywhere; }
+.bs-analysis-status p { margin-top: 10px; }
+.bs-analysis-status .bs-analysis-summary { color: #9ce6c6; font: 10px/1.8 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.bs-analysis-progress { display: block; width: 100%; height: 4px; margin-top: 13px; accent-color: var(--bs-accent); }
+.bs-analysis-warnings { color: #edb29e; font-size: 10px; line-height: 1.65; margin-top: 10px !important; white-space: pre-line; overflow-wrap: anywhere; }
+.bs-analysis[data-analysis-state="error"] { border-color: #ef977e45; }
+.bs-analysis[data-analysis-state="error"] .bs-analysis-status { color: #f3b29c; }
+.bs-beat-source { margin-bottom: 19px; flex-wrap: wrap; gap: 8px; }
+.bs-beat-source select { min-width: 150px; max-width: 100%; }
+.bs-preview-section { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--bs-line); }
+.bs-preview-section .bs-select-label { flex-wrap: wrap; gap: 8px; }
+.bs-preview-section select { min-width: 110px; }
+.bs-preview-section .bs-setting-help { margin-top: 8px; }
+.bs-import-fields input:disabled { opacity: .45; cursor: not-allowed; }
+.bs-beat-dots { flex-wrap: wrap; max-width: 220px; margin-inline: auto; row-gap: 10px; min-height: 11px; }
 .bs-reduced-flash .bs-beat-dots .bs-active { box-shadow: none; }.bs-reduced-flash .bs-loading-bars i { animation: none; height: 20px; }.bs-reduced-flash * { transition: none !important; }.bs-graphics-low .bs-cover, .bs-graphics-low .bs-modal { backdrop-filter: none; }
 @media (min-width: 1500px) { .bs-menu-main { width: min(100% - 12%, 1120px); }.bs-intro { margin-bottom: 42px; }.bs-track-art { height: 190px; }.bs-small-card { padding: 25px 28px; }.bs-track-body { padding: 25px 27px 18px; }.bs-orbit-one { top: 50px; }.bs-orbit-two { top: 43px; }.bs-art-ship { top: 55px; } }
 @media (max-height: 850px) and (min-width: 800px) { .bs-topbar { padding-top: 19px; padding-bottom: 19px; }.bs-menu-main { max-width: 920px; padding-top: 25px; }.bs-intro { margin-bottom: 23px; }.bs-intro h1 { font-size: 43px; margin: 13px 0 11px; }.bs-intro-copy { font-size: 11px; }.bs-track-art { height: 136px; }.bs-small-card { padding: 16px 21px; }.bs-small-card h3 { font-size: 19px; }.bs-card-top { margin-bottom: 8px; }.bs-dojo-controls { margin-top: 10px; }.bs-local-card .bs-button { margin-top: 10px; }.bs-track-body { padding: 17px 21px 13px; }.bs-track-meta { margin: 11px 0 15px; }.bs-controls { margin-top: 20px; padding-top: 18px; }.bs-footer { padding-top: 15px; padding-bottom: 15px; }.bs-art-ship { top: 36px; width: 45px; height: 58px; }.bs-art-ship span { width: 29px; height: 46px; }.bs-orbit { top: 31px; }.bs-orbit-two { top: 24px; } }

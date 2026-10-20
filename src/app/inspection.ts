@@ -28,7 +28,22 @@ export function installInspection(world: World): void {
                 bodyCount: [...world.query([Body])].length,
                 sounds: [...world.query([Sound])].length,
                 camera: arena.camera,
+                analysis: s.analysis ? { ...s.analysis, warnings: s.analysis.warnings?.slice() } : undefined,
+                preview: { active: s.preview, position: s.transport?.position ?? 0, until: s.previewUntil },
+                chart: {
+                    id: s.track.id, bpm: s.track.bpm, beatsPerBar: s.track.beatsPerBar,
+                    beatCount: s.track.beats.length, downbeatCount: s.track.beats.filter(beat => beat.downbeat).length,
+                },
             };
+        },
+        /** Copies only timing metadata; never exposes audio bytes or mutates a run. */
+        analysis() {
+            const s = world.resource(Session);
+            return s.analyzedTrack ? {
+                ...s.analyzedTrack,
+                beats: s.analyzedTrack.beats.slice(),
+                downbeats: s.analyzedTrack.downbeats.slice(),
+            } : null;
         },
         project(point: [number, number, number]) { return worldToViewport(world, world.resource(Arena).camera, point); },
     };

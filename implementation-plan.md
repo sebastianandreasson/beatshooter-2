@@ -3,6 +3,11 @@
 Status: **M0–M6 implemented and automated acceptance passed. Human audio-latency sign-off remains.**
 Prepared 2026-10-20 against `@dylanebert/shallot@0.10.0`.
 
+Follow-up experiment: local Beat This! analysis is now implemented and tested
+on the four private tracks in `local-audio/`. It is separate from the original
+M0–M6 scope. See [prototype results](docs/beat-this-prototype.md) for measured
+performance, exact parity with the original model, and pending listening review.
+
 ## Implementation record — 2026-10-20
 
 The original brief and acceptance criteria below are retained for traceability.

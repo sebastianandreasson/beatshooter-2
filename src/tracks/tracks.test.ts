@@ -33,6 +33,70 @@ describe("track manifests", () => {
 });
 
 describe("local file loading", () => {
+    test("analysis, preview and retry reuse one decoded file and content identity", async () => {
+        let decodes = 0;
+        const loader = new TrackLoader({
+            async decodeAudioData() {
+                decodes++;
+                return { duration: 4, length: 192_000, numberOfChannels: 2 } as AudioBuffer;
+            },
+        });
+        const file = new File(["audio"], "cached.wav");
+        const prepared = await loader.prepareLocal(file);
+        const preview = await loader.loadLocal(file, 120);
+        preview.dispose();
+        const game = await loader.loadLocal(file, 100, 0.1);
+        expect(decodes).toBe(1);
+        expect(game.buffer).toBe(prepared.buffer);
+        expect(prepared.contentHash).toMatch(/^[a-f0-9]{64}$/);
+        game.dispose();
+        const cached = loader.prepareLocal(file);
+        loader.cancel();
+        await expect(cached).rejects.toMatchObject({ name: "AbortError" });
+        loader.clearLocalCache();
+        await loader.prepareLocal(file);
+        expect(decodes).toBe(2);
+        loader.dispose();
+    });
+
+    test("detected timestamps and chart identity survive loading without a BPM grid", async () => {
+        const loader = new TrackLoader({
+            async decodeAudioData() { return { duration: 5 } as AudioBuffer; },
+        });
+        const file = new File(["audio"], "detected.wav");
+        const analysis = {
+            schemaVersion: 1 as const, analyzerVersion: "test-1", duration: 5,
+            beats: [0.2, 0.7, 1.19, 1.68, 2.16, 2.64, 3.11, 3.58, 4.04, 4.5],
+            downbeats: [0.7, 2.64, 4.5], elapsedMs: 1, backend: "webgpu" as const,
+        };
+        const loaded = await loader.loadLocal(file, 120, 0, analysis);
+        expect(loaded.manifest.beats.map(beat => beat.time)).toEqual(analysis.beats);
+        expect(loaded.manifest.beats[0]!.downbeat).toBe(false);
+        expect(loaded.manifest.id).toMatch(/^analyzed-/);
+        expect(loaded.manifest.id.length).toBeLessThanOrEqual(128);
+        const retry = await loader.loadLocal(file, 80, 0.3, analysis);
+        expect(retry.manifest.id).toBe(loaded.manifest.id);
+        const changed = await loader.loadLocal(file, 120, 0, {
+            ...analysis, beats: analysis.beats.map(time => time + 0.01),
+            downbeats: analysis.downbeats.map(time => time + 0.01),
+        });
+        expect(changed.manifest.id).not.toBe(loaded.manifest.id);
+        await expect(loader.loadLocal(file, 120, 0, { ...analysis, duration: 6 }))
+            .rejects.toThrow("does not match");
+        loader.dispose();
+    });
+
+    test("compressed size does not bypass the decoded PCM memory budget", async () => {
+        const loader = new TrackLoader({
+            async decodeAudioData() {
+                return { duration: 3600, length: 3600 * 48000, numberOfChannels: 2 } as AudioBuffer;
+            },
+        });
+        await expect(loader.prepareLocal(new File(["tiny compressed data"], "long.mp3")))
+            .rejects.toThrow("too much decoded audio memory");
+        loader.dispose();
+    });
+
     test("metadata IDs stay stable and safe for names with spaces, Unicode and punctuation", async () => {
         const metadata = { name: "Björk / 夜の音楽.. final mix!.wav", size: 500, lastModified: 123456789 };
         const id = localTrackId(metadata);

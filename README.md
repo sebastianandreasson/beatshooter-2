@@ -17,6 +17,7 @@ The engine remains pinned to `@dylanebert/shallot@0.10.0`.
 ```sh
 bun --version
 bun install --frozen-lockfile
+bun run setup:audio
 bun run dev
 ```
 
@@ -41,11 +42,27 @@ Contact damage has a 0.9-second invulnerability window. Zero health ends a run;
 reaching the end of the audio completes it. Retry and menu navigation work
 without reloading.
 
-Local files never upload. Enter a steady tempo and first-beat offset in seconds,
-then use the audible metronome preview to check the grid. BPM entry does not
-analyze variable-tempo music; those tracks require authored timestamps.
-Files are limited to 100 MB / six hours. A local file must be reselected after
+Local files never upload. Select a file and click **Analyze beats** to run the
+experimental Beat This! model locally with WebGPU. It detects individual beats
+and bar starts, including changing tempo. Preview with the metronome before
+playing; **Detected beats** uses that exact timeline. **Manual BPM** remains
+available for a steady tempo and first-beat offset.
+The preview section selector offers 12 seconds from the start, middle or end,
+or the full track. Higher clicks mark bar starts.
+
+`bun run setup:audio` downloads and verifies the pinned 83 MB model and copies
+the matching 25.5 MB ONNX runtime from installed dependencies. These generated
+binaries are gitignored and served from the same origin as the game. Analysis
+does not run until requested. A worker handles inference and is terminated on
+completion or cancellation. One decoded local file is reused for analysis,
+preview, play and retry; replacing it releases the cached buffer. Analysis
+results are session-only. Detection can be wrong; warnings flag irregular
+timing, and unavailable bar starts use explicitly labeled groups of four beats.
+
+Files are limited to 100 MB, six hours, and a post-decode 256 MiB PCM budget
+(about 11 minutes at 48 kHz stereo). A local file must be reselected after
 reload; only its name/tempo/offset, preferences, and best scores are saved.
+Detected-chart scores use a file-content hash plus versioned chart identity.
 Dojo has a six-hour metronome horizon and can be reset at any time.
 
 Settings include master/music/effects gain, graphics detail, reduced flashes,
@@ -81,6 +98,9 @@ bun ./tests/stress.ts
 # Real renderer + physics + audio + HUD; start preview separately on port 4175
 bun run preview --port 4175 --strictPort
 bun ./tests/browser-stress.ts http://127.0.0.1:4175
+
+# Full Beat This! experiment, using private files from gitignored local-audio/
+bun tests/audio-analysis.ts http://127.0.0.1:4175
 ```
 
 The explicit `?stress=1` fixture replenishes 200 enemies and 500 projectiles
@@ -95,6 +115,7 @@ See the release document for measured hardware, counts, and frame intervals.
 | `src/app/`, `src/stress/` | Shallot plugin composition and opt-in inspection/stress fixture |
 | `src/arena/`, `src/player/` | Arena, collision walls, fixed movement, camera projection |
 | `src/rhythm/` | Authored timelines and Web Audio transport through public `AudioOutput` |
+| `src/analysis/` | Local Beat This! worker, preprocessing, detected-chart validation and bar mapping |
 | `src/combat/`, `src/enemies/` | Seeded waves, pursuit, swept nearest hits, damage and scoring |
 | `src/session/` | Menu/loading/play/pause/results, audio/entity/listener ownership |
 | `src/presentation/` | Shared materials, shots, hit flashes and bounded damage numbers |
@@ -113,7 +134,9 @@ use injected beat commands rather than claiming identical live replays.
 This is a fresh implementation. No application code, dependencies, credentials,
 or assets were copied from `../beatshooter`. The demo music, artwork, icon, and
 sound effects are original; see [asset credits](public/tracks/CREDITS.md).
-There is no Spotify integration, loot system, multiplayer, or beat analysis.
+There is no Spotify integration, loot system or multiplayer. Automatic analysis
+is a local prototype; see [analysis notes](docs/beat-this-prototype.md) and
+[model/runtime credits](public/models/README.md).
 
 ## Static hosting
 

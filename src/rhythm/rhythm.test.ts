@@ -105,6 +105,26 @@ describe("authored timelines", () => {
         expect(beatAtPosition(beats, 1.4)?.index).toBe(2);
         expect(beatAtPosition(beats, 100)?.index).toBe(5);
     });
+
+    test("pickup bars and inferred unaccented boundaries retain explicit musical phase", () => {
+        const beats = [
+            { time: 0.2, index: 0, bar: 0, beatInBar: 2, downbeat: false },
+            { time: 0.7, index: 1, bar: 1, beatInBar: 0, downbeat: true },
+            { time: 1.2, index: 2, bar: 1, beatInBar: 1, downbeat: false },
+            { time: 1.7, index: 3, bar: 1, beatInBar: 2, downbeat: false },
+            { time: 2.2, index: 4, bar: 2, beatInBar: 0, downbeat: false },
+        ];
+        validateTimeline(beats, 3);
+        expect(beatAtPosition(beats, 0.5)?.beatInBar).toBe(2);
+        expect(beatAtPosition(beats, 2.5)?.downbeat).toBe(false);
+        expect(() => validateTimeline([
+            { ...beats[0]!, downbeat: true }, ...beats.slice(1),
+        ], 3)).toThrow("bar information");
+        expect(() => validateTimeline([
+            { ...beats[0]!, bar: 1 }, ...beats.slice(1),
+        ], 3)).toThrow("bar zero");
+        expect(() => validateTimeline(beats, NaN)).toThrow("duration");
+    });
 });
 
 describe("music transport against an injected audio clock", () => {

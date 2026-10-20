@@ -10,3 +10,7 @@ test-results/
 .DS_Store
 .playwright-cli/
 output/
+
+local-audio/
+public/models/*.onnx
+public/models/onnx-runtime/

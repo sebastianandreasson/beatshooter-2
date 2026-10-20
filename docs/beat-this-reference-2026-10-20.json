@@ -1,0 +1,147 @@
+{
+  "recordedAt": "2026-10-20T10:26:58.662999+00:00",
+  "python": "3.12.9 (main, Feb  4 2025, 14:38:38) [Clang 16.0.0 (clang-1600.0.26.6)]",
+  "platform": "macOS-15.7.7-arm64-arm-64bit",
+  "torch": "2.6.0",
+  "torchaudio": "2.6.0",
+  "beatThis": "1.1.0",
+  "numpy": "2.5.4",
+  "device": "cpu",
+  "threads": 4,
+  "checkpoint": "final0",
+  "postprocessor": "minimal (no DBN)",
+  "upstream": "https://github.com/CPJKU/beat_this/tree/v1.1.0",
+  "comparison": "Identical browser-decoded, arithmetic-channel-mean, OfflineAudioContext-resampled 22050 Hz mono float32 PCM; official Python CPU vs ONNX WebGPU browser. Agreement is not human musical accuracy.",
+  "results": [
+    {
+      "trackIndex": 1,
+      "samples": 5998464,
+      "durationSeconds": 272.0391836734694,
+      "pcmSha256": "b4778d01b7aa6cb3cc9ce55f44e1a0432a17091129f40a0fc801fbc1a55ad924",
+      "elapsedSeconds": 11.234058417001506,
+      "beats": {
+        "toleranceMilliseconds": 70.0,
+        "referenceCount": 533,
+        "browserCount": 533,
+        "matched": 533,
+        "agreementPrecision": 1.0,
+        "agreementRecall": 1.0,
+        "agreementF1": 1.0,
+        "medianErrorMilliseconds": 0.0,
+        "p95ErrorMilliseconds": 0.0,
+        "exactArrayMatch": true
+      },
+      "downbeats": {
+        "toleranceMilliseconds": 70.0,
+        "referenceCount": 165,
+        "browserCount": 165,
+        "matched": 165,
+        "agreementPrecision": 1.0,
+        "agreementRecall": 1.0,
+        "agreementF1": 1.0,
+        "medianErrorMilliseconds": 0.0,
+        "p95ErrorMilliseconds": 0.0,
+        "exactArrayMatch": true
+      },
+      "file": "Hyper Spoiler.mp3"
+    },
+    {
+      "trackIndex": 2,
+      "samples": 4152456,
+      "durationSeconds": 188.32,
+      "pcmSha256": "363238402597c99128b5298d9537475abca8083859923dcae3f59b3bcbd3de19",
+      "elapsedSeconds": 8.406280708004488,
+      "beats": {
+        "toleranceMilliseconds": 70.0,
+        "referenceCount": 309,
+        "browserCount": 309,
+        "matched": 309,
+        "agreementPrecision": 1.0,
+        "agreementRecall": 1.0,
+        "agreementF1": 1.0,
+        "medianErrorMilliseconds": 0.0,
+        "p95ErrorMilliseconds": 0.0,
+        "exactArrayMatch": true
+      },
+      "downbeats": {
+        "toleranceMilliseconds": 70.0,
+        "referenceCount": 78,
+        "browserCount": 78,
+        "matched": 78,
+        "agreementPrecision": 1.0,
+        "agreementRecall": 1.0,
+        "agreementF1": 1.0,
+        "medianErrorMilliseconds": 0.0,
+        "p95ErrorMilliseconds": 0.0,
+        "exactArrayMatch": true
+      },
+      "file": "I Can't.mp3"
+    },
+    {
+      "trackIndex": 3,
+      "samples": 5648256,
+      "durationSeconds": 256.1567346938775,
+      "pcmSha256": "7a51a94d93002fa8f1f92906352cc8464a0caf1b5439c9293f87c9e08f0898ce",
+      "elapsedSeconds": 11.644075165997492,
+      "beats": {
+        "toleranceMilliseconds": 70.0,
+        "referenceCount": 452,
+        "browserCount": 452,
+        "matched": 452,
+        "agreementPrecision": 1.0,
+        "agreementRecall": 1.0,
+        "agreementF1": 1.0,
+        "medianErrorMilliseconds": 0.0,
+        "p95ErrorMilliseconds": 0.0,
+        "exactArrayMatch": true
+      },
+      "downbeats": {
+        "toleranceMilliseconds": 70.0,
+        "referenceCount": 130,
+        "browserCount": 130,
+        "matched": 130,
+        "agreementPrecision": 1.0,
+        "agreementRecall": 1.0,
+        "agreementF1": 1.0,
+        "medianErrorMilliseconds": 0.0,
+        "p95ErrorMilliseconds": 0.0,
+        "exactArrayMatch": true
+      },
+      "file": "Magna Divide.mp3"
+    },
+    {
+      "trackIndex": 4,
+      "samples": 4688064,
+      "durationSeconds": 212.61061224489796,
+      "pcmSha256": "65428e56070fab732421b540869cd9381e190de43afca476cc956af8f13927ce",
+      "elapsedSeconds": 9.200680416994146,
+      "beats": {
+        "toleranceMilliseconds": 70.0,
+        "referenceCount": 470,
+        "browserCount": 470,
+        "matched": 470,
+        "agreementPrecision": 1.0,
+        "agreementRecall": 1.0,
+        "agreementF1": 1.0,
+        "medianErrorMilliseconds": 0.0,
+        "p95ErrorMilliseconds": 0.0,
+        "exactArrayMatch": true
+      },
+      "downbeats": {
+        "toleranceMilliseconds": 70.0,
+        "referenceCount": 136,
+        "browserCount": 136,
+        "matched": 136,
+        "agreementPrecision": 1.0,
+        "agreementRecall": 1.0,
+        "agreementF1": 1.0,
+        "medianErrorMilliseconds": 0.0,
+        "p95ErrorMilliseconds": 0.0,
+        "exactArrayMatch": true
+      },
+      "file": "Siriusmo Itchy from Enthusiast.mp3"
+    }
+  ],
+  "checkpointBytes": 81058141,
+  "checkpointSha256": "8c328b45f59d8dd3dff219253ff6a8d6482be57d0133a29140e2febbf8eb8331"
+}

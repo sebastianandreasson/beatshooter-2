@@ -240,6 +240,13 @@ export class MusicTransport {
         this.cursor.reset(0, true);
     }
 
+    /** Release decoded audio when the selected local file is replaced. */
+    unload(): void {
+        this.stop();
+        this.track = null;
+        this.cursor = new BeatCursor([]);
+    }
+
     /** Stop preview/session sources and disconnect all owned nodes. */
     dispose(): void {
         if (this.disposed) return;

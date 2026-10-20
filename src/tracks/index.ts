@@ -1,5 +1,7 @@
 import demoManifest from "../../public/tracks/neon-circuit.json";
 import { generateTimeline, type Beat, validateTempo, validateTimeline } from "../rhythm/timeline";
+import { createAnalyzedChart } from "../analysis/chart";
+import type { BeatAnalysis } from "../analysis/types";
 
 export interface TrackManifest {
     schemaVersion: 1;
@@ -82,8 +84,17 @@ export interface LoadedTrack {
     dispose(): void;
 }
 
+export interface PreparedLocalAudio {
+    file: File;
+    buffer: AudioBuffer;
+    /** SHA-256 of the selected file, before decodeAudioData can detach its bytes. */
+    contentHash: string;
+}
+
 type Decoder = Pick<AudioContext, "decodeAudioData">;
 const MAX_FILE_BYTES = 100 * 1024 * 1024;
+// Analysis adds mono PCM, model tensors and GPU memory to the playback buffer.
+const MAX_DECODED_BYTES = 256 * 1024 * 1024;
 
 /** Stable metadata identity, not a content fingerprint or a security hash. */
 export function localTrackId(file: Pick<File, "name" | "size" | "lastModified">): string {
@@ -108,6 +119,7 @@ export class TrackLoader {
     private pending: AbortController | null = null;
     private owned = new Set<LoadedTrack>();
     private disposed = false;
+    private prepared?: PreparedLocalAudio;
 
     constructor(context: Decoder) {
         this.context = context;
@@ -137,34 +149,48 @@ export class TrackLoader {
         }
     }
 
-    async loadLocal(file: File, bpm: number, firstBeatOffset = 0): Promise<LoadedTrack> {
-        validateTempo(bpm, firstBeatOffset);
+    /** One selected file is retained for analysis, preview, play and retry. */
+    async prepareLocal(file: File): Promise<PreparedLocalAudio> {
+        const abort = this.beginLoad();
+        try {
+            const prepared = await this.prepare(file, abort);
+            this.checkCurrent(abort);
+            return prepared;
+        } catch (error) {
+            if (abort.signal.aborted) throw abortError();
+            throw error;
+        } finally {
+            if (this.pending === abort) this.pending = null;
+        }
+    }
+
+    clearLocalCache(): void {
+        this.prepared = undefined;
+    }
+
+    async loadLocal(file: File, bpm: number, firstBeatOffset = 0, analysis?: BeatAnalysis): Promise<LoadedTrack> {
+        if (!analysis) validateTempo(bpm, firstBeatOffset);
         const abort = this.beginLoad();
         let objectUrl: string | undefined;
         try {
-            if (!file || !file.size) throw new Error("Choose a non-empty audio file from your device.");
-            if (file.size > MAX_FILE_BYTES) {
-                throw new Error("Choose an audio file smaller than 100 MB.");
-            }
-            const bytes = await file.arrayBuffer();
+            const { buffer, contentHash } = await this.prepare(file, abort);
             this.checkCurrent(abort);
-            const buffer = await this.decode(bytes);
-            this.checkCurrent(abort);
-            if (buffer.duration > 21_600) {
-                throw new Error("Choose an audio file no longer than 6 hours (21,600 seconds).");
+            if (analysis && Math.abs(analysis.duration - buffer.duration) > 0.05) {
+                throw new Error("The analysis does not match this file. Analyze the selected track again.");
             }
-            const beats = generateTimeline(buffer.duration, bpm, firstBeatOffset);
+            const chart = analysis ? createAnalyzedChart(analysis) : undefined;
+            const beats = chart?.beats ?? generateTimeline(buffer.duration, bpm, firstBeatOffset);
             objectUrl = URL.createObjectURL(file);
             const manifest = validateManifest({
                 schemaVersion: 1,
-                id: localTrackId(file),
+                id: chart ? `analyzed-${contentHash}-${chart.chartHash}` : localTrackId(file),
                 title: file.name.replace(/\.[^.]+$/, ""),
                 artist: "Local file · this session only",
                 audioUrl: objectUrl,
                 duration: buffer.duration,
-                bpm,
-                firstBeatOffset,
-                beatsPerBar: 4,
+                bpm: chart?.bpm ?? bpm,
+                firstBeatOffset: chart?.firstBeatOffset ?? firstBeatOffset,
+                beatsPerBar: chart?.beatsPerBar ?? 4,
                 beats,
                 source: `User-selected file: ${file.name}`,
                 license: "User-provided; never uploaded or redistributed",
@@ -190,7 +216,30 @@ export class TrackLoader {
         this.cancel();
         for (const loaded of this.owned) loaded.dispose();
         this.owned.clear();
+        this.prepared = undefined;
         this.disposed = true;
+    }
+
+    private async prepare(file: File, abort: AbortController): Promise<PreparedLocalAudio> {
+        if (!file || !file.size) throw new Error("Choose a non-empty audio file from your device.");
+        if (file.size > MAX_FILE_BYTES) throw new Error("Choose an audio file smaller than 100 MB.");
+        if (this.prepared?.file === file) return this.prepared;
+        this.prepared = undefined;
+        const bytes = await file.arrayBuffer();
+        this.checkCurrent(abort);
+        const digest = await crypto.subtle.digest("SHA-256", bytes);
+        this.checkCurrent(abort);
+        const buffer = await this.decode(bytes);
+        this.checkCurrent(abort);
+        if (buffer.duration > 21_600) {
+            throw new Error("Choose an audio file no longer than 6 hours (21,600 seconds).");
+        }
+        if (buffer.length * buffer.numberOfChannels * Float32Array.BYTES_PER_ELEMENT > MAX_DECODED_BYTES) {
+            throw new Error("This track needs too much decoded audio memory. Choose a shorter file (about 11 minutes at 48 kHz stereo).");
+        }
+        const contentHash = [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, "0")).join("");
+        this.prepared = { file, buffer, contentHash };
+        return this.prepared;
     }
 
     private beginLoad(): AbortController {
