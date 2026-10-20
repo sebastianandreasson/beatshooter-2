@@ -16,20 +16,36 @@ review remains open; see the
 [visual verification record](docs/music-visuals-verification.md).
 The original M0–M6 acceptance below remains historical evidence for that scope.
 
+Follow-up neon presentation: ships and enemies now use luminous geometric
+outlines, with thin emissive arena rails and brighter projectile, XP and
+particle cores. Selective HDR bloom preserves the original sharp scene under
+its glow. Musical pulses gently vary bloom; detected section transitions add
+a bounded color fringe at the screen edges. A mild vignette frames the arena
+while the DOM HUD stays sharp. Fixed pools provide short projectile trails
+timed to the local beat, prioritizing nearby hostile shots when crowded.
+Pause holds their presentation, and retries clear old trail births. Calm,
+Off, reduced motion and reduced flashes control the decoration; Low graphics
+reduces bloom resolution/passes and visible trails. See
+[neon visual verification](docs/neon-visuals-verification.md).
+
 Follow-up section effects: validated LinkSeg spans now drive cosmetic changes
 across the arena floor. Standard effects send a single shockwave from the map
 center outward. Floor and grid colors switch behind its advancing front;
 perimeter and background colors blend to the new section's dark palette.
-The seven label colors match the track timeline. All map geometry, walls and
-camera poses remain stable throughout the effect, with normal player follow
-intact. Player/enemy/projectile motion stays under gameplay control. Combat
+The seven label colors match the track timeline. The front raises nearby
+vertices into a smooth travelling ridge across the floor, walls, actors,
+shots and particles. Health bars and damage numbers follow the displaced
+visuals. Physical transforms and camera orientation stay stable, with normal
+player follow intact. Player/enemy/projectile motion stays under gameplay control. Combat
 timing, movement, directional dashes, pointer aiming and collision rules keep
 their original behavior.
 
 A starfield travels steadily outward behind the arena on the music clock,
-using a fixed pool of stars across three depth planes. During each eligible
-shockwave, speed smoothly rises from 1× to 15× and returns to 1× while stars
-stretch into hyperspeed streaks. Analytically integrated distance retains all
+using a fixed pool of 960 small, bright stars across three depth planes (480
+visible with Low graphics). Baseline travel is five times the original speed.
+During each eligible shockwave, speed smoothly rises to 25× that new baseline
+(125× the original speed) and settles back while stars stretch into long
+hyperspeed streaks. Analytically integrated distance retains all
 travel from completed boosts, preventing a backward jump when speed settles.
 Pause and slowdown affect star travel with the song; seeking and retries sample
 the same deterministic path. Camera orientation and zoom remain unchanged.
@@ -40,13 +56,15 @@ actual beat intervals. Slow tracks halve that span until it fits within
 3.5 song seconds. Transitions finish at the next section, last available beat,
 or first unusable interval when needed. Fragments under 0.65 song seconds and
 boundaries inside detection gaps use a bounded color fade without a travelling ring.
-Pause and upgrade slowdown freeze or stretch the presentation with the song;
+Pause freezes the presentation with the song;
 retry/seek sample the current section directly without queuing old transitions.
 The first section establishes its palette during count-in without an effect.
 
-Calm uses a subtler ring and weaker starfield boost. Off, reduced flashes and OS
+Calm uses a subtler ring, lower ridge and weaker starfield boost. Off, reduced flashes and OS
 reduced motion keep stars static and use a simple palette fade. The wave and
-color wipe reuse the original floor material; stars reuse their fixed pool
+color wipe reuse the floor material. Subdivided arena geometry is allocated
+once, and a shared vertex shader displaces scene meshes without changing
+collision shapes or uploading mesh vertices every frame. Stars reuse their fixed pool
 without allocating entities or materials at section boundaries. Tracks without
 section analysis, including the current demo/dojo/manual-BPM paths, retain
 normal star drift and their existing floor palette; no section boundaries are
@@ -96,17 +114,16 @@ immediately. Slowdown and pause follow the music clock, with stationary fades
 for reduced-motion settings. See the [original damage record](docs/damage-verification.md)
 and [upgrade verification](docs/upgrades-verification.md) for the updated timing.
 
-Follow-up upgrades: every new level queues a seeded offer of three distinct
-cards, with one selection per level. Music playback and game simulation briefly
-slow together while the cards enter, then stop on a subdivision of the actual
-local beat. The transition advances 100–140 ms of music, approximately
-180–250 ms in real time. Power-of-two subdivisions keep slow tempos equally
-brief; missing detections use a 100 ms music-time fade, shortened at the song
-tail. The transition clears movement/dash input and protects the player.
-Card animation is driven by music position, and pending levels are resolved
-while paused before playback resumes. Click or press 1/2/3 to select; Escape
-cannot skip a choice. Duplicate inputs are guarded, and a failed audio resume
-keeps the applied upgrade and offers a playback retry without awarding it again.
+Follow-up upgrades: each new run begins with a full-screen free upgrade choice
+while music and gameplay wait. Its instructions explain the later side panel
+and number keys. Selecting starts the normal count-in without spending XP.
+Every new level then queues a seeded offer of three distinct
+cards, stacked vertically on the right during normal play. Music, simulation,
+movement, aim and dash continue at full speed. Click or press 1/2/3 to apply a
+choice immediately and show the next queued offer. The current offer stays
+fixed when later levels are earned. Repeated keys, double clicks and stale
+card events cannot spend an extra level. Escape/focus loss use normal pause
+and preserve the queue; ending or restarting the run closes the panel.
 
 The initial catalog adds +3 to both damage bounds, +20 maximum/current health,
 +2 regeneration per five song seconds, +1 normal projectile (cap 7), a six-shot
@@ -121,11 +138,11 @@ impact and launch toward a new enemy at most once per beat; each shot keeps
 its original damage, critical result, and bounce allowance.
 
 The explicit stress fixture raises the first XP requirement to 1,000,000 solely
-to prevent selection pauses during profiling; drops and pickups still run.
+to keep the upgrade panel out of profiling; drops and pickups still run.
 The fixture does not change normal progression. Current behavior and catalog
 values are also documented in [README.md](README.md); the original selection
 checks are recorded in [upgrade verification](docs/upgrades-verification.md),
-with the latest changes in [spawn and pacing verification](docs/spawn-pacing-verification.md).
+with the earlier pacing changes in [spawn and pacing verification](docs/spawn-pacing-verification.md).
 
 ## Implementation record — 2026-10-20
 

@@ -1,6 +1,8 @@
+import { chooseStartingUpgrade } from "./starting-upgrade";
 import { expect, test, type Page } from "playwright/test";
 import { ANALYZER_VERSION, type BeatAnalysis } from "../src/analysis/types";
 import { SECTION_ANALYZER_VERSION } from "../src/analysis/sections";
+import { shockwaveHeight } from "../src/shockwave/surface";
 
 interface SectionSnapshot {
     phase: string;
@@ -9,7 +11,12 @@ interface SectionSnapshot {
     bodyCount: number;
     analysis?: { state: string };
     chart: { beatCount: number; downbeatCount: number };
+    enemies: { id: number; body?: { position: { x: number; y: number; z: number } } }[];
     visuals: { shaderStatus: string };
+    neon: {
+        status: "pending" | "ready" | "fallback";
+        frame: { enabled: boolean; bloom: number; chromatic: number };
+    };
     starfield: {
         distance: number;
         speed: number;
@@ -33,6 +40,12 @@ interface SectionSnapshot {
         strength: number;
         palette: unknown;
         motionAllowed: boolean;
+        surface: {
+            peakLift: number;
+            vertexCount: number;
+            affectedCount: number;
+            samples: { x: number; z: number; height: number }[];
+        };
         shockwave: {
             radius: number;
             active: boolean;
@@ -62,6 +75,8 @@ interface MotionSample {
     cameraSize: number;
     map: SectionSnapshot["sectionEffects"]["map"];
     starfield: SectionSnapshot["starfield"];
+    healthbarAnchors: { x: number; z: number; lift: number; projectionError: number }[];
+    strength: number;
     screenVelocity: [number, number] | null;
     speed: number;
 }
@@ -150,6 +165,7 @@ async function boot(page: Page, mode: "standard" | "off" | "reduced" = "standard
     await expect.poll(async () => (await snapshot(page)).analysis?.state).toBe("ready");
     await expect(page.locator(".bs-section-preview .bs-player-band")).toHaveCount(3);
     await page.locator('[data-action="start-local"]').click();
+    await chooseStartingUpgrade(page);
     await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
     await page.waitForFunction(() => {
         const state = (window as unknown as InspectedWindow).__beatshooter.snapshot();
@@ -185,13 +201,20 @@ async function pointerError(page: Page, x: number, y: number) {
     }, { x, y });
 }
 
+function expectFlatSurface(state: SectionSnapshot) {
+    expect(state.sectionEffects.surface.peakLift).toBe(0);
+    expect(state.sectionEffects.surface.samples.every(sample => sample.height === 0)).toBe(true);
+}
+
 test.setTimeout(60_000);
 
-test("a section shockwave sends the drifting starfield into hyperspeed while map, controls, and replay stay stable", async ({ page }, testInfo) => {
+test("a section shockwave bulges the arena and boosts the starfield while controls and replay stay stable", async ({ page }, testInfo) => {
     const errors: string[] = [];
     page.on("pageerror", error => errors.push(error.message));
     const baseline = await boot(page);
     expect(baseline.visuals.shaderStatus).toBe("ready");
+    expect(baseline.neon.status).toBe("ready");
+    expect(baseline.neon.frame.chromatic).toBe(0);
     expect(baseline.chart.beatCount).toBe(24);
     expect(baseline.chart.downbeatCount).toBe(6);
     expect(baseline.sectionEffects.sectionIndex).toBe(0);
@@ -199,18 +222,20 @@ test("a section shockwave sends the drifting starfield into hyperspeed while map
     expect(baseline.sectionEffects.shockwave.active).toBe(false);
     expect(baseline.sectionEffects.shockwave.radius).toBe(0);
     expect(baseline.sectionEffects.camera.size).toBe(17);
+    expect(baseline.sectionEffects.surface.vertexCount).toBeGreaterThan(1000);
+    expectFlatSurface(baseline);
     expect(baseline.starfield.motionAllowed).toBe(true);
     expect(baseline.starfield.distance).toBeGreaterThan(0);
-    expect(baseline.starfield.speed).toBe(1);
+    expect(baseline.starfield.speed).toBe(5);
     expect(baseline.starfield.boost).toBe(0);
-    expect(baseline.starfield.entityCount).toBeGreaterThan(0);
+    expect(baseline.starfield.entityCount).toBe(960);
     const driftingHandle = await page.waitForFunction(position => {
         const state = (window as unknown as InspectedWindow).__beatshooter.snapshot();
         return state.position > position + 0.15 && state.position < 1.5 ? state : false;
     }, baseline.position, { polling: "raf", timeout: 3_000 });
     const drifting = await driftingHandle.jsonValue() as SectionSnapshot;
     expect(drifting.starfield.distance).toBeGreaterThan(baseline.starfield.distance);
-    expect(drifting.starfield.speed).toBe(1);
+    expect(drifting.starfield.speed).toBe(5);
     expect(drifting.starfield.entityCount).toBe(baseline.starfield.entityCount);
     const baselinePath = "output/playwright/section-starfield-drift.png";
     await page.screenshot({ path: baselinePath });
@@ -218,6 +243,8 @@ test("a section shockwave sends the drifting starfield into hyperspeed while map
 
     const beginning = await atProgress(page, 0.08);
     expect(beginning.visuals.shaderStatus).toBe("ready");
+    expect(beginning.neon.status).toBe("ready");
+    expect(beginning.neon.frame.chromatic).toBeGreaterThan(0);
     expect(beginning.sectionEffects.active).toBe(true);
     expect(beginning.sectionEffects.label).toBe("chorus");
     expect(beginning.sectionEffects.startTime).toBe(2);
@@ -233,7 +260,7 @@ test("a section shockwave sends the drifting starfield into hyperspeed while map
     expect(beginning.sectionEffects.map).toEqual(baseline.sectionEffects.map);
     expect(beginning.sectionEffects.palette).not.toEqual(baseline.sectionEffects.palette);
     expect(beginning.starfield.boost).toBeGreaterThan(0);
-    expect(beginning.starfield.speed).toBeGreaterThan(1);
+    expect(beginning.starfield.speed).toBeGreaterThan(5);
     expect(beginning.starfield.distance).toBeGreaterThan(drifting.starfield.distance);
     expect(beginning.starfield.entityCount).toBe(baseline.starfield.entityCount);
     await expect(page.locator(".bs-run-progress .bs-player-section")).toHaveText("Chorus");
@@ -250,6 +277,21 @@ test("a section shockwave sends the drifting starfield into hyperspeed while map
             const player = state.player.position, velocity = state.player.velocity;
             const from = target.__beatshooter.project([player.x, 0.55, player.z]);
             const to = target.__beatshooter.project([player.x + velocity.x * 0.1, 0.55, player.z + velocity.z * 0.1]);
+            const canvas = document.querySelector("canvas")!.getBoundingClientRect();
+            const healthbarAnchors = state.phase !== "playing" ? []
+                : [...document.querySelectorAll<HTMLElement>(".enemy-healthbar")].flatMap(element => {
+                    const body = state.enemies.find(enemy => enemy.id === Number(element.dataset.enemyId))?.body?.position;
+                    if (!body || element.hidden) return [];
+                    const lift = Number(element.dataset.surfaceLift);
+                    const pixel = target.__beatshooter.project([body.x, 1.8 + lift, body.z]);
+                    if (!pixel) return [];
+                    const rect = element.getBoundingClientRect();
+                    return [{
+                        x: body.x, z: body.z, lift,
+                        projectionError: Math.hypot(rect.x + rect.width / 2 - canvas.left - pixel[0],
+                            rect.y + rect.height / 2 - canvas.top - pixel[1]),
+                    }];
+                });
             target.__sectionMotion!.push({
                 position: state.position, progress: state.sectionEffects.progress,
                 radius: state.sectionEffects.shockwave.radius,
@@ -259,6 +301,7 @@ test("a section shockwave sends the drifting starfield into hyperspeed while map
                 cameraSize: state.sectionEffects.camera.size,
                 map: state.sectionEffects.map,
                 starfield: state.starfield,
+                healthbarAnchors, strength: state.sectionEffects.strength,
                 screenVelocity: from && to ? [to[0] - from[0], to[1] - from[1]] : null,
                 speed: Math.hypot(velocity.x, velocity.z),
             });
@@ -270,13 +313,28 @@ test("a section shockwave sends the drifting starfield into hyperspeed while map
     await page.keyboard.down("KeyD");
     const middle = await atProgress(page, 0.48);
     expect(middle.sectionEffects.shockwave.active).toBe(true);
+    expect(middle.neon.frame.chromatic).toBeGreaterThan(0);
     expect(middle.sectionEffects.shockwave.radius).toBeGreaterThan(beginning.sectionEffects.shockwave.radius);
     expect(middle.sectionEffects.shockwave.radius).toBeCloseTo(middle.sectionEffects.progress * 30, 5);
     expect(middle.sectionEffects.map).toEqual(baseline.sectionEffects.map);
     expect(middle.sectionEffects.camera.rotation).toEqual(baseline.sectionEffects.camera.rotation);
     expect(middle.sectionEffects.camera.size).toBe(17);
     expect(middle.player.bodyY).toBeCloseTo(0.55, 4);
-    expect(middle.starfield.speed).toBeGreaterThan(10);
+    const surface = middle.sectionEffects.surface;
+    expect(surface.vertexCount).toBeGreaterThan(1000);
+    expect(surface.affectedCount).toBeGreaterThan(0);
+    expect(surface.peakLift).toBeGreaterThan(0.7);
+    const radius = middle.sectionEffects.shockwave.radius;
+    const heightAt = (x: number) => {
+        const sample = surface.samples.find(sample => Math.abs(sample.x - x) < 1e-6 && sample.z === 0);
+        expect(sample).toBeDefined();
+        return sample!.height;
+    };
+    expect(heightAt(radius)).toBeCloseTo(surface.peakLift, 6);
+    expect(heightAt(radius + 4)).toBe(0);
+    expect(heightAt(Math.max(0, radius - 4))).toBe(0);
+    expect(heightAt(0)).toBe(0);
+    expect(middle.starfield.speed).toBeGreaterThan(100);
     expect(middle.starfield.distance).toBeGreaterThan(beginning.starfield.distance);
     expect(middle.starfield.entityCount).toBe(baseline.starfield.entityCount);
     await page.keyboard.up("KeyD");
@@ -286,9 +344,9 @@ test("a section shockwave sends the drifting starfield into hyperspeed while map
     expect(moving.length).toBeGreaterThan(2);
     expect(moving.every(frame => frame.screenVelocity![0] > 0)).toBe(true);
     expect(moving.every(frame => frame.velocityX > 0)).toBe(true);
-    const screenshotPath = "output/playwright/section-starfield-hyperspeed.png";
+    const screenshotPath = "output/playwright/section-shockwave-bulge.png";
     await page.screenshot({ path: screenshotPath });
-    await testInfo.attach("section-starfield-hyperspeed", { path: screenshotPath, contentType: "image/png" });
+    await testInfo.attach("section-shockwave-bulge", { path: screenshotPath, contentType: "image/png" });
     await pause(page);
     const held = await snapshot(page);
     expect(held.sectionEffects.active).toBe(true);
@@ -298,6 +356,7 @@ test("a section shockwave sends the drifting starfield into hyperspeed while map
     expect(frozen.sectionEffects).toEqual(held.sectionEffects);
     expect(frozen.player.position).toEqual(held.player.position);
     expect(frozen.starfield).toEqual(held.starfield);
+    expect(frozen.neon.frame).toEqual(held.neon.frame);
 
     await page.mouse.move(830, 330);
     await expect.poll(() => pointerError(page, 830, 330)).toBeLessThan(2);
@@ -310,6 +369,15 @@ test("a section shockwave sends the drifting starfield into hyperspeed while map
     const settled = await snapshot(page);
     const allMotion = await page.evaluate(() => (window as unknown as InspectedWindow).__sectionMotion!);
     expect(allMotion.some(frame => frame.progress > 0.9)).toBe(true);
+    const peakSpeed = Math.max(...allMotion.map(frame => frame.starfield.speed));
+    expect(Math.abs(peakSpeed / baseline.starfield.speed - 25)).toBeLessThan(0.5);
+    const liftedBars = allMotion.flatMap(frame => frame.healthbarAnchors
+        .filter(bar => bar.lift > 0.05).map(bar => ({ ...bar, progress: frame.progress, strength: frame.strength })));
+    expect(liftedBars.length).toBeGreaterThan(0);
+    for (const bar of liftedBars) {
+        expect(bar.lift).toBeCloseTo(shockwaveHeight(bar.progress, bar.strength, bar.x, bar.z), 5);
+        expect(bar.projectionError).toBeLessThan(2);
+    }
     for (const frame of allMotion) {
         expect(frame.cameraRotation).toEqual(baseline.sectionEffects.camera.rotation);
         expect(frame.cameraSize).toBe(17);
@@ -323,12 +391,14 @@ test("a section shockwave sends the drifting starfield into hyperspeed while map
     expect(settled.sectionEffects.camera.rotation).toEqual(baseline.sectionEffects.camera.rotation);
     expect(settled.sectionEffects.camera.size).toBe(17);
     expect(settled.sectionEffects.shockwave.active).toBe(false);
+    expect(settled.neon.frame.chromatic).toBe(0);
     expect(settled.sectionEffects.shockwave.radius).toBe(0);
+    expectFlatSurface(settled);
     expect(settled.sectionEffects.map).toEqual(baseline.sectionEffects.map);
     expect(settled.sectionEffects.palette).toEqual(beginning.sectionEffects.shockwave.to);
     expect(settled.sectionEffects.camera.clearColor).not.toBe(baseline.sectionEffects.camera.clearColor);
     expect(settled.starfield.distance).toBeGreaterThan(held.starfield.distance);
-    expect(settled.starfield.speed).toBe(1);
+    expect(settled.starfield.speed).toBe(5);
     expect(settled.starfield.boost).toBe(0);
     expect(settled.starfield.entityCount).toBe(baseline.starfield.entityCount);
 
@@ -336,13 +406,17 @@ test("a section shockwave sends the drifting starfield into hyperspeed while map
     await page.getByRole("button", { name: "Restart session", exact: true }).click();
     await expect.poll(async () => (await snapshot(page)).generation).toBe(baseline.generation + 1);
     const restarted = await snapshot(page);
-    expect(restarted.position).toBeLessThan(0);
+    expect(restarted.position).toBeLessThanOrEqual(0);
     expect(restarted.sectionEffects.active).toBe(false);
+    expect(restarted.neon.frame.chromatic).toBe(0);
+    expectFlatSurface(restarted);
     expect(restarted.sectionEffects.camera.rotation).toEqual(baseline.sectionEffects.camera.rotation);
     expect(restarted.sectionEffects.camera.size).toBe(17);
     expect(restarted.sectionEffects.map).toEqual(baseline.sectionEffects.map);
     expect(restarted.starfield.boost).toBe(0);
     expect(restarted.starfield.entityCount).toBe(baseline.starfield.entityCount);
+    await chooseStartingUpgrade(page);
+    await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
     await atProgress(page, 0.2);
     await pause(page);
     await page.getByRole("button", { name: "Return to menu", exact: true }).click();
@@ -352,6 +426,7 @@ test("a section shockwave sends the drifting starfield into hyperspeed while map
     expect(menu.sectionEffects.camera.rotation).toEqual(baseline.sectionEffects.camera.rotation);
     expect(menu.sectionEffects.camera.size).toBe(17);
     expect(menu.sectionEffects.camera.clearColor).toBe(0x090f15);
+    expectFlatSurface(menu);
     expect(menu.sectionEffects.map).toEqual(baseline.sectionEffects.map);
     expect(menu.bodyCount).toBe(baseline.bodyCount);
     expect(menu.starfield.entityCount).toBe(baseline.starfield.entityCount);
@@ -364,11 +439,15 @@ for (const mode of ["off", "reduced"] as const) {
         expect(baseline.starfield.motionAllowed).toBe(false);
         expect(baseline.starfield.speed).toBe(0);
         expect(baseline.starfield.boost).toBe(0);
+        expect(baseline.starfield.entityCount).toBe(960);
+        expectFlatSurface(baseline);
         const middle = await atProgress(page, 0.5);
         expect(middle.sectionEffects.label).toBe("chorus");
         expect(middle.sectionEffects.motionAllowed).toBe(false);
         expect(middle.sectionEffects.shockwave.active).toBe(false);
+        expect(middle.neon.frame.chromatic).toBe(0);
         expect(middle.sectionEffects.shockwave.radius).toBe(0);
+        expectFlatSurface(middle);
         expect(middle.sectionEffects.map).toEqual(baseline.sectionEffects.map);
         expect(middle.sectionEffects.camera.rotation).toEqual(baseline.sectionEffects.camera.rotation);
         expect(middle.sectionEffects.camera.size).toBe(17);

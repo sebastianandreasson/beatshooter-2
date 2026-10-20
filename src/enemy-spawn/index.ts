@@ -128,9 +128,9 @@ export const EnemySpawnPlugin: Plugin = {
         // Opaque rails define the arrival footprint; one faint blended core
         // makes it read as light without hiding the growing enemy inside.
         state.materials = {
-            chaser: material([0.32, 0.1, 0.08, 1]),
-            spinner: material([0.21, 0.13, 0.35, 1]),
-            ranger: material([0.32, 0.24, 0.08, 1]),
+            chaser: material([1.35, 0.25, 0.15, 1]),
+            spinner: material([0.7, 0.35, 1.5, 1]),
+            ranger: material([1.5, 0.9, 0.18, 1]),
         };
         const beam = (baseColor: [number, number, number, number]) =>
             materials.add(StandardMaterial({ baseColor, unlit: true }), { alphaMode: AlphaMode.Blend });

@@ -1,3 +1,4 @@
+import { chooseStartingUpgrade } from "./starting-upgrade";
 import { expect, test, type Page } from "playwright/test";
 import type { UpgradeId } from "../src/upgrades";
 
@@ -8,6 +9,7 @@ interface Snapshot {
     playbackRate: number;
     simulationScale: number;
     player: { position: Point };
+    dash: { state: string; accepted: number };
     combat: { health: number; time: number; kills: number };
     enemies: (Point & { id: number })[];
     projectiles: (Point & {
@@ -22,20 +24,57 @@ interface Snapshot {
     };
     upgrade: {
         choices: { id: UpgradeId }[]; ranks: Record<UpgradeId, number>; pending: number;
-        progress: number; target?: number; protected: boolean;
+        offeredLevel: number;
     };
     visuals: { frame: { beatIndex: number; beatPhase: number } };
 }
-type SlowdownSample = {
-    state: Snapshot; time: number; cardsDisabled: boolean;
-    visibility: DocumentVisibilityState; focused: boolean;
-};
-type InspectedWindow = Window & { __upgradeSamples?: SlowdownSample[]; __beatshooter: {
+type InspectedWindow = Window & { __beatshooter: {
     snapshot(): Snapshot;
     project(point: [number, number, number]): [number, number] | null;
 } };
 const snapshot = (page: Page) => page.evaluate(() =>
     (window as unknown as InspectedWindow).__beatshooter.snapshot());
+
+for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
+    test(`the full-screen starting upgrade explains live choices and waits for selection at ${viewport.width}px`, async ({ page }) => {
+        await page.setViewportSize(viewport);
+        await page.goto("/?test=1");
+        await page.getByRole("button", { name: "Enter the arena", exact: true }).click();
+        const panel = page.getByRole("dialog", { name: "Start of run upgrade", exact: true });
+        await expect(panel).toBeVisible();
+        await expect(panel).toContainText("Later upgrades appear on the right");
+        await expect(panel).toContainText("Extra upgrades queue");
+        await expect(panel.locator(".bs-upgrade-card")).toHaveCount(3);
+        const before = await snapshot(page);
+        expect(before.phase).toBe("starting");
+        expect(before.playbackRate).toBe(0);
+        expect(before.experience.level).toBe(1);
+        expect(before.upgrade.pending).toBe(1);
+        await page.waitForTimeout(250);
+        await page.keyboard.press("Escape");
+        expect((await snapshot(page)).position).toBe(before.position);
+        expect((await snapshot(page)).phase).toBe("starting");
+        expect(await page.locator('[data-screen="hud"]').evaluate(el => (el as HTMLElement).inert)).toBe(true);
+        await page.screenshot({ path: `output/playwright/starting-upgrade-${viewport.width}.png` });
+        const chosen = before.upgrade.choices[2]!;
+        await page.keyboard.press("3");
+        await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
+        const started = await snapshot(page);
+        expect(started.position).toBeLessThan(0);
+        expect(started.upgrade.ranks[chosen.id]).toBe(1);
+        expect(started.upgrade.pending).toBe(0);
+        expect(started.experience.totalXp).toBe(0);
+        await expect(panel).toBeHidden();
+        await page.keyboard.press("Escape");
+        await page.getByRole("button", { name: "Restart session", exact: true }).click();
+        await expect(panel).toBeVisible();
+        const fresh = await snapshot(page);
+        expect(Object.values(fresh.upgrade.ranks).every(rank => rank === 0)).toBe(true);
+        expect(fresh.upgrade.pending).toBe(1);
+        await page.getByRole("button", { name: "Return to menu", exact: true }).click();
+        await expect(page.locator('.bs-ui[data-phase="menu"]')).toBeVisible();
+    });
+}
 
 async function aim(page: Page) {
     const observed = await page.evaluate(() => {
@@ -56,32 +95,18 @@ async function earnUpgrade(page: Page, demo = true) {
     await page.goto("/?test=1");
     await expect(page.locator('.bs-ui[data-phase="menu"]')).toBeVisible({ timeout: 60_000 });
     await page.getByRole("button", { name: demo ? "Enter the arena" : "Practice", exact: true }).click();
+    await chooseStartingUpgrade(page);
     await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
-    // Capture every rendered frame in-page: a 180–250 ms transition is too
-    // short to measure reliably through repeated automation round trips.
-    await page.evaluate(() => {
-        const inspected = window as unknown as InspectedWindow;
-        inspected.__upgradeSamples = [];
-        const record = (time: number) => {
-            const state = inspected.__beatshooter.snapshot();
-            if (state.phase === "upgrade-slowing" || state.phase === "upgrading") {
-                inspected.__upgradeSamples!.push({
-                    state, time,
-                    visibility: document.visibilityState, focused: document.hasFocus(),
-                    cardsDisabled: [...document.querySelectorAll<HTMLButtonElement>(".bs-upgrade-card")]
-                        .every(card => card.disabled),
-                });
-            }
-            if (state.phase === "playing" || state.phase === "upgrade-slowing") requestAnimationFrame(record);
-        };
-        requestAnimationFrame(record);
-    });
+    return collectUntil(page, state => state.upgrade.pending > 0);
+}
+
+async function collectUntil(page: Page, ready: (state: Snapshot) => boolean) {
     const held = new Set<string>();
     const deadline = Date.now() + 35_000;
     try {
         while (Date.now() < deadline) {
             const state = await aim(page);
-            if (state.phase === "upgrade-slowing" || state.phase === "upgrading") return state;
+            if (ready(state)) return state;
             expect(state.phase).toBe("playing");
             const player = state.player.position;
             const drop = [...state.experience.drops].sort((a, b) =>
@@ -109,116 +134,77 @@ async function earnUpgrade(page: Page, demo = true) {
 
 test.setTimeout(65_000);
 
-test("level-up slows the demo, freezes three cards, and resumes a main-beat barrage", async ({ page }, testInfo) => {
+test("upgrade choices leave music and movement running, apply immediately, and retain normal pause", async ({ page }, testInfo) => {
     const errors: string[] = [];
     page.on("pageerror", error => errors.push(error.message));
     await page.setViewportSize({ width: 1280, height: 800 });
-    await page.emulateMedia({ reducedMotion: "no-preference" });
-    await earnUpgrade(page);
-    await expect(page.locator('.bs-ui[data-phase="upgrading"]')).toBeVisible();
-    const samples = await page.evaluate(() => (window as unknown as InspectedWindow).__upgradeSamples!);
-    await testInfo.attach("upgrade-slowdown-samples", {
-        contentType: "application/json",
-        body: JSON.stringify(samples.map(({ state, time, cardsDisabled, visibility, focused }) => ({
-            time, phase: state.phase, playbackRate: state.playbackRate,
-            simulationScale: state.simulationScale, progress: state.upgrade.progress,
-            position: state.position, target: state.upgrade.target,
-            combatTime: state.combat.time, cardsDisabled, visibility, focused,
-        })), null, 2),
-    });
-    const first = samples[0]!.state;
-    expect(first.phase).toBe("upgrade-slowing");
-    expect(first.upgrade.protected).toBe(true);
-    const slowing = samples.filter(sample => sample.state.phase === "upgrade-slowing").map(sample => sample.state);
-    expect(slowing.length).toBeGreaterThanOrEqual(3);
-    expect(samples.at(-1)!.state.phase).toBe("upgrading");
-    expect(samples.at(-1)!.time - samples[0]!.time).toBeLessThanOrEqual(300);
-    for (const sample of samples) {
-        if (sample.state.phase === "upgrade-slowing") expect(sample.cardsDisabled).toBe(true);
-    }
-    expect(slowing[0]!.playbackRate).toBeGreaterThan(slowing.at(-1)!.playbackRate);
-    // Audio automation continues between rendered frames. A short transition
-    // need not render a frame near its final 0.12 rate; validate every sampled
-    // point against the rate/progress curve and the exact paused endpoint.
-    for (const state of slowing) {
-        if (state.playbackRate > 0) {
-            const expectedRate = Math.sqrt(1 - (1 - 0.12 ** 2) * state.upgrade.progress);
-            expect(state.playbackRate).toBeCloseTo(expectedRate, 1);
-        }
-    }
-    for (let i = 1; i < slowing.length; i++) {
-        expect(slowing[i]!.position).toBeGreaterThanOrEqual(slowing[i - 1]!.position);
-        expect(slowing[i]!.upgrade.progress).toBeGreaterThanOrEqual(slowing[i - 1]!.upgrade.progress);
-        expect(slowing[i]!.playbackRate).toBeLessThanOrEqual(slowing[i - 1]!.playbackRate);
-        if (slowing[i]!.playbackRate > 0) {
-            expect(slowing[i]!.simulationScale).toBeCloseTo(slowing[i]!.playbackRate, 1);
-        } else {
-            // AudioContext can reach its scheduled stop between ObserveMusic
-            // and this rAF observer. Rate jumps from 0.12 to zero; the stored
-            // simulation scale is finalized by the next engine observation.
-            expect(slowing[i]!.upgrade.progress).toBe(1);
-            expect(slowing[i]!.simulationScale).toBeGreaterThanOrEqual(0.12);
-            expect(slowing[i]!.simulationScale).toBeLessThanOrEqual(slowing[i - 1]!.simulationScale);
-            expect(slowing[i]!.position).toBeLessThanOrEqual(slowing[i]!.upgrade.target!);
-            const next = samples[samples.findIndex(sample => sample.state === slowing[i]) + 1]!.state;
-            expect(next.phase).toBe("upgrading");
-            expect(next.position).toBeCloseTo(slowing[i]!.upgrade.target!, 8);
-            expect(next.combat.time).toBe(slowing[i]!.combat.time);
-        }
-        expect(slowing[i]!.combat.health).toBe(first.combat.health);
-    }
-    await expect(page.locator('.bs-ui[data-phase="upgrading"]')).toBeVisible();
+    const first = await earnUpgrade(page);
     await expect(page.locator(".bs-upgrade-card")).toHaveCount(3);
     await expect(page.locator(".bs-upgrade-card").first()).toBeEnabled();
-    await page.evaluate(() => new Promise<void>(resolve =>
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
-    const frozen = await snapshot(page);
-    expect(frozen.position).toBeCloseTo(first.upgrade.target!, 8);
-    expect(frozen.playbackRate).toBe(0);
-    expect(new Set(frozen.upgrade.choices.map(choice => choice.id)).size).toBe(3);
-    await page.waitForTimeout(300);
-    const still = await snapshot(page);
-    expect(still.position).toBe(frozen.position);
-    expect(still.combat).toEqual(frozen.combat);
-    expect(still.enemies).toEqual(frozen.enemies);
-    expect(still.projectiles).toEqual(frozen.projectiles);
-    expect(still.player).toEqual(frozen.player);
-    await page.keyboard.press("Escape");
-    await expect(page.locator('.bs-ui[data-phase="upgrading"]')).toBeVisible();
-    expect(await page.locator('[data-screen="hud"]').evaluate(element => (element as HTMLElement).inert)).toBe(true);
-    expect(await page.evaluate(() => document.activeElement?.closest(".bs-upgrade-dialog") !== null)).toBe(true);
-    const desktop = "output/playwright/upgrades-game-desktop.png";
-    await page.screenshot({ path: desktop });
-    await testInfo.attach("upgrades-desktop", { path: desktop, contentType: "image/png" });
-    await page.setViewportSize({ width: 390, height: 844 });
-    for (const card of await page.locator(".bs-upgrade-card").all()) {
-        const box = await card.boundingBox();
-        expect(box).not.toBeNull();
-        expect(box!.x).toBeGreaterThanOrEqual(0);
-        expect(box!.y).toBeGreaterThanOrEqual(0);
-        expect(box!.x + box!.width).toBeLessThanOrEqual(390);
-        expect(box!.y + box!.height).toBeLessThanOrEqual(844);
+    expect(first.phase).toBe("playing");
+    expect(first.playbackRate).toBe(1);
+    expect(first.simulationScale).toBe(1);
+    expect(await page.locator('[data-screen="hud"]').evaluate(el => (el as HTMLElement).inert)).toBe(false);
+    expect(await page.evaluate(() => !!document.activeElement?.closest(".bs-upgrade-panel"))).toBe(false);
+    const heldOffer = first.upgrade.choices;
+    const direction = first.player.position.x > 0 ? "KeyA" : "KeyD";
+    await page.keyboard.down(direction);
+    await page.waitForTimeout(350);
+    await page.keyboard.up(direction);
+    const moving = await snapshot(page);
+    expect(moving.position - first.position).toBeGreaterThan(.25);
+    expect(moving.combat.time - first.combat.time).toBeGreaterThan(.25);
+    expect(Math.abs(moving.player.position.x - first.player.position.x)).toBeGreaterThan(.5);
+    expect(moving.upgrade.choices).toEqual(heldOffer);
+    expect(moving.playbackRate).toBe(1);
+    expect(moving.simulationScale).toBe(1);
+
+    for (const [width, height] of [[1280,800], [390,844], [1024,600]]) {
+        await page.setViewportSize({ width: width!, height: height! });
+        const cards = await page.locator(".bs-upgrade-card").all();
+        let bottom = 0;
+        for (const card of cards) {
+            const box = (await card.boundingBox())!;
+            expect(box.x).toBeGreaterThan(width! * .25);
+            expect(box.x + box.width).toBeLessThan(width!);
+            expect(box.y).toBeGreaterThanOrEqual(bottom);
+            expect(box.y + box.height).toBeLessThan(height! - 70);
+            bottom = box.y + box.height;
+            await expect(card.locator("kbd")).toBeVisible();
+        }
+        const path = `output/playwright/upgrades-live-${width}.png`;
+        await page.screenshot({ path });
+        await testInfo.attach(`upgrades-${width}`, { path, contentType: "image/png" });
     }
-    const mobile = "output/playwright/upgrades-game-mobile.png";
-    await page.screenshot({ path: mobile });
-    await testInfo.attach("upgrades-mobile", { path: mobile, contentType: "image/png" });
     await page.setViewportSize({ width: 1280, height: 800 });
+    await page.locator(".bs-upgrade-card").first().focus();
+    const beforeDash = await snapshot(page);
+    await page.waitForFunction(after => {
+        const state = (window as unknown as InspectedWindow).__beatshooter.snapshot();
+        return state.position > after && state.dash.state === "ready" && state.position % 2 < .055;
+    }, beforeDash.position, { polling: "raf", timeout: 5000 });
+    await page.keyboard.press("Space");
+    expect((await snapshot(page)).dash.accepted).toBe(beforeDash.dash.accepted + 1);
+    expect((await snapshot(page)).upgrade.choices).toEqual(heldOffer);
+    await page.keyboard.press("Escape");
+    await expect(page.locator('.bs-ui[data-phase="paused"]')).toBeVisible();
+    await expect(page.locator(".bs-upgrade-panel")).toBeHidden();
+    const paused = await snapshot(page);
+    await page.keyboard.press("1");
+    await page.waitForTimeout(120);
+    expect((await snapshot(page)).position).toBe(paused.position);
+    expect((await snapshot(page)).upgrade).toEqual(paused.upgrade);
+    await page.keyboard.press("Escape");
+    await expect(page.locator(".bs-upgrade-panel")).toBeVisible();
     await page.locator('[data-upgrade-id="barrage"]').click();
-    await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
-    await page.waitForTimeout(200);
     const resumed = await snapshot(page);
+    expect(resumed.phase).toBe("playing");
     expect(resumed.playbackRate).toBe(1);
     expect(resumed.simulationScale).toBe(1);
     expect(resumed.upgrade.ranks.barrage).toBe(1);
     expect(resumed.upgrade.pending).toBe(0);
-    expect(resumed.upgrade.protected).toBe(false);
     expect(resumed.playerStats.effective.barrageCount).toBe(6);
-    const musicAdvance = resumed.position - frozen.position;
-    const simulationAdvance = resumed.combat.time - frozen.combat.time;
-    expect(musicAdvance).toBeGreaterThan(0.1);
-    // Fixed integration can differ by a frame, but each card must not introduce
-    // the ordinary 40 ms transport lead-in as extra unaccompanied simulation.
-    expect(Math.abs(simulationAdvance - musicAdvance)).toBeLessThan(0.035);
+    await expect(page.locator(".bs-upgrade-panel")).toBeHidden();
 
     let previous = resumed, normal = false, barrage = false;
     const deadline = Date.now() + 4000;
@@ -243,9 +229,10 @@ test("level-up slows the demo, freezes three cards, and resumes a main-beat barr
     expect(normal && barrage).toBe(true);
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "Restart session" }).click();
+    await chooseStartingUpgrade(page);
     await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
     const fresh = await snapshot(page);
-    expect(Object.values(fresh.upgrade.ranks).every(rank => rank === 0)).toBe(true);
+    expect(Object.entries(fresh.upgrade.ranks).every(([id, rank]) => rank === (id === "crit-damage" ? 1 : 0))).toBe(true);
     expect(fresh.playerStats.effective.barrageCount).toBe(0);
     expect(fresh.upgrade.pending).toBe(0);
     expect(fresh.upgrade.choices).toEqual([]);
@@ -255,12 +242,10 @@ test("level-up slows the demo, freezes three cards, and resumes a main-beat barr
 
 test("a keyboard-selected ricochet waits at impact until the following beat", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
-    await earnUpgrade(page, false);
-    await expect(page.locator('.bs-ui[data-phase="upgrading"]')).toBeVisible();
-    const offered = await snapshot(page);
-    const slot = offered.upgrade.choices.findIndex(choice => choice.id === "bounce");
-    expect(slot).toBeGreaterThanOrEqual(0);
-    await page.keyboard.press(String(slot + 1));
+    await page.goto("/?test=1");
+    await page.getByRole("button", { name: "Practice", exact: true }).click();
+    await expect(page.locator(".bs-start-upgrade")).toBeVisible();
+    await page.keyboard.press("2");
     await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
     expect((await snapshot(page)).playerStats.effective.bounces).toBe(1);
     // Early waves contain one enemy per bar. Aim into an empty corner briefly
@@ -310,4 +295,39 @@ test("a keyboard-selected ricochet waits at impact until the following beat", as
         await page.waitForTimeout(15);
     }
     expect(witnessed, "a real collision must hold its projectile and release it on the next beat").toBe(true);
+});
+
+
+test("later level-ups queue behind a stable offer and held number keys cannot spend twice", async ({ page }) => {
+    test.setTimeout(90_000);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    const first = await earnUpgrade(page);
+    const queued = await collectUntil(page, state => state.upgrade.pending >= 2);
+    expect(queued.phase).toBe("playing");
+    expect(queued.position).toBeGreaterThan(first.position + 1);
+    expect(queued.combat.kills).toBeGreaterThan(first.combat.kills);
+    expect(queued.upgrade.choices).toEqual(first.upgrade.choices);
+    expect(queued.upgrade.offeredLevel).toBe(2);
+    await expect(page.locator('[data-value="upgrade-pending"]')).toHaveText(`${queued.upgrade.pending - 1} queued`);
+    const choice = queued.upgrade.choices[0]!;
+    await page.keyboard.down("1");
+    const selected = await snapshot(page);
+    expect(selected.upgrade.ranks[choice.id]).toBe(1);
+    expect(selected.upgrade.pending).toBe(queued.upgrade.pending - 1);
+    expect(selected.upgrade.offeredLevel).toBe(3);
+    await page.keyboard.down("1"); // A held key emits repeat, not a fresh choice.
+    expect((await snapshot(page)).upgrade).toEqual(selected.upgrade);
+    await page.keyboard.up("1");
+    const next = selected.upgrade.choices[1]!;
+    await page.keyboard.press("Numpad2");
+    const second = await snapshot(page);
+    expect(second.upgrade.ranks[next.id]).toBe(selected.upgrade.ranks[next.id] + 1);
+    expect(second.upgrade.pending).toBe(selected.upgrade.pending - 1);
+    expect(second.phase).toBe("playing");
+    expect(second.playbackRate).toBe(1);
+    expect(second.simulationScale).toBe(1);
+    const third = await collectUntil(page, state => state.upgrade.pending > 0);
+    const last = third.upgrade.choices[2]!;
+    await page.keyboard.press("3");
+    expect((await snapshot(page)).upgrade.ranks[last.id]).toBe(third.upgrade.ranks[last.id] + 1);
 });

@@ -3,9 +3,9 @@ import type { Beat } from "../rhythm/timeline";
 import { SectionTransitionTimeline } from "../section-effects/state";
 
 export interface StarfieldMotionFrame {
-    /** Integrated travel in baseline-speed seconds, including completed boosts. */
+    /** Integrated travel in the renderer's original distance units, including completed boosts. */
     distance: number;
-    /** Instantaneous speed multiplier: one normally, fifteen at the boost peak. */
+    /** Instantaneous travel speed: five normally, 125 at the boost peak. */
     speed: number;
     boost: number;
 }
@@ -19,7 +19,9 @@ interface BoostSegment {
     extraAfter: number;
 }
 
-const EXTRA_SPEED = 14;
+export const STAR_BASE_SPEED = 5;
+export const STAR_HYPERSPACE_MULTIPLIER = 25;
+const EXTRA_SPEED = STAR_BASE_SPEED * (STAR_HYPERSPACE_MULTIPLIER - 1);
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
 /** Integral of sin²(πp), with respect to musical progress p. */
 const integratedEnvelope = (progress: number): number =>
@@ -89,17 +91,18 @@ export class StarfieldTimeline {
             else high = middle;
         }
         const segment = this.segments[low - 1];
-        if (!segment) return { distance: time, speed: 1, boost: 0 };
+        const base = time * STAR_BASE_SPEED;
+        if (!segment) return { distance: base, speed: STAR_BASE_SPEED, boost: 0 };
         if (time >= segment.end) {
-            return { distance: time + segment.extraAfter, speed: 1, boost: 0 };
+            return { distance: base + segment.extraAfter, speed: STAR_BASE_SPEED, boost: 0 };
         }
         const progress = clamp01(segment.startProgress + (time - segment.start) * segment.progressRate);
         const boost = Math.sin(Math.PI * progress) ** 2;
         const partialExtra = EXTRA_SPEED *
             (integratedEnvelope(progress) - integratedEnvelope(segment.startProgress)) / segment.progressRate;
         return {
-            distance: time + segment.extraBefore + partialExtra,
-            speed: 1 + EXTRA_SPEED * boost,
+            distance: base + segment.extraBefore + partialExtra,
+            speed: STAR_BASE_SPEED + EXTRA_SPEED * boost,
             boost,
         };
     }

@@ -60,7 +60,8 @@ export const DashPlugin: Plugin = {
         const dash = world.resource(DashState);
         window.addEventListener("keydown", event => {
             if (event.code !== "Space" ||
-                (event.target as HTMLElement)?.closest("input,select,textarea,button,[contenteditable='true']") ||
+                ((event.target as HTMLElement)?.closest("input,select,textarea,button,[contenteditable='true']")
+                    && !(event.target as HTMLElement)?.closest("[data-action='choose-upgrade']")) ||
                 world.resource(Session).phase !== "playing") return;
             event.preventDefault();
             if (event.repeat || dash.held) return;

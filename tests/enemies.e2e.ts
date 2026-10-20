@@ -1,3 +1,4 @@
+import { chooseStartingUpgrade } from "./starting-upgrade";
 import { expect, test, type Page } from "playwright/test";
 
 interface MeshWitness {
@@ -65,6 +66,7 @@ test("new enemies show distinct silhouettes and main-beat attacks, freeze on pau
     await page.waitForFunction(() => Boolean((window as unknown as InspectedWindow).__beatshooter));
     const initial = await snapshot(page);
     await page.getByRole("button", { name: "Practice", exact: true }).click();
+    await chooseStartingUpgrade(page);
     await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
     // Aim into an empty corner so the first shooters survive long enough to
     // witness their normal attack and lifecycle through real browser controls.
@@ -171,6 +173,7 @@ test("new enemies show distinct silhouettes and main-beat attacks, freeze on pau
     await testInfo.attach("ranger-aimed-shot", { path: rangerScreenshot, contentType: "image/png" });
 
     await page.keyboard.press("KeyR");
+    await chooseStartingUpgrade(page);
     await expect.poll(async () => (await snapshot(page)).generation).toBe(held.generation + 1);
     await expect.poll(async () => (await snapshot(page)).presentation.enemyAccentGroups).toBe(0);
     const fresh = await snapshot(page);

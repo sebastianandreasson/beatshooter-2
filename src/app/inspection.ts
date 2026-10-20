@@ -12,6 +12,10 @@ import { EnemySpawnPresentation } from "../enemy-spawn";
 import { enemySpawnPose } from "../enemy-spawn/pose";
 import { SectionEffects } from "../section-effects/runtime";
 import { Starfield } from "../starfield";
+import { Shockwave } from "../shockwave";
+import { shockwaveHeight } from "../shockwave/surface";
+import { Neon } from "../neon";
+import { NeonTrails } from "../neon-trails";
 
 /** Read-only opt-in witnesses for browser tests; never enables an on-screen overlay. */
 export function installInspection(world: World): void {
@@ -27,6 +31,11 @@ export function installInspection(world: World): void {
             const arrivals = world.resource(EnemySpawnPresentation);
             const sections = world.resource(SectionEffects);
             const stars = world.resource(Starfield);
+            const wave = world.resource(Shockwave);
+            const neon = world.resource(Neon), trails = world.resource(NeonTrails);
+            const waveRadius = wave.progress * 30;
+            const surfaceSamples = [waveRadius, waveRadius + 4, Math.max(0, waveRadius - 4), 0]
+                .map(x => ({ x, z: 0, height: shockwaveHeight(wave.progress, wave.strength, x, 0) }));
             const transform = world.storage(Transform), materials = world.storage(MeshMaterial);
             const mesh = (eid: number) => ({
                 position: {
@@ -41,6 +50,14 @@ export function installInspection(world: World): void {
                 position: s.position, audioState: s.transport?.state,
                 playbackRate: s.transport?.playbackRate ?? 0,
                 simulationScale: world.time.scale,
+                neon: {
+                    status: neon.status, error: neon.error, frame: { ...neon.frame },
+                    passes: neon.passes, dimensions: { ...neon.dimensions },
+                },
+                neonTrails: {
+                    visibleCount: trails.visibleCount, capacity: trails.capacity,
+                    samples: trails.witnesses.map(sample => ({ ...sample, mesh: mesh(sample.entity) })),
+                },
                 starfield: {
                     distance: stars.distance, speed: stars.speed, boost: stars.boost,
                     motionAllowed: stars.motionAllowed, entityCount: stars.stars.length,
@@ -54,6 +71,12 @@ export function installInspection(world: World): void {
                         active: sections.strength > 0 && sections.frame.active,
                         radius: sections.strength > 0 && sections.frame.active ? sections.frame.progress * 30 : 0,
                         from: structuredClone(sections.frame.from), to: structuredClone(sections.frame.to),
+                    },
+                    surface: {
+                        peakLift: surfaceSamples[0]!.height,
+                        vertexCount: arena.floorVertexCount,
+                        affectedCount: wave.affectedCount,
+                        samples: surfaceSamples,
                     },
                     map: {
                         position: {
@@ -86,9 +109,6 @@ export function installInspection(world: World): void {
                     pending: s.combat.upgrades.pending, offeredLevel: s.combat.upgrades.offeredLevel,
                     choices: s.combat.upgrades.choices.map(choice => ({ ...choice })),
                     ranks: { ...s.combat.upgrades.ranks },
-                    progress: s.phase === "upgrading" ? 1 : s.transport?.slowdownProgress ?? 0,
-                    target: s.transport?.slowdownTarget, busy: s.upgradeBusy,
-                    resumePending: s.upgradeResumePending, protected: s.combat.protectPlayer,
                 },
                 player: {
                     position: { ...p.position }, aim: { ...p.aim }, target: { ...p.target },

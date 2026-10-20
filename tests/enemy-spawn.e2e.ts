@@ -1,3 +1,4 @@
+import { chooseStartingUpgrade } from "./starting-upgrade";
 import { expect, test, type Page } from "playwright/test";
 
 interface MeshWitness {
@@ -59,6 +60,7 @@ async function practice(page: Page) {
     // without seeking the transport or mutating simulation state.
     await page.locator("#bs-dojo-bpm").fill("60");
     await page.getByRole("button", { name: "Practice", exact: true }).click();
+    await chooseStartingUpgrade(page);
     await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
     await page.mouse.move(1150, 90);
 }
@@ -164,6 +166,7 @@ test("enemies beam in for one authored beat, freeze on pause, and only then acqu
     expect(active.enemies[0]!.body!.scale.x).toBeGreaterThan(grown.body!.scale.x);
 
     await page.keyboard.press("KeyR");
+    await chooseStartingUpgrade(page);
     await expect.poll(async () => (await snapshot(page)).generation).toBe(initial.generation + 2);
     await arrival(page, 0.2);
     await pause(page);

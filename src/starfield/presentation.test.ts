@@ -58,16 +58,17 @@ test("a fixed nonphysical star pool flows normally, boosts with sections and fre
             expect(world.has(eid, Shape)).toBe(false);
         }
         render(1);
-        expect(state.distance).toBe(1);
-        expect(state.speed).toBe(1);
+        expect(state.distance).toBe(5);
+        expect(state.speed).toBe(5);
         expect(state.boost).toBe(0);
         const normal = poses();
         render(1.5);
         expect(poses()).not.toEqual(normal);
         render(3);
-        expect(state.speed).toBeCloseTo(15);
+        expect(state.speed).toBeCloseTo(125);
+        expect(state.speed / 5).toBe(25);
         expect(state.boost).toBeCloseTo(1);
-        expect(state.distance).toBeGreaterThan(3);
+        expect(state.distance).toBeGreaterThan(15);
         expect(Math.max(...poses().map(pose => pose!.scale[1]))).toBeGreaterThan(4);
         const held = poses(), heldDistance = state.distance;
         session.phase = "paused";
@@ -100,8 +101,8 @@ test("Calm limits acceleration, low graphics halves visible work, and comfort mo
         const fullDistance = state.distance;
         session.preferences.settings.effectsIntensity = "calm";
         render();
-        expect(state.speed).toBeCloseTo(3.52);
-        expect(state.distance).toBeCloseTo(3 + (fullDistance - 3) * 0.18);
+        expect(state.speed).toBeCloseTo(26.6);
+        expect(state.distance).toBeCloseTo(15 + (fullDistance - 15) * 0.18);
         session.preferences.settings.graphics = "low";
         render();
         expect(state.visibleStars).toBeLessThanOrEqual(LOW_DETAIL_STAR_COUNT);
@@ -144,21 +145,21 @@ test("ordinary songs still flow and retry/menu reuse all stars without carrying 
         const seedLayout = poses();
         for (let retry = 0; retry < 5; retry++) {
             render(3);
-            expect(state.speed).toBeGreaterThan(1);
+            expect(state.speed).toBeGreaterThan(5);
             const oldTimeline = state.timeline;
             session.generation++;
             render(0);
             expect(state.timeline).not.toBe(oldTimeline);
             expect(state.distance).toBe(0);
-            expect(state.speed).toBe(1);
+            expect(state.speed).toBe(5);
             expect(poses()).toEqual(seedLayout);
             expect(state.stars).toEqual(pool);
         }
         session.loaded = undefined;
         session.track = { ...session.track, id: "no-section-song" };
         render(10);
-        expect(state.distance).toBe(10);
-        expect(state.speed).toBe(1);
+        expect(state.distance).toBe(50);
+        expect(state.speed).toBe(5);
         expect(state.boost).toBe(0);
         session.phase = "menu";
         render();

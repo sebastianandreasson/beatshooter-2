@@ -31,13 +31,13 @@ export function createParticlePool(world: World): ParticlePool {
     const materials = world.resource(Materials);
     const material = (baseColor: [number, number, number, number]) =>
         materials.add(StandardMaterial({ baseColor, unlit: true }));
-    const mint = material([0.2, 0.55, 0.44, 1]);
-    const amber = material([0.6, 0.32, 0.13, 1]);
-    const ringMaterial = material([0.065, 0.18, 0.16, 1]);
-    const azure = material([0.18, 0.62, 0.9, 1]);
-    const gold = material([0.85, 0.65, 0.24, 1]);
-    const levelRing = material([0.08, 0.32, 0.47, 1]);
-    const goldRing = material([0.35, 0.27, 0.1, 1]);
+    const mint = material([0.3, 1.65, 1.2, 1]);
+    const amber = material([1.9, 0.8, 0.18, 1]);
+    const ringMaterial = material([0.1, 0.6, 0.45, 1]);
+    const azure = material([0.16, 1.3, 2.8, 1]);
+    const gold = material([2.4, 1.65, 0.3, 1]);
+    const levelRing = material([0.2, 1.1, 1.9, 1]);
+    const goldRing = material([1.45, 0.9, 0.15, 1]);
     const allocate = (count: number, handle: MaterialHandle) => Array.from({ length: count }, () => {
         const eid = world.create();
         world.add(eid, Transform, { scale: [0, 0, 0] });

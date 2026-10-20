@@ -8,7 +8,7 @@ import { MusicVisuals } from "../music-visuals";
 import { PresentSectionEffects, SampleSectionEffects } from "../section-effects";
 import { isArenaPhase, Session } from "../session";
 import type { TrackManifest } from "../tracks";
-import { StarfieldTimeline } from "./motion";
+import { STAR_BASE_SPEED, StarfieldTimeline } from "./motion";
 import { createStarSeeds, LOW_DETAIL_STAR_COUNT, sampleStarPose, type StarPose, type StarSeed } from "./pose";
 
 export const Starfield: Resource<{
@@ -52,10 +52,10 @@ export const SampleStarfield: System = {
         }
         const frame = state.timeline.sample(session.position);
         const gain = session.preferences.settings.effectsIntensity === "calm" ? 0.18 : 1;
-        const base = Number.isFinite(session.position) ? Math.max(0, session.position) : 0;
+        const base = Number.isFinite(session.position) ? Math.max(0, session.position) * STAR_BASE_SPEED : 0;
         state.distance = base + (frame.distance - base) * gain;
         state.boost = frame.boost * gain;
-        state.speed = 1 + 14 * state.boost;
+        state.speed = STAR_BASE_SPEED + (frame.speed - STAR_BASE_SPEED) * gain;
     },
 };
 
@@ -87,9 +87,9 @@ export const StarfieldPlugin: Plugin = {
     initialize(world) {
         const state = world.resource(Starfield), materials = world.resource(Materials);
         const colors: [number, number, number, number][] = [
-            [0.035, 0.065, 0.085, 1],
-            [0.065, 0.105, 0.13, 1],
-            [0.12, 0.16, 0.18, 1],
+            [0.16, 0.25, 0.32, 1],
+            [0.32, 0.45, 0.55, 1],
+            [0.62, 0.78, 0.9, 1],
         ];
         const handles = colors.map(baseColor => materials.add(StandardMaterial({ baseColor, unlit: true })));
         const [x, y, z, w] = lookAtRotation(0, 32, 19, 0, 0, 0);

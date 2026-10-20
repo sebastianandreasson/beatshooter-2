@@ -1,3 +1,4 @@
+import { chooseStartingUpgrade } from "./starting-upgrade";
 import { expect, test, type Locator, type Page } from "playwright/test";
 import { ANALYZER_VERSION } from "../src/analysis/types";
 
@@ -136,6 +137,7 @@ test("uploads analyze automatically, default to detected beats and round only di
     await expect(page.locator('[data-value="analysis-summary"]')).toContainText("138 BPM");
     await expect(page.getByText("Fixture warning must not be displayed.")).toHaveCount(0);
     await page.getByRole("button", { name: "Play this track", exact: true }).click();
+    await chooseStartingUpgrade(page);
     await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
     await expect(page.locator('[data-value="bpm"]')).toHaveText("138");
     const saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), preferencesKey);

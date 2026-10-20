@@ -89,7 +89,7 @@ export const ExperiencePlugin: Plugin = {
         const state = world.resource(ExperiencePresentation);
         state.mesh = world.resource(Meshes).add({ name: "Beatshooter experience gem", ...gemGeometry() });
         state.material = world.resource(Materials).add(StandardMaterial({
-            baseColor: [0.045, 0.58, 1, 1], emissive: [0.005, 0.035, 0.075],
+            baseColor: [0.035, 0.36, 0.6, 1], emissive: [0.025, 0.5, 1.5],
             perceptualRoughness: 0.3, metallic: 0.1,
         }));
     },

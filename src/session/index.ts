@@ -23,11 +23,10 @@ import type { BeatAnalysis } from "../analysis/types";
 import { publishVisualEvents, VisualEvents } from "../music-visuals/events";
 import { DashState } from "../dash/state";
 import { chooseUpgrade, prepareUpgradeChoices } from "../upgrades";
-import { levelUpPauseTarget } from "./upgrade-timing";
 
-export type Phase = "menu" | "loading" | "playing" | "paused" | "upgrade-slowing" | "upgrading" | "results";
-export const isRunningPhase = (phase: Phase) => phase === "playing" || phase === "upgrade-slowing";
-export const isArenaPhase = (phase: Phase) => isRunningPhase(phase) || phase === "paused" || phase === "upgrading";
+export type Phase = "menu" | "loading" | "starting" | "playing" | "paused" | "results";
+export const isRunningPhase = (phase: Phase) => phase === "playing";
+export const isArenaPhase = (phase: Phase) => isRunningPhase(phase) || phase === "paused" || phase === "starting";
 export type Selection = { mode: "demo" } | { mode: "dojo"; bpm: number } | { mode: "local"; file: File; bpm: number; offset: number; useAnalysis?: boolean };
 export const SessionEntity = component("Beatshooter/SessionEntity", {});
 interface SessionData {
@@ -40,7 +39,7 @@ interface SessionData {
     preview: boolean; previewLoading: boolean; previewLoaded?: LoadedTrack; previewUntil: number; fps: number;
     analysis?: UIView["analysis"]; analysisController?: AbortController;
     analyzedFile?: File; analyzedTrack?: BeatAnalysis;
-    upgradeBusy: boolean; upgradeResumePending: boolean; upgradeFocusLost: boolean;
+    startBusy: boolean;
 }
 export const Session: Resource<SessionData> = {
     create: () => ({
@@ -49,7 +48,7 @@ export const Session: Resource<SessionData> = {
         pending: [], generation: 0, loadToken: 0, position: 0, visualPosition: 0,
         completePending: false, loadingLostFocus: false, diagnostics: false, shotClip: -1, hitClip: -1,
         preview: false, previewLoading: false, previewUntil: 0, fps: 60,
-        upgradeBusy: false, upgradeResumePending: false, upgradeFocusLost: false,
+        startBusy: false,
     }),
 };
 
@@ -61,8 +60,7 @@ function clearSession(world: World): void {
     const session = world.resource(Session);
     session.transport?.stop();
     world.setTimeScale(1);
-    session.upgradeBusy = session.upgradeResumePending = false;
-    session.upgradeFocusLost = false;
+    session.startBusy = false;
     session.pending.length = 0;
     world.resource(VisualEvents).pending.length = 0;
     session.completePending = false;
@@ -224,7 +222,7 @@ export async function startSession(world: World, selection: Selection): Promise<
     world.pause();
     renderUI(world);
     try {
-        const { transport, loader, context } = audio(world);
+        const { loader, context } = audio(world);
         // Called before the first await, preserving the explicit button/key gesture.
         await context.resume();
         if (token !== session.loadToken) return;
@@ -241,14 +239,11 @@ export async function startSession(world: World, selection: Selection): Promise<
             };
             savePreferences(session.preferences);
         }
-        await transport.start({ ...session.track, buffer: loaded?.buffer, metronome: selection.mode === "dojo" });
-        if (token !== session.loadToken) { transport.stop(); return; }
-        session.position = transport.position;
-        session.visualPosition = transport.visualPosition;
-        session.phase = "playing";
-        world.resource(PlayerState).enabled = true;
-        world.resume();
-        if (session.loadingLostFocus || document.hidden) pauseSession(world, "Window lost focus");
+        // The free level-one choice is separate from XP-earned levels. Keep the
+        // transport stopped so the first beat and count-in wait for the player.
+        session.combat.upgrades.pending = 1;
+        prepareUpgradeChoices(session.combat);
+        session.phase = "starting";
     } catch (error) {
         if (token !== session.loadToken) return;
         session.transport?.stop();
@@ -262,21 +257,14 @@ export async function startSession(world: World, selection: Selection): Promise<
 
 export function pauseSession(world: World, reason = "Paused by you"): void {
     const session = world.resource(Session);
-    if (session.phase === "upgrading") {
-        if (reason === "Window lost focus") {
-            session.upgradeFocusLost = true;
-            session.transport?.pause("hidden");
-        }
-        return;
-    }
+    if (session.phase === "starting" && reason === "Window lost focus") session.loadingLostFocus = true;
     if (!isRunningPhase(session.phase)) return;
-    const wasUpgrading = session.phase === "upgrade-slowing";
     session.transport?.pause(reason === "Window lost focus" ? "hidden" : "user");
     // Observation already advanced the transport cursor. A high-refresh frame
     // may not have reached its next fixed step yet, so commit accepted commands
     // before freezing rather than losing that beat until the next one arrives.
     if (session.pending.length) PrepareCombat.update!(world);
-    session.phase = wasUpgrading ? "upgrading" : "paused";
+    session.phase = "paused";
     session.pauseReason = reason;
     world.resource(PlayerState).enabled = false;
     world.resource(PlayerState).keys.clear();
@@ -288,8 +276,8 @@ export function pauseSession(world: World, reason = "Paused by you"): void {
 
 export async function resumeSession(world: World): Promise<void> {
     const session = world.resource(Session);
-    if (session.phase === "upgrading" && session.upgradeResumePending) {
-        await resumeAfterUpgrade(world);
+    if (session.phase === "starting" && session.combat.upgrades.pending === 0) {
+        await startPlayback(world);
         return;
     }
     if (session.phase !== "paused") return;
@@ -312,84 +300,46 @@ export async function resumeSession(world: World): Promise<void> {
     renderUI(world);
 }
 
-function beginUpgrade(world: World): void {
+async function startPlayback(world: World): Promise<void> {
     const s = world.resource(Session);
-    if (s.phase !== "playing" || s.combat.upgrades.pending < 1) return;
-    prepareUpgradeChoices(s.combat);
-    s.combat.protectPlayer = true;
-    s.upgradeBusy = s.upgradeResumePending = false;
-    s.upgradeFocusLost = false;
-    const p = world.resource(PlayerState);
-    p.enabled = false;
-    p.keys.clear();
-    p.input = { x: 0, z: 0 };
-    p.dashVelocity = p.dashTarget = undefined;
-    p.wasDashing = false;
-    world.resource(DashState).controller.active = undefined;
-    world.resource(DashState).held = false;
-    setLinearVelocity(world, p.body, { x: 0, y: 0, z: 0 });
-    const position = s.transport?.position ?? s.position;
-    const target = levelUpPauseTarget(s.track.beats, position, s.track.duration);
-    if (s.transport?.beginSlowdown(target)) {
-        s.phase = "upgrade-slowing";
-    } else {
-        s.transport?.pause();
-        s.phase = "upgrading";
-        world.pause();
-    }
-    renderUI(world);
-}
-
-async function resumeAfterUpgrade(world: World): Promise<void> {
-    const s = world.resource(Session);
-    if (s.phase !== "upgrading" || s.upgradeBusy || !s.upgradeResumePending) return;
-    s.upgradeBusy = true;
-    s.upgradeFocusLost = false;
+    if (s.phase !== "starting" || s.startBusy || s.combat.upgrades.pending > 0) return;
     const token = s.loadToken;
+    s.startBusy = true;
+    s.loadingLostFocus = false;
+    s.error = undefined;
     renderUI(world);
     try {
-        const { context, transport } = audio(world);
+        const { transport, context } = audio(world);
         await context.resume();
-        if (token !== s.loadToken || s.phase !== "upgrading") return;
-        if (document.hidden || s.upgradeFocusLost) {
-            throw new Error("Return to this window, then resume your upgraded run.");
-        }
-        // Selection already supplies a user gesture and the arena is ready.
-        // Start the retained source immediately so repeated upgrades do not add
-        // the normal resume lead-in to physics while music is still held.
-        await transport.resume({ immediate: true });
-        if (token !== s.loadToken || s.phase !== "upgrading") return;
-        if (document.hidden || s.upgradeFocusLost) {
-            transport.pause("hidden");
-            throw new Error("Return to this window, then resume your upgraded run.");
-        }
-        s.upgradeResumePending = false;
-        s.combat.protectPlayer = false;
+        if (token !== s.loadToken || s.phase !== "starting") return;
+        if (document.hidden || s.loadingLostFocus) throw new Error("Return to this window, then start your run.");
+        await transport.start({ ...s.track, buffer: s.loaded?.buffer, metronome: s.selection.mode === "dojo" });
+        if (token !== s.loadToken || s.phase !== "starting") return;
+        s.position = transport.position;
+        s.visualPosition = transport.visualPosition;
         s.phase = "playing";
-        s.error = undefined;
         world.resource(PlayerState).enabled = true;
-        world.setTimeScale(1);
         world.resume();
+        if (s.loadingLostFocus || document.hidden) pauseSession(world, "Window lost focus");
     } catch (error) {
-        if (token !== s.loadToken || s.phase !== "upgrading") return;
-        s.error = error instanceof Error ? error.message : "Allow audio, then resume your upgraded run.";
+        if (token !== s.loadToken) return;
+        s.transport?.stop();
+        s.error = error instanceof Error ? error.message : "Allow audio, then try starting again.";
     } finally {
-        if (token === s.loadToken) { s.upgradeBusy = false; renderUI(world); }
+        if (token === s.loadToken) { s.startBusy = false; renderUI(world); }
     }
 }
 
-export async function selectUpgrade(world: World, id: string): Promise<void> {
+/** Apply immediately; the offer's level prevents a stale card spending a queued choice. */
+export function selectUpgrade(world: World, id: string, offeredLevel: number): void {
     const s = world.resource(Session);
-    if (s.phase !== "upgrading" || s.upgradeBusy || s.upgradeResumePending) return;
+    if ((s.phase !== "playing" && s.phase !== "starting") || s.startBusy || s.completePending
+        || offeredLevel !== s.combat.upgrades.offeredLevel) return;
     const choice = s.combat.upgrades.choices.find(item => item.id === id);
-    if (!choice || !chooseUpgrade(s.combat, choice.id, s.position)) return;
-    if (s.combat.upgrades.pending > 0) {
-        prepareUpgradeChoices(s.combat);
-        renderUI(world);
-        return;
-    }
-    s.upgradeResumePending = true;
-    await resumeAfterUpgrade(world);
+    if (!choice || !chooseUpgrade(s.combat, choice.id, s.phase === "starting" ? 0 : s.transport?.position ?? s.position)) return;
+    if (s.phase === "starting") { void startPlayback(world); return; }
+    prepareUpgradeChoices(s.combat);
+    renderUI(world);
 }
 
 export function quitSession(world: World): void {
@@ -417,8 +367,6 @@ function finishSession(world: World, result: "complete" | "defeat"): void {
     session.pending.length = 0;
     session.result = result;
     session.phase = "results";
-    session.combat.protectPlayer = false;
-    session.upgradeBusy = session.upgradeResumePending = false;
     world.setTimeScale(1);
     session.preferences = updateBest(session.preferences, session.track.id, session.combat.score);
     savePreferences(session.preferences);
@@ -482,7 +430,7 @@ export function mountGameUI(container: HTMLElement, world: World): () => void {
         retry: () => void startSession(world, session.selection),
         quit: () => quitSession(world),
         resetDojo: () => void startSession(world, session.selection),
-        chooseUpgrade: id => selectUpgrade(world, id),
+        chooseUpgrade: (id, level) => selectUpgrade(world, id, level),
         updateSettings: patch => applySettings(world, patch),
         resetSettings: () => { session.preferences = resetPreferences(); applySettings(world); },
     }, container);
@@ -509,14 +457,11 @@ export function renderUI(world: World): void {
         maxHealth: s.combat.playerStats.effective.maxHealth, position: s.position,
         structure: s.loaded?.structure,
         previewPosition: s.preview ? s.transport?.position : 0,
-        upgrade: s.phase === "upgrade-slowing" || s.phase === "upgrading" ? {
+        upgrade: s.phase === "starting" || (s.phase === "playing" && s.combat.upgrades.choices.length > 0) ? {
             choices: s.combat.upgrades.choices,
             level: s.combat.upgrades.offeredLevel,
             pending: s.combat.upgrades.pending,
-            progress: s.phase === "upgrading" ? 1 : s.transport?.slowdownProgress ?? 0,
-            ready: s.phase === "upgrading",
-            busy: s.upgradeBusy,
-            resumePending: s.upgradeResumePending,
+            busy: s.startBusy,
         } : undefined,
         beat: currentBeat?.index ?? -1, beatInBar: currentBeat?.beatInBar ?? -1,
         beatsPerBar, downbeat: currentBeat?.downbeat ?? false, analysis: s.analysis,
@@ -543,7 +488,7 @@ export const ObserveMusic: System = {
             if (observation.completed || observation.pausedReason || observation.position >= s.previewUntil) stopPreview(world);
             return;
         }
-        if (observation.pausedReason && observation.pausedReason !== "upgrade") {
+        if (observation.pausedReason) {
             pauseSession(world, observation.pausedReason === "stall" ? "Playback paused after a long frame. Resume when ready." : "Audio was suspended. Resume to continue.");
             return;
         }
@@ -551,23 +496,6 @@ export const ObserveMusic: System = {
         s.visualPosition = observation.visualPosition;
         s.pending.push(...observation.beats);
         s.completePending ||= observation.completed;
-        if (s.phase === "upgrade-slowing") {
-            world.setTimeScale(s.transport.playbackRate);
-            if (observation.completed) {
-                // Settle the final authored commands before completion wins.
-                PrepareCombat.update!(world);
-                finishSession(world, "complete");
-            } else if (observation.pausedReason === "upgrade") {
-                // The pause boundary may itself be a beat. Commit it exactly once
-                // before freezing, even if the slow fixed-step accumulator is short.
-                PrepareCombat.update!(world);
-                s.phase = "upgrading";
-                stopEffects(world);
-                world.pause();
-                world.setTimeScale(1);
-                renderUI(world);
-            }
-        }
     },
 };
 
@@ -625,7 +553,7 @@ export const ResolveCombat: System = {
         }
         if (result.defeated) finishSession(world, "defeat");
         else if (s.completePending) finishSession(world, "complete");
-        else if (s.combat.upgrades.pending > 0) beginUpgrade(world);
+        else if (s.combat.upgrades.pending > 0) prepareUpgradeChoices(s.combat);
     },
 };
 

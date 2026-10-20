@@ -1,5 +1,5 @@
-export const STAR_COUNT = 240;
-export const LOW_DETAIL_STAR_COUNT = 120;
+export const STAR_COUNT = 960;
+export const LOW_DETAIL_STAR_COUNT = 480;
 const VIEW_LENGTH = Math.hypot(32, 19);
 const UP_Y = 19 / VIEW_LENGTH;
 const UP_Z = -32 / VIEW_LENGTH;
@@ -59,8 +59,8 @@ export function createStarSeeds(count = STAR_COUNT): StarSeed[] {
 export function sampleStarPose(seed: StarSeed, distance: number, boost: number, out: StarPose): StarPose {
     const phase = ((seed.phase + Math.max(0, distance) * seed.rate) % 1 + 1) % 1;
     const fade = smooth(phase / 0.055) * (1 - smooth((phase - 0.9) / 0.1));
-    const width = (0.064 + seed.layer * 0.008) * seed.size * fade;
-    const length = width + clamp01(boost) * (2.5 + seed.layer * 1.2) * fade;
+    const width = (0.04 + seed.layer * 0.006) * seed.size * fade;
+    const length = width + clamp01(boost) * (6 + seed.layer * 2) * fade;
     // The head follows a constant radial velocity; extra length trails behind it.
     const radius = 3 + phase * 45 - (length - width) * 0.5;
     const screenX = seed.x * radius, screenY = seed.y * radius;

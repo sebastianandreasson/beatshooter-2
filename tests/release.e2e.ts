@@ -1,3 +1,4 @@
+import { chooseStartingUpgrade } from "./starting-upgrade";
 import { expect, test, type Page } from "playwright/test";
 
 interface Witness {
@@ -136,6 +137,7 @@ test("cancelling a delayed demo load cannot later start its audio or gameplay", 
         expect(settled.pending).toBe(0);
         await expect(page.locator('[data-value="menu-error"]')).toBeHidden();
         await page.getByRole("button", { name: "Practice", exact: true }).click();
+        await chooseStartingUpgrade(page);
         await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
         expect(errors).toEqual([]);
     } finally {
@@ -173,6 +175,7 @@ test("a newer local selection supersedes a delayed analysis read without revivin
     });
     await page.getByRole("button", { name: "Cancel analysis", exact: true }).click();
     await page.getByRole("button", { name: "Play this track" }).click();
+    await chooseStartingUpgrade(page);
     await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
     await expect(page.locator('[data-value="track-title"]')).toHaveText("new-selection");
     await page.evaluate(() => (window as DelayedFileWindow).__releaseSlowFile!());
@@ -185,7 +188,7 @@ test("a newer local selection supersedes a delayed analysis read without revivin
     expect(errors).toEqual([]);
 });
 
-test("focus loss during loading opens a paused session until an explicit resume", async ({ page }) => {
+test("focus loss during loading leaves music stopped until the starting upgrade is chosen", async ({ page }) => {
     const errors = captureErrors(page);
     let release!: () => void;
     let requested!: () => void;
@@ -204,14 +207,14 @@ test("focus loss during loading opens a paused session until an explicit resume"
         await expect(page.locator('[data-screen="loading"]')).toBeVisible();
         await page.evaluate(() => window.dispatchEvent(new Event("blur")));
         release();
-        await expect(page.locator('[data-screen="paused"]')).toBeVisible({ timeout: 20_000 });
-        const paused = await page.evaluate(() => (window as WitnessWindow).__beatshooter!.snapshot());
-        expect(paused.pending).toBe(0);
+        await expect(page.locator('.bs-ui[data-phase="starting"]')).toBeVisible({ timeout: 20_000 });
+        const held = await page.evaluate(() => (window as WitnessWindow).__beatshooter!.snapshot());
+        expect(held.pending).toBe(0);
         await page.waitForTimeout(500);
         const later = await page.evaluate(() => (window as WitnessWindow).__beatshooter!.snapshot());
-        expect(later.position).toBe(paused.position);
-        expect(later.phase).toBe("paused");
-        await page.getByRole("button", { name: "Resume session" }).click();
+        expect(later.position).toBe(held.position);
+        expect(later.phase).toBe("starting");
+        await chooseStartingUpgrade(page);
         await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
         expect(errors).toEqual([]);
     } finally {
@@ -231,6 +234,7 @@ test("a missing bundled audio file gives a useful recovery path without an uncau
     await expect(page.locator('[data-value="menu-error"]')).toContainText("HTTP 404");
     await menu(page);
     await page.getByRole("button", { name: "Practice", exact: true }).click();
+    await chooseStartingUpgrade(page);
     await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
     expect(errors).toEqual([]);
 });

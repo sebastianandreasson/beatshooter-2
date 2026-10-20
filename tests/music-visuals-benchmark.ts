@@ -1,3 +1,4 @@
+import { chooseStartingUpgrade } from "./starting-upgrade";
 /**
  * Sequential production renderer comparison; intentionally outside test-discovery suffixes.
  * Serve the current build first. This script does not build, serve, or modify application code.
@@ -81,6 +82,7 @@ async function measure(browser: Browser, mode: Mode) {
             () => Boolean((window as InspectedWindow).__beatshooter), undefined, { timeout: 60_000 },
         );
         await page.getByRole("button", { name: /^Practice/ }).click();
+        await chooseStartingUpgrade(page);
         await page.waitForFunction(() => {
             const s = (window as InspectedWindow).__beatshooter!.snapshot();
             return s.phase === "playing" && s.position >= 0;

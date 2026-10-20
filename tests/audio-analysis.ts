@@ -1,3 +1,4 @@
+import { chooseStartingUpgrade } from "./starting-upgrade";
 /**
  * Explicit local-file experiment, excluded from CI and automatic test discovery.
  * bun tests/audio-analysis.ts [http://127.0.0.1:4174] [--headed]
@@ -174,6 +175,7 @@ try {
             }
         }
         await page.locator('[data-action="start-local"]').click();
+        await chooseStartingUpgrade(page);
         await waitPhase(page, "playing");
         await page.waitForFunction(() => (window as InspectionWindow).__beatshooter!.snapshot().combat.score > 0,
             undefined, { timeout: 30_000 });
@@ -191,6 +193,7 @@ try {
             throw new Error("Gameplay did not sample local energy on the shared musical clock.");
         }
         await page.getByRole("button", { name: "Restart session" }).click();
+        await chooseStartingUpgrade(page);
         await waitPhase(page, "playing");
         if ((await snapshot(page)).chart.id !== played.chart.id) throw new Error("Retry changed the chart.");
         await page.keyboard.press("Escape");

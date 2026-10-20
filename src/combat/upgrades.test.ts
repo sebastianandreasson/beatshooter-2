@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { createEnemy } from "../enemies";
 import { dropExperience } from "../experience/state";
 import { setPlayerStatModifier } from "../player-stats";
+import { prepareUpgradeChoices, queueUpgradeLevels } from "../upgrades";
 import {
     advanceCombat, createCombat, fireEnemyProjectile, fireProjectile, fireVolley,
     onCombatBeat, type CombatState,
@@ -192,19 +193,18 @@ describe("upgraded music-timed combat", () => {
         expect(combat.upgrades.earnedThrough).toBe(3);
     });
 
-    test("transition protection absorbs hostile shots and contact without changing immunity or tint timing", () => {
+    test("pending upgrades do not protect the player from hostile shots or contact", () => {
         const combat = fixture();
         combat.tuning.contactDamage = 15;
-        combat.protectPlayer = true;
+        queueUpgradeLevels(combat.upgrades, 2);
+        prepareUpgradeChoices(combat);
         const shooter = enemy(combat, -3);
         enemy(combat, 0);
         fireEnemyProjectile(combat, shooter, right);
         advanceCombat(combat, 0.3, origin);
-        expect(combat.health).toBe(100);
-        expect(combat.invulnerableUntil).toBe(0);
+        expect(combat.health).toBeLessThan(100);
+        expect(combat.invulnerableUntil).toBeGreaterThan(0);
         expect(combat.projectiles).toHaveLength(0);
-        combat.protectPlayer = false;
-        advanceCombat(combat, 0.1, origin);
-        expect(combat.health).toBe(85);
+        expect(combat.upgrades.pending).toBe(1);
     });
 });

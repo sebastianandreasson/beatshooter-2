@@ -1,3 +1,4 @@
+import { chooseStartingUpgrade } from "./starting-upgrade";
 import { expect, test, type Page } from "playwright/test";
 
 interface Snapshot {
@@ -21,6 +22,7 @@ async function practice(page: Page) {
     await page.goto("/?test=1");
     await expect(page.locator('.bs-ui[data-phase="menu"]')).toBeVisible({ timeout: 60_000 });
     await page.getByRole("button", { name: "Practice", exact: true }).click();
+    await chooseStartingUpgrade(page);
     await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
 }
 
@@ -91,6 +93,7 @@ test("stationary dash follows aim, pauses with music, and retry clears it", asyn
     await expect.poll(async () => (await snapshot(page)).dash.active).toBeUndefined();
     expect((await snapshot(page)).dash.accepted).toBe(1);
     await page.keyboard.press("KeyR");
+    await chooseStartingUpgrade(page);
     await expect.poll(async () => (await snapshot(page)).generation).toBe(held.generation + 1);
     const reset = await snapshot(page);
     expect(reset.position).toBeLessThan(0);

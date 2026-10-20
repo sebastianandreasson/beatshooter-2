@@ -11,12 +11,17 @@ import { ExperiencePlugin } from "../experience";
 import { EnemySpawnPlugin } from "../enemy-spawn";
 import { SectionEffectsPlugin } from "../section-effects";
 import { StarfieldPlugin } from "../starfield";
+import { ShockwavePlugin } from "../shockwave";
+import { NeonPlugin } from "../neon";
+import { NeonTrailsPlugin } from "../neon-trails";
 
 export async function startApp(): Promise<void> {
     const bootstrap = document.querySelector<HTMLElement>("[data-shallot-bootstrap]") ?? undefined;
     const app = await runApp({
         plugins: [
-            StandardPhysicsPlugin, StandardAudioPlugin, ArenaPlugin, PlayerPlugin, SessionPlugin, DashPlugin, MusicVisualsPlugin, SectionEffectsPlugin, StarfieldPlugin, EnemySpawnPlugin, PresentationPlugin, ExperiencePlugin,
+            StandardPhysicsPlugin, StandardAudioPlugin, ArenaPlugin, PlayerPlugin, SessionPlugin, DashPlugin,
+            MusicVisualsPlugin, SectionEffectsPlugin, ShockwavePlugin, StarfieldPlugin, EnemySpawnPlugin,
+            PresentationPlugin, ExperiencePlugin, NeonPlugin, NeonTrailsPlugin,
             ...(new URLSearchParams(location.search).get("stress") === "1" ? [StressPlugin] : []),
         ],
         loading: shallotDark({ bootstrap }),

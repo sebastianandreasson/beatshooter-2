@@ -31,14 +31,15 @@ Bun 1.4.3+ before running these commands.
 | Pointer | Aim at the reticle |
 | Musical beat | Fire automatically |
 | Space near the accented first beat | Dash in the movement direction, or aim direction when stationary |
-| Escape | Pause / resume outside upgrade selection |
+| Escape | Pause / resume, keeping pending upgrades |
 | 1 / 2 / 3, or click a card | Choose a level-up upgrade |
 | R in dojo | Reset the run and metronome |
 | F3 | Toggle development diagnostics; off by default |
 
 Choose **Neon Circuit**, the original 72-second, 120 BPM demo; enter the dojo at
-20–300 BPM; or import a local audio file. Each run starts with four count-in
-clicks. Kills award **100 points** and each survived beat awards **2 points**.
+20–300 BPM; or import a local audio file. Each run first offers a full-screen **Start of run
+upgrade** choice. Choose one free upgrade before the music starts; then four
+count-in clicks lead into play. Kills award **100 points** and each survived beat awards **2 points**.
 Enemy waves grow by musical bars, with a normal-play cap of 100 enemies.
 Contact and projectile damage share a 0.9-second invulnerability window. Zero health ends a run;
 reaching the end of the audio completes it. Retry and menu navigation work
@@ -97,14 +98,10 @@ and total collected XP. Each run starts fresh.
 Level-ups produce blue-and-gold rising particles and expanding rings timed to
 a nearby musical subdivision. Comfort settings soften or disable the
 celebration while keeping gems and the XP bar visible. Each new level also
-offers **three upgrade cards; choose one** by clicking or pressing **1, 2, or 3**.
-Music and gameplay briefly slow together as the cards enter, then stop at a
-subdivision of the actual local beat. The transition spans 100–140 ms of music,
-about **180–250 ms in real time**; slower tempos use finer subdivisions.
-The player is protected and movement/dash input is cleared during this
-transition. Card entrances use music position, including
-the slowdown; reduced-motion settings use stationary fades. Missing detections
-and the song tail use a short bounded fade rather than inventing beats.
+offers **three larger upgrade cards stacked on the right**. Music and gameplay continue
+at normal speed while you choose; movement, aiming and dash stay available.
+Press **1, 2, or 3** (including the numeric keypad), or click a card, to apply
+its effect immediately.
 
 | Upgrade | Effect per selection |
 | --- | --- |
@@ -130,12 +127,14 @@ the first authored beat at or after its due time, then starts the next
 five-second interval. Slowdown stretches that interval in real time, pause
 stops it, and missing beats never release a backlog of heals.
 
-Choices stay fixed while the menu is open. Several levels earned together
-queue one choice per level; music stays paused until every choice is made.
-Escape cannot skip a selection, and repeated keys/double clicks cannot select
-twice. If audio cannot resume after a choice, the upgrade remains applied and
-**Resume upgraded run** retries playback without granting it again. Returning
-to the menu remains available. Upgrades, choices, and stats reset with the run.
+Choices stay fixed until selected. Further levels queue behind the current
+offer, with a visible count; each selection shows the next queued offer.
+Holding a number key or double-clicking cannot spend multiple choices.
+Escape and focus loss still pause normally and retain the queue; resume to
+continue choosing. Waiting grants no damage protection. Finishing or losing a
+run closes the panel, and restart clears upgrades and pending choices before
+offering a new starting upgrade. The free starting choice does not consume XP
+or replace the first earned level-up.
 See [XP verification](docs/experience-verification.md) for the gem system and
 [upgrade verification](docs/upgrades-verification.md) for the selection flow.
 
@@ -170,14 +169,18 @@ for measured performance, predictions and remaining listening review.
 In **Standard** effects mode, entering a new detected section sends one
 shockwave from the center of the arena toward its edges. The floor and grid
 change to the new section's colors as the ring passes, leaving the new theme
-behind it. The map, camera and perimeter geometry keep their normal poses
-throughout the effect. Perimeter and background colors blend to match the section
+behind it. The front lifts nearby vertices into a smooth ridge, then lets them
+settle as it passes. Floor, walls, actors, shots and particles share this
+deformation; health bars and damage numbers follow their raised anchors.
+The camera and physics stay steady. Perimeter and background colors blend to match the section
 timeline: blue for intro, green for verse, gold for chorus, violet for bridge,
 cyan for instrumental, rose for outro and dark slate for silence.
 
-Behind the arena, stars travel steadily outward across three depth layers.
-Each section shockwave smoothly accelerates them from normal speed to **15×**
-speed and back, stretching them into hyperspeed streaks. Travel accumulates
+Behind the arena, **960 small, bright stars** travel steadily outward across
+three depth layers (480 with Low graphics). Their baseline is **5× faster**
+than the original starfield. Each section shockwave smoothly accelerates them
+to **25× that faster baseline** and back, stretching them into long hyperspeed
+streaks. Travel accumulates
 continuously, so returning to normal speed never jumps the stars backward.
 The starfield follows the music clock through pause and slowdown, while the
 camera keeps its normal view and player follow.
@@ -192,7 +195,7 @@ freeze or stretch the effect with the music. The first section establishes its
 colors during count-in without an entrance effect.
 
 The shockwave is cosmetic: movement, dash directions, pointer aiming and
-collision rules keep their normal behavior. **Calm** uses a subtler ring and
+collision rules keep their normal behavior. **Calm** uses a subtler ring, lower ridge and
 weaker starfield boost. **Off**, reduced flashes and reduced motion
 keep the stars static and use a simple fade between section palettes.
 Tracks without section analysis, including demo, dojo and manual-BPM tracks,
@@ -233,9 +236,24 @@ negative values delay it.** Audio and combat timestamps remain unchanged.
 Focus loss, hidden tabs, suspended audio, and long stalls pause the session and
 require explicit resume. A load that finishes after focus loss also waits paused.
 
+The neon presentation uses dark ship/enemy faces with luminous geometric edges,
+thin glowing arena rails, bright projectile cores and blue XP gems. Selective
+HDR bloom adds soft halos around the bright geometry while preserving its sharp
+edges. Projectile trails grow over a short fraction of the local beat and stop
+with the music. A subtle vignette frames the arena; section transitions briefly
+add subpixel color separation near the screen edges. The DOM HUD remains crisp.
+
+Bloom intensity follows the shared musical pulses and section envelope.
+**Calm** softens the glow and shortens trails; **Off** bypasses postprocessing and
+hides trails. Reduced flashes and OS reduced motion keep a gentle, steady glow
+without trails or color separation. Low graphics uses smaller bloom targets,
+three passes instead of four, and up to 64 trails instead of 192. Pools and GPU
+targets are reused through play and retry. See
+[neon visual verification](docs/neon-visuals-verification.md).
+
 The arena's floor patterns, bar ripples, perimeter lights, death shards and
 damage-number envelopes follow the same music clock. Section transitions change
-floor colors behind an outward-moving ring; the map geometry, play plane, collision
+floor colors behind an outward-moving ring; physical map transforms, play plane, collision
 boundaries, camera orientation and aiming remain stable. Deaths and scores resolve immediately;
 larger death accents wait at most 100 ms for a nearby sixteenth-note subdivision.
 When no suitable subdivision exists, a small local dissolve confirms the kill.
@@ -318,10 +336,12 @@ See the release document for measured hardware, counts, and frame intervals.
 | `src/enemy-spawn/` | Music-timed beam, spin and growth previews without physics or combat participation |
 | `src/player-stats/`, `src/upgrades/` | Per-run stats/modifiers, damage accounting, upgrade catalog, seeded three-card offers and queued choices |
 | `src/experience/` | Persistent XP drops, swept attraction/collection, run levels and musical gem presentation |
-| `src/session/` | Menu/loading/play/pause/upgrade/results, synchronized slowdown and selection, audio/entity/listener ownership |
+| `src/session/` | Menu/loading/play/pause/results, live upgrade selection, audio/entity/listener ownership |
 | `src/music-visuals/` | Floor shader, bounded musical effect queues, pooled shards/rings and comfort controls |
 | `src/section-effects/` | Detected-section timing, dark palettes and music-timed floor color transitions |
+| `src/shockwave/` | Shared vertex displacement, corrected normals and subdivided arena surfaces |
 | `src/starfield/` | Continuous music-clock travel, integrated section speed boosts and pooled background stars |
+| `src/neon/`, `src/neon-trails/` | Selective HDR bloom, geometric emission, section color separation and pooled musical projectile trails |
 | `src/presentation/` | Shared combat materials, steady damage tint and music-timed damage numbers |
 | `src/tracks/`, `public/tracks/` | Validated manifests, local decoding, original demo and generator |
 | `src/ui/`, `src/settings/` | Responsive DOM interface and validated versioned preferences |

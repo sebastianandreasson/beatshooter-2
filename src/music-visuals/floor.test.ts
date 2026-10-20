@@ -145,9 +145,13 @@ test("fallback colors fade smoothly and perimeter colors wait until the wave rea
     }
 });
 
-test("the production floor function resolves its section uniforms into WGSL", () => {
+test("the production floor preflight resolves both vertex bulging and world-XZ color sampling", () => {
     const source = musicFloorShaderSource();
+    expect(source).toContain("fn floorVertex");
     expect(source).toContain("@fragment fn floorFragment");
+    expect(source).toContain("shockwaveSurface(");
+    expect(source).toContain("surface.position.y * 0.1");
+    expect(source).toContain("world.xz");
     expect(source).toContain("floorColor: vec4f");
     expect(source).toContain("accentColor: vec4f");
     expect(source).not.toContain("NaN");

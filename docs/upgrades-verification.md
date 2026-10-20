@@ -2,7 +2,58 @@
 
 Implemented against Shallot 0.10.0 with Bun 1.4.3.
 
-This records the original upgrade implementation. The later [spawn and pacing update](spawn-pacing-verification.md) shortens slowdown to approximately 180–250 ms and raises XP requirements to 36 initially, +18 per level; earlier measurements below remain historical.
+## Current selection behavior — uninterrupted play
+
+A full-screen **Start of run upgrade** choice precedes each run, including
+retries and dojo resets. Music stays stopped until a choice is made. Selecting
+applies one free upgrade, then starts the normal count-in. XP and level remain
+unchanged. The screen explains the later side panel, shortcuts and queue.
+Failed audio startup retains the selected perk and exposes a start retry; it
+cannot award the perk twice.
+
+Level-ups display three enlarged cards on the right while the session stays in
+`playing`. Neither earning nor selecting an upgrade calls the audio transport,
+changes simulation speed, grants protection, clears movement, or cancels dash.
+The catalog and musical combat effects below are unchanged.
+
+Main-row and keypad keys 1–3, or a card click, apply the offered stat immediately.
+The live side panel does not steal focus, trap Tab, dim the arena, or make the
+HUD inert. The initial full-screen choice uses modal focus handling.
+Space remains dash when a card has focus. The current offer remains fixed as
+additional levels queue; a counter shows how many offers follow it. Each choice
+spends one level. Held keys, double clicks and stale offer IDs are guarded.
+Escape and focus loss use normal pause and retain all choices. Selection is
+unavailable during pause/results; retry resets the run.
+
+Verification for this update:
+
+- Shared project: `bun test` passed 284 tests / 29,238 assertions across 39 files;
+  `bun check` and the production build passed.
+- All 16 affected browser checks passed against an isolated production build
+  while the other agent was finishing the shared shockwave implementation.
+  Coverage includes normal-speed audio/simulation and held movement with cards
+  open, card clicks, number/keypad shortcuts, stable queued offers, held-key
+  suppression, Escape, restart, XP collection, dash, and existing menu/import flows.
+- The full 72-second demo completed through ordinary movement and aim with live
+  upgrade selection: 6,788 points, 65 eliminations, 50 remaining health.
+- Reviewed the live panel at 1280×800, 390×844 and 1024×600. The three cards are
+  stacked on the right with visible shortcuts; the arena has no modal overlay.
+  Screenshots: `output/playwright/upgrades-live-1280.png`,
+  `output/playwright/upgrades-live-390.png`, and
+  `output/playwright/upgrades-live-1024.png`.
+
+The real-game queue check keeps playing without selecting the first offer,
+earns another level through combat and pickups, then selects successive choices.
+No test API grants XP or alters the game state. Session tests separately cover
+several levels from one pickup, stale offer rejection, pause/focus-loss retention,
+and track completion taking precedence.
+
+## Original implementation record
+
+The following measurements describe the earlier pause-based implementation.
+The later [spawn and pacing update](spawn-pacing-verification.md) shortened its
+slowdown and raised XP requirements to 36 initially, +18 per level. The selection
+pause and slowdown are now removed; these measurements remain historical.
 
 ## Gameplay and ownership
 

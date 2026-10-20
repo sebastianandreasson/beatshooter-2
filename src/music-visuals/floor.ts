@@ -4,6 +4,7 @@ import tgpu from "typegpu";
 import * as d from "typegpu/data";
 import * as std from "typegpu/std";
 import { Arena, ArenaPlugin } from "../arena";
+import { shockwaveSurface } from "../shockwave/surface";
 
 /** Every clock value comes from the transport/chart sampler, never the renderer clock. */
 export interface MusicFloorInput {
@@ -75,8 +76,8 @@ const gridLine = tgpu.fn([d.vec2f, d.f32, d.f32], d.f32)((point, width, footprin
 });
 
 /**
- * Ground-only radiance: no vertex displacement or lighting/exposure changes.
- * A single outward wave paints the next palette over the fixed arena.
+ * World-XZ color sampling stays attached as the shared vertex wave lifts the floor.
+ * A single outward front paints the next palette over the unchanged play plane.
  */
 const shadeFloor = tgpu.fn([FloorParameters, d.vec2f], d.vec4f)((p, point) => {
     "use gpu";
@@ -163,6 +164,16 @@ const MusicFloorMaterial = materialType({
     name: "Beatshooter/MusicFloor",
     parameters: FloorParameters,
     defaults: FLOOR_DEFAULTS,
+    vertex: (input) => {
+        "use gpu";
+        const surface = shockwaveSurface(
+            input.parameters.section.x,
+            input.parameters.section.y * input.parameters.pulse.w,
+            input.world.xyz,
+            input.worldNormal,
+        );
+        return { world: d.vec4f(surface.position, input.world.w), worldNormal: surface.normal };
+    },
     fragment: (context) => {
         "use gpu";
         return shadeFloor(context.parameters, d.vec2f(context.world.x, context.world.z));
@@ -262,10 +273,14 @@ function updateArenaPalette(world: World, state: FloorState): void {
         materials.update(arena.materials.floor, { baseColor: [fr! * 0.75, fg! * 0.75, fb! * 0.75, 1] });
         materials.update(arena.materials.line, { baseColor: [lr! * 1.12, lg! * 1.12, lb! * 1.12, 1] });
         materials.update(arena.materials.wall, { baseColor: [ar! * 0.62, ag! * 0.62, ab! * 0.62, 1] });
+        if (arena.materials.rim) {
+            materials.update(arena.materials.rim, { baseColor: [ar! * 4, ag! * 4, ab! * 4, 1] });
+        }
     } else {
         materials.update(arena.materials.floor, { baseColor: [0.006, 0.012, 0.018, 1] });
         materials.update(arena.materials.line, { baseColor: [0.03, 0.09, 0.105, 1] });
         materials.update(arena.materials.wall, { baseColor: [0.07, 0.19, 0.21, 1] });
+        if (arena.materials.rim) materials.update(arena.materials.rim, { baseColor: [0.13, 1.15, 1, 1] });
     }
     state.arenaPaletteApplied = !!section;
 }
@@ -349,16 +364,30 @@ export function updateMusicFloor(world: World, input: MusicFloorInput): void {
  */
 export function musicFloorShaderSource(): string {
     return tgpu.resolve({
-        externals: { FloorParameters, shadeFloor },
+        externals: { FloorParameters, shadeFloor, shockwaveSurface },
         template: `
 @group(0) @binding(0) var<uniform> floorParameters: FloorParameters;
-@vertex fn floorVertex(@builtin(vertex_index) i: u32) -> @builtin(position) vec4f {
+struct FloorVertexOutput {
+    @builtin(position) clip: vec4f,
+    @location(0) world: vec3f,
+};
+@vertex fn floorVertex(@builtin(vertex_index) i: u32) -> FloorVertexOutput {
     let x = f32((i << 1u) & 2u);
     let y = f32(i & 2u);
-    return vec4f(x * 2 - 1, y * 2 - 1, 0, 1);
+    let world = vec3f(x * 2 - 1, 0, y * 2 - 1);
+    let surface = shockwaveSurface(
+        floorParameters.section.x,
+        floorParameters.section.y * floorParameters.pulse.w,
+        world,
+        vec3f(0, 1, 0)
+    );
+    return FloorVertexOutput(
+        vec4f(surface.position.x, surface.position.z + surface.position.y * 0.1, 0, 1),
+        surface.position
+    );
 }
-@fragment fn floorFragment(@builtin(position) point: vec4f) -> @location(0) vec4f {
-    return shadeFloor(floorParameters, point.xy);
+@fragment fn floorFragment(@location(0) world: vec3f) -> @location(0) vec4f {
+    return shadeFloor(floorParameters, world.xz);
 }`,
     });
 }

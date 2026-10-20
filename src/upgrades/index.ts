@@ -137,7 +137,7 @@ function modifierFor(id: UpgradeId, rank: number): PlayerStatModifier {
     }
 }
 
-/** Only offered cards can mutate stats; double clicks cannot spend another level. */
+/** Only offered cards can mutate stats; the session also validates the offer level. */
 export function chooseUpgrade(
     combat: CombatState,
     id: UpgradeId,

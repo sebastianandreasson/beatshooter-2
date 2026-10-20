@@ -23,11 +23,11 @@ export interface UIActions {
     resetDojo(): void;
     updateSettings(patch: Partial<Settings>): void;
     resetSettings(): void;
-    chooseUpgrade(id: string): void | Promise<unknown>;
+    chooseUpgrade(id: string, offeredLevel: number): void;
 }
 
 export interface UIView {
-    phase: "menu" | "loading" | "playing" | "paused" | "results" | "upgrade-slowing" | "upgrading";
+    phase: "menu" | "loading" | "starting" | "playing" | "paused" | "results";
     mode?: "demo" | "dojo" | "local";
     settings: Settings;
     title?: string;
@@ -46,10 +46,7 @@ export interface UIView {
         choices: readonly UpgradeChoice[];
         level: number;
         pending: number;
-        progress: number;
-        ready: boolean;
-        busy: boolean;
-        resumePending?: boolean;
+        busy?: boolean;
     };
     position?: number;
     structure?: SectionAnalysis;
@@ -197,22 +194,19 @@ const template = `
     </div>
     <div class="bs-cover" data-screen="loading" hidden><section class="bs-dialog bs-loading-dialog" role="status"><div class="bs-loading-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div><h2>Loading</h2><p data-value="loading-message">Loading audio…</p><button class="bs-button bs-button-quiet" data-action="quit">Cancel</button></section></div>
     <div class="bs-cover" data-screen="paused" hidden><section class="bs-dialog bs-pause-dialog" aria-labelledby="bs-pause-title"><h2 id="bs-pause-title">Paused</h2><p data-value="pause-reason"></p><div class="bs-message" data-value="session-error" role="alert" hidden></div><div class="bs-dialog-actions"><button class="bs-button bs-button-primary" data-action="resume">${icon("play")} Resume session</button><button class="bs-button bs-button-outline" data-action="settings">${icon("settings")} Settings</button><button class="bs-button bs-button-quiet" data-action="retry">${icon("reset")} Restart session</button><button class="bs-text-button" data-action="quit">Return to menu</button></div><p class="bs-dialog-footnote"><kbd>ESC</kbd> TO RESUME</p></section></div>
-    <div class="bs-upgrade-cover" data-upgrade-screen hidden>
-        <section class="bs-upgrade-dialog" role="dialog" aria-modal="true" aria-labelledby="bs-upgrade-title" aria-describedby="bs-upgrade-description" tabindex="-1">
-            <header class="bs-upgrade-heading">
-                <div class="bs-upgrade-level" aria-hidden="true"><span>LV</span><strong data-value="upgrade-level">2</strong></div>
-                <div><p class="bs-eyebrow">LEVEL UP <span class="bs-mini-rule"></span></p><h2 id="bs-upgrade-title">Choose an upgrade</h2><p id="bs-upgrade-description">Select one for this run.</p></div>
-            </header>
-            <div class="bs-upgrade-cards" role="group" aria-label="Choose one of three upgrades"></div>
-            <div class="bs-message bs-upgrade-error" data-value="upgrade-error" role="alert" hidden></div>
-            <button class="bs-button bs-button-primary bs-upgrade-resume" data-action="resume-upgrade" hidden>${icon("play")} Resume upgraded run</button>
-            <footer class="bs-upgrade-footer">
-                <span class="bs-upgrade-transport">${icon("pause")}<span data-value="upgrade-status" role="status" aria-live="polite">Slowing music…</span></span>
-                <span class="bs-upgrade-pending" data-value="upgrade-pending" hidden></span>
-                <button class="bs-text-button" data-action="quit">Return to menu</button>
-            </footer>
-        </section>
-    </div>
+    <aside class="bs-upgrade-panel" data-upgrade-screen aria-labelledby="bs-upgrade-title" hidden>
+        <div class="bs-upgrade-content">
+        <header class="bs-upgrade-heading">
+            <h2 id="bs-upgrade-title"><span data-value="upgrade-title">Upgrade</span> <small>LV <b data-value="upgrade-level">2</b></small></h2>
+            <span class="bs-upgrade-pending" data-value="upgrade-pending" role="status" aria-live="polite" hidden></span>
+        </header>
+        <p class="bs-upgrade-intro" hidden>Choose an upgrade before the music starts. Later upgrades appear on the right while you keep playing. Press <kbd>1</kbd>, <kbd>2</kbd>, or <kbd>3</kbd> to choose. Extra upgrades queue until you select them.</p>
+        <div class="bs-upgrade-cards" role="group" aria-label="Choose one of three upgrades"></div>
+        <div class="bs-message" data-value="start-error" role="alert" hidden></div>
+        <button class="bs-button bs-button-primary" data-action="start-ready" hidden>Start run</button>
+        <button class="bs-text-button bs-start-quit" data-action="quit" hidden>Return to menu</button>
+        </div>
+    </aside>
     <div class="bs-cover" data-screen="results" hidden><section class="bs-dialog bs-results-dialog" aria-labelledby="bs-results-title"><h2 id="bs-results-title" data-value="result-title">Track complete</h2><div class="bs-result-score"><span>FINAL SCORE</span><strong data-value="result-score">0</strong><span data-value="best-label">PERSONAL BEST</span></div><div class="bs-result-stats"><div><strong data-value="result-kills">0</strong><span>ELIMINATED</span></div><div><strong data-value="result-time">0:00</strong><span>SURVIVED</span></div><div><strong data-value="result-best">0</strong><span>BEST SCORE</span></div></div><p class="bs-result-experience"><span>LEVEL <b data-value="result-level">1</b></span><span><b data-value="result-xp">0</b> TOTAL XP</span></p><div class="bs-dialog-actions"><button class="bs-button bs-button-primary" data-action="retry">${icon("reset")} Play again</button><button class="bs-button bs-button-outline" data-action="quit">Back to sessions ${icon("arrow")}</button></div><p class="bs-score-rule">100 points per elimination + 2 per beat survived.</p></section></div>
     <div class="bs-modal" data-modal="settings" hidden><section class="bs-dialog bs-settings-dialog" role="dialog" aria-modal="true" aria-labelledby="bs-settings-title"><button class="bs-icon-button bs-dialog-close" data-action="close-settings" aria-label="Close settings">${icon("cross")}</button><h2 id="bs-settings-title">Settings</h2><div class="bs-settings-section"><h3>Audio mix</h3><label class="bs-slider-label" for="bs-master">Master <output for="bs-master" data-output="masterVolume">75%</output></label><input id="bs-master" data-setting="masterVolume" type="range" min="0" max="1" step="0.01" value=".75"><label class="bs-slider-label" for="bs-music">Music <output for="bs-music" data-output="musicVolume">80%</output></label><input id="bs-music" data-setting="musicVolume" type="range" min="0" max="1" step="0.01" value=".8"><label class="bs-slider-label" for="bs-effects">Effects <output for="bs-effects" data-output="effectsVolume">55%</output></label><input id="bs-effects" data-setting="effectsVolume" type="range" min="0" max="1" step="0.01" value=".55"></div><div class="bs-settings-section"><h3>Timing</h3><label class="bs-slider-label" for="bs-offset">Visual timing offset <output for="bs-offset" data-output="timingOffsetMs">0 ms</output></label><input id="bs-offset" data-setting="timingOffsetMs" type="range" min="-250" max="250" step="5" value="0"><p class="bs-setting-help">Positive: earlier pulse. Negative: later pulse. Audio and combat timestamps stay unchanged.</p></div><div class="bs-settings-section"><h3>Visuals</h3><label class="bs-select-label" for="bs-intensity">Visual effects<select id="bs-intensity" data-setting="effectsIntensity"><option value="off">Off</option><option value="calm">Calm</option><option value="standard">Standard</option></select></label><p class="bs-setting-help bs-visual-help">Calm reduces motion. Off disables effects.</p><label class="bs-select-label" for="bs-graphics">Graphics detail<select id="bs-graphics" data-setting="graphics"><option value="high">High</option><option value="low">Low</option></select></label><label class="bs-checkbox-label" for="bs-reduced"><span>Reduced flashes<small>Soften beat pulses and hit feedback.</small></span><input id="bs-reduced" data-setting="reducedFlash" type="checkbox"></label></div><div class="bs-settings-footer"><span>Saved automatically.</span><button class="bs-text-button" data-action="reset-settings">Reset settings</button></div></section></div>
     <div class="bs-modal" data-modal="import" hidden>
@@ -273,11 +267,6 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
     let previousAnalysisState: NonNullable<UIView["analysis"]>["state"] = "idle";
     let upgradeKey = "";
     let upgradeActive = false;
-    let upgradeReady = false;
-    let upgradeSelectionLocked = false;
-    let upgradeResumePending = false;
-    let upgradeExternalError: string | undefined;
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const refs = new Map<string, HTMLElement>();
     for (const element of root.querySelectorAll<HTMLElement>("[data-value]")) {
         refs.set(element.dataset.value!, element);
@@ -291,115 +280,77 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
         const element = refs.get(key);
         if (element) element.hidden = !value;
     };
-    const upgradeCover = root.querySelector<HTMLElement>(".bs-upgrade-cover")!;
-    const upgradePanel = root.querySelector<HTMLElement>(".bs-upgrade-dialog")!;
+    const upgradePanel = root.querySelector<HTMLElement>(".bs-upgrade-panel")!;
     const upgradeCards = root.querySelector<HTMLElement>(".bs-upgrade-cards")!;
     const upgradeArt: Record<string, keyof typeof icons> = {
         damage: "damage", health: "health", regeneration: "regeneration",
         projectiles: "projectiles", barrage: "barrage",
         "crit-chance": "critical", "crit-damage": "critical", bounce: "bounce",
     };
-    const setUpgradeDisabled = () => {
-        const disabled = view?.phase !== "upgrading" || !view.upgrade?.ready
-            || view.upgrade.busy || view.upgrade.resumePending || upgradeSelectionLocked;
-        for (const button of upgradeCards.querySelectorAll<HTMLButtonElement>("button")) button.disabled = disabled;
-        upgradePanel.setAttribute("aria-busy", String(!!view?.upgrade?.busy || (upgradeSelectionLocked && !view?.upgrade?.resumePending)));
-    };
-    const selectUpgrade = (id: string) => {
-        if (view?.phase !== "upgrading" || !view.upgrade?.ready || view.upgrade.busy
-            || view.upgrade.resumePending || upgradeSelectionLocked || !view.upgrade.choices.some((choice) => choice.id === id)) return;
-        upgradeSelectionLocked = true;
-        const selectedKey = upgradeKey;
-        message("upgrade-error", "");
-        setUpgradeDisabled();
-        const failed = (error: unknown) => {
-            if (!upgradeActive || upgradeKey !== selectedKey) return;
-            upgradeSelectionLocked = false;
-            message("upgrade-error", error instanceof Error ? error.message : "Unable to resume audio. Select an upgrade to try again.");
-            setUpgradeDisabled();
-            upgradeCards.querySelector<HTMLButtonElement>(`[data-upgrade-id="${id}"]`)?.focus();
-        };
-        try { Promise.resolve(actions.chooseUpgrade(id)).catch(failed); } catch (error) { failed(error); }
+    const selectUpgrade = (id: string, level: number) => {
+        if (modal || (view?.phase !== "playing" && view?.phase !== "starting") || view.upgrade?.busy || view.upgrade?.level !== level
+            || !view.upgrade.choices.some(choice => choice.id === id)) return;
+        actions.chooseUpgrade(id, level);
     };
     const renderUpgrade = (next: UIView) => {
-        const active = next.phase === "upgrade-slowing" || next.phase === "upgrading";
-        upgradeCover.hidden = !active;
-        for (const screen of root.querySelectorAll<HTMLElement>("[data-screen]")) screen.inert = active || !!modal;
+        const starting = next.phase === "starting";
+        const active = (starting || (next.phase === "playing" && !!next.upgrade?.choices.length)) && !modal;
+        upgradePanel.hidden = !active;
+        upgradePanel.classList.toggle("bs-start-upgrade", starting);
+        upgradePanel.setAttribute("role", starting ? "dialog" : "complementary");
+        if (starting) upgradePanel.setAttribute("aria-modal", "true");
+        else upgradePanel.removeAttribute("aria-modal");
+        for (const screen of root.querySelectorAll<HTMLElement>("[data-screen]")) screen.inert = starting || !!modal;
         if (!active) {
             if (upgradeActive) {
-                upgradeSelectionLocked = false;
+                if (upgradePanel.contains(document.activeElement)) (document.activeElement as HTMLElement).blur();
                 upgradeKey = "";
                 upgradeCards.replaceChildren();
-                message("upgrade-error", "");
-                // Do not leave focus on a hidden choice after the session resumes.
-                if (upgradePanel.contains(document.activeElement)) (document.activeElement as HTMLElement).blur();
             }
             upgradeActive = false;
-            upgradeReady = false;
-            upgradeResumePending = false;
-            upgradeExternalError = undefined;
             return;
         }
-        const choiceState = next.upgrade;
-        const choices = choiceState?.choices ?? [];
-        const key = `${choiceState?.level}:${choiceState?.pending}:${choices.map((choice) => `${choice.id}:${choice.nextRank}`).join(",")}`;
-        const changed = key !== upgradeKey;
-        if (changed) {
+        const choiceState = next.upgrade!;
+        text("upgrade-title", starting ? "Start of run upgrade" : "Upgrade");
+        upgradePanel.querySelector<HTMLElement>(".bs-upgrade-intro")!.hidden = !starting;
+        upgradePanel.querySelector<HTMLElement>(".bs-start-quit")!.hidden = !starting;
+        message("start-error", starting ? next.error ?? "" : "");
+        const startButton = upgradePanel.querySelector<HTMLButtonElement>('[data-action="start-ready"]')!;
+        startButton.hidden = !starting || choiceState.pending > 0;
+        startButton.disabled = !!choiceState.busy;
+        startButton.textContent = choiceState.busy ? "Starting…" : "Start run";
+        // Extra earned levels only update the queue count; never rebuild or reroll
+        // the current offer while the player is aiming or choosing a card.
+        const key = `${choiceState.level}:${choiceState.choices.map(choice => `${choice.id}:${choice.nextRank}`).join(",")}`;
+        if (key !== upgradeKey) {
             upgradeKey = key;
-            upgradeSelectionLocked = false;
-            message("upgrade-error", "");
-            upgradeCards.replaceChildren(...choices.slice(0, 3).map((choice, index) => {
+            const focusedIndex = [...upgradeCards.children].indexOf(document.activeElement as Element);
+            upgradeCards.replaceChildren(...choiceState.choices.slice(0, 3).map((choice, index) => {
                 const button = document.createElement("button");
                 button.type = "button";
                 button.className = "bs-upgrade-card";
                 button.dataset.action = "choose-upgrade";
                 button.dataset.upgradeId = choice.id;
+                button.dataset.upgradeLevel = String(choiceState.level);
                 button.setAttribute("aria-keyshortcuts", String(index + 1));
-                button.innerHTML = `<span class="bs-upgrade-card-top"><span class="bs-upgrade-icon">${icon(upgradeArt[choice.id] ?? "target")}</span><span class="bs-upgrade-rank"></span></span><span class="bs-upgrade-copy"><strong class="bs-upgrade-name"></strong><span class="bs-upgrade-description"></span></span><span class="bs-upgrade-detail"></span><span class="bs-upgrade-select"><span><kbd>${index + 1}</kbd> SELECT UPGRADE</span>${icon("arrow")}</span>`;
-                button.querySelector<HTMLElement>(".bs-upgrade-rank")!.textContent = choice.rank === 0 ? "NEW" : `RANK ${choice.rank} → ${choice.nextRank}`;
+                button.innerHTML = `<kbd>${index + 1}</kbd><span class="bs-upgrade-copy"><span class="bs-upgrade-card-top"><strong class="bs-upgrade-name"></strong><span class="bs-upgrade-rank"></span></span><span class="bs-upgrade-detail"></span><span class="bs-upgrade-description"></span></span><span class="bs-upgrade-icon" aria-hidden="true">${icon(upgradeArt[choice.id] ?? "target")}</span>`;
+                button.querySelector<HTMLElement>(".bs-upgrade-rank")!.textContent = `R${choice.nextRank}`;
                 button.querySelector<HTMLElement>(".bs-upgrade-name")!.textContent = choice.title;
                 button.querySelector<HTMLElement>(".bs-upgrade-description")!.textContent = choice.description;
-                button.querySelector<HTMLElement>(".bs-upgrade-detail")!.textContent = choice.detail ?? "";
-                button.setAttribute("aria-label", `${choice.title}. ${choice.detail ?? ""}. ${choice.description} Rank ${choice.nextRank}. Press ${index + 1} to choose.`);
+                button.querySelector<HTMLElement>(".bs-upgrade-detail")!.textContent = choice.detail;
+                button.setAttribute("aria-label", `${choice.title}. ${choice.detail}. ${choice.description} Rank ${choice.nextRank}. Press ${index + 1} to choose.`);
                 return button;
             }));
+            // Preserve deliberate keyboard focus between queued offers without
+            // stealing focus or movement input when an offer first appears.
+            if (focusedIndex >= 0) upgradeCards.querySelectorAll<HTMLButtonElement>("button")[focusedIndex]?.focus({ preventScroll: true });
         }
-        text("upgrade-level", count(choiceState?.level ?? next.level ?? 2));
-        const ready = next.phase === "upgrading" && !!choiceState?.ready;
-        const resumePending = !!choiceState?.resumePending;
-        const resume = root.querySelector<HTMLButtonElement>('[data-action="resume-upgrade"]')!;
-        resume.hidden = !resumePending;
-        resume.disabled = !!choiceState?.busy;
-        if (next.error || upgradeExternalError !== next.error) message("upgrade-error", next.error ?? "");
-        upgradeExternalError = next.error;
-        text("upgrade-status", choiceState?.busy ? "Resuming…"
-            : resumePending ? "Upgrade applied · music paused"
-            : upgradeSelectionLocked ? "Resuming…"
-            : ready ? "Music paused" : "Slowing music…");
-        const remaining = Math.max(0, (choiceState?.pending ?? 1) - 1);
-        message("upgrade-pending", remaining > 0 ? `${count(remaining)} more ${remaining === 1 ? "upgrade" : "upgrades"} waiting` : "");
-        const progress = ready ? 1 : Math.min(1, Math.max(0, choiceState?.progress ?? 0));
-        const motion = !reducedMotion.matches && !next.settings.reducedFlash && next.settings.effectsIntensity !== "off";
-        const headerProgress = Math.min(1, progress / 0.45);
-        upgradeCover.style.setProperty("--upgrade-reveal", String(progress));
-        const heading = root.querySelector<HTMLElement>(".bs-upgrade-heading")!;
-        heading.style.opacity = String(headerProgress);
-        heading.style.transform = motion ? `translateY(${(1 - headerProgress) * 12}px)` : "none";
-        for (const [index, button] of [...upgradeCards.querySelectorAll<HTMLButtonElement>("button")].entries()) {
-            const local = Math.min(1, Math.max(0, (progress - 0.1 - index * 0.12) / 0.66));
-            const eased = 1 - (1 - local) ** 3;
-            // All entrance values come from the music-position progress supplied by
-            // the session. Pausing that clock also freezes the cards, with no timers.
-            button.style.opacity = String(eased);
-            button.style.transform = motion ? `translateY(${(1 - eased) * 28}px) scale(${0.975 + eased * 0.025})` : "none";
-        }
-        setUpgradeDisabled();
-        if (!upgradeActive) upgradePanel.focus({ preventScroll: true });
-        if (resumePending && !upgradeResumePending) resume.focus({ preventScroll: true });
-        else if (ready && (!upgradeReady || changed)) upgradeCards.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus({ preventScroll: true });
+        text("upgrade-level", count(choiceState.level));
+        for (const button of upgradeCards.querySelectorAll<HTMLButtonElement>("button")) button.disabled = !!choiceState.busy;
+        const remaining = Math.max(0, choiceState.pending - 1);
+        message("upgrade-pending", remaining ? `${count(remaining)} queued` : "");
+        if (starting && !upgradeActive) upgradeCards.querySelector<HTMLButtonElement>("button")?.focus({ preventScroll: true });
         upgradeActive = true;
-        upgradeReady = ready;
-        upgradeResumePending = resumePending;
     };
     const setPreview = (value: boolean) => {
         previewing = value;
@@ -514,9 +465,9 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
         if (!button) return;
         const action = button.dataset.action;
         if (action === "choose-upgrade") {
-            if (event.detail <= 1) selectUpgrade(button.dataset.upgradeId ?? "");
+            if (event.detail <= 1) selectUpgrade(button.dataset.upgradeId ?? "", Number(button.dataset.upgradeLevel));
         }
-        else if (action === "resume-upgrade") void run(() => actions.resume(), "upgrade-error");
+        else if (action === "start-ready") void actions.resume();
         else if (action === "settings") openModal("settings");
         else if (action === "import") openModal("import");
         else if (action === "close-settings" || action === "close-import") closeModal();
@@ -598,27 +549,26 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
         actions.updateSettings({ [key]: value });
     }, { signal: events.signal });
     window.addEventListener("keydown", (event) => {
-        if (upgradeActive) {
-            if (event.code === "Escape") {
-                event.preventDefault();
-                event.stopImmediatePropagation();
-            } else if (/^(Digit|Numpad)[123]$/.test(event.code)) {
+        if (upgradeActive && view?.phase === "starting") {
+            if (event.code === "Escape") { event.preventDefault(); event.stopImmediatePropagation(); return; }
+            if (event.code === "Tab") {
+                const controls = [...upgradePanel.querySelectorAll<HTMLElement>("button:not(:disabled)")].filter(el => el.checkVisibility());
+                const first = controls[0], last = controls.at(-1);
+                if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+                else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+                return;
+            }
+        }
+        if (upgradeActive && !modal && !(event.target as HTMLElement)?.matches("input,select,textarea,[contenteditable='true']")) {
+            if (/^(Digit|Numpad)[123]$/.test(event.code) && !event.ctrlKey && !event.altKey && !event.metaKey) {
                 event.preventDefault();
                 event.stopImmediatePropagation();
                 const choice = view?.upgrade?.choices[Number(event.code.at(-1)) - 1];
-                if (!event.repeat && choice) selectUpgrade(choice.id);
-            } else if (event.code === "Tab") {
-                const controls = [...upgradePanel.querySelectorAll<HTMLElement>("button:not(:disabled)")]
-                    .filter((element) => !element.closest("[hidden]"));
-                const first = controls[0], last = controls[controls.length - 1];
-                if (event.shiftKey && (document.activeElement === first || document.activeElement === upgradePanel)) {
-                    event.preventDefault(); last?.focus();
-                } else if (!event.shiftKey && (document.activeElement === last || document.activeElement === upgradePanel)) {
-                    event.preventDefault(); first?.focus();
-                }
-                event.stopImmediatePropagation();
+                if (!event.repeat && choice) selectUpgrade(choice.id, view!.upgrade!.level);
+                return;
             }
-            return;
+            // Space remains dash even when a clicked card has keyboard focus.
+            if (view?.phase === "playing" && event.code === "Space" && (event.target as HTMLElement)?.closest(".bs-upgrade-card")) event.preventDefault();
         }
         if (!modal) return;
         if (event.code === "Escape") {
@@ -649,7 +599,7 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
             for (const element of root.querySelectorAll<HTMLElement>("[data-screen]")) {
                 const screen = element.dataset.screen;
                 element.hidden = screen === "hud"
-                    ? !["playing", "paused", "upgrade-slowing", "upgrading"].includes(next.phase)
+                    ? !["playing", "paused", "starting"].includes(next.phase)
                     : screen !== next.phase;
             }
             renderUpgrade(next);

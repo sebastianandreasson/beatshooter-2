@@ -1,3 +1,4 @@
+import { chooseStartingUpgrade } from "./starting-upgrade";
 import { expect, test, type Page } from "playwright/test";
 
 type Point = { x: number; z: number };
@@ -18,7 +19,7 @@ interface Snapshot {
     enemyHealthbars: number;
     playerStats: {
         base: { damageMin: number; damageMax: number };
-        effective: { damageMin: number; damageMax: number };
+        effective: { damageMin: number; damageMax: number; criticalMultiplier: number };
         metrics: {
             shotsFired: number;
             hits: number;
@@ -131,10 +132,10 @@ function assertDamage(observed: Observation) {
     expect(metrics.totalDamageDealt).toBe(observed.state.combat.kills * 24
         + observed.state.enemies.reduce((total, enemy) => total + enemy.maxHealth - enemy.health, 0));
     for (const number of observed.numbers.filter(number => number.kind === "hit" || number.kind === "kill")) {
-        const multiplier = number.critical ? 2 : 1;
-        expect(number.amount).toBeGreaterThanOrEqual(13 * multiplier);
-        expect(number.amount).toBeLessThanOrEqual(17 * multiplier);
-        expect(number.amount % multiplier).toBe(0);
+        const multiplier = number.critical ? observed.state.playerStats.effective.criticalMultiplier : 1;
+        expect(number.amount).toBeGreaterThanOrEqual(Math.round(13 * multiplier));
+        expect(number.amount).toBeLessThanOrEqual(Math.round(17 * multiplier));
+        expect([13, 14, 15, 16, 17].map(value => Math.round(value * multiplier))).toContain(number.amount);
         expect(Number(number.text.replace("✦", "").trim())).toBe(number.amount);
         expect(number.text).not.toContain("+100");
     }
@@ -148,6 +149,7 @@ test("enemy health bars, beat-timed hit and kill numbers, and player damage stat
     await page.emulateMedia({ reducedMotion: "no-preference" });
     await boot(page);
     await page.getByRole("button", { name: "Practice", exact: true }).click();
+    await chooseStartingUpgrade(page);
     await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
     await page.mouse.move(1150, 90);
     // Let each enemy archetype spawn naturally while shots point away.
@@ -158,7 +160,7 @@ test("enemy health bars, beat-timed hit and kill numbers, and player damage stat
     }, undefined, { polling: "raf", timeout: 10_000 });
     const full = await observe(page);
     expect(full.state.playerStats.base).toMatchObject({ damageMin: 13, damageMax: 17 });
-    expect(full.state.playerStats.effective).toEqual(full.state.playerStats.base);
+    expect(full.state.playerStats.effective).toEqual({ ...full.state.playerStats.base, criticalMultiplier: 2.25 });
     expect(full.state.enemyHealthbars).toBe(full.state.enemies.length);
     for (const enemy of full.state.enemies) {
         const bar = full.bars.find(bar => bar.enemyId === enemy.id)!;
@@ -226,6 +228,7 @@ test("enemy health bars, beat-timed hit and kill numbers, and player damage stat
     await testInfo.attach("damage-healthbars-and-numbers", { path: screenshot, contentType: "image/png" });
 
     await page.keyboard.press("KeyR");
+    await chooseStartingUpgrade(page);
     await expect.poll(async () => (await snapshot(page)).generation).toBe(held.state.generation + 1);
     await expect(page.locator(".enemy-healthbar")).toHaveCount(0);
     await expect(page.locator(".damage-number")).toHaveCount(0);
@@ -247,6 +250,7 @@ test("damage and health stay readable with effects Off and with reduced motion",
     await page.getByRole("combobox", { name: "Visual effects", exact: true }).selectOption("off");
     await page.getByRole("button", { name: "Close settings", exact: true }).click();
     await page.getByRole("button", { name: "Practice", exact: true }).click();
+    await chooseStartingUpgrade(page);
     await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
     const off = await aimUntil(page, observed => Boolean(nonfatalHit(observed)));
     const offHit = nonfatalHit(off)!;

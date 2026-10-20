@@ -7,6 +7,7 @@ const viewLength = Math.hypot(32, 19);
 test("seeded depth layers have constant baseline travel and stay behind the arena inside the camera range", () => {
     const seeds = createStarSeeds();
     expect(seeds).toHaveLength(STAR_COUNT);
+    expect(seeds).toHaveLength(960);
     expect(createStarSeeds()).toEqual(seeds);
     expect(new Set(seeds.map(seed => seed.depth))).toEqual(new Set([64, 80, 96]));
     for (const seed of seeds) {
@@ -22,7 +23,8 @@ test("seeded depth layers have constant baseline travel and stay behind the aren
             expect(depth).toBeCloseTo(seed.depth);
             expect(depth + viewLength).toBeLessThan(150);
             expect(pose.length).toBeGreaterThanOrEqual(pose.width);
-            expect(pose.length).toBeLessThan(5.1);
+            expect(pose.width).toBeLessThan(0.081);
+            expect(pose.length).toBeLessThan(10.1);
         }
     }
 });

@@ -1,3 +1,4 @@
+import { chooseStartingUpgrade } from "./starting-upgrade";
 import { expect, test, type Page } from "playwright/test";
 
 type Planar = { x: number; z: number };
@@ -32,6 +33,7 @@ async function boot(page: Page): Promise<void> {
 }
 
 async function playing(page: Page): Promise<void> {
+    await chooseStartingUpgrade(page);
     await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible({ timeout: 20_000 });
 }
 
@@ -101,6 +103,7 @@ test("real movement stays planar, reset clears velocity, pointer projection surv
 
     const generation = (await snapshot(page)).generation;
     await page.keyboard.press("KeyR");
+    await chooseStartingUpgrade(page);
     await expect.poll(async () => (await snapshot(page)).generation).toBe(generation + 1);
     await playing(page);
     const reset = await snapshot(page);

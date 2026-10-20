@@ -1,3 +1,4 @@
+import { chooseStartingUpgrade } from "./starting-upgrade";
 import { writeFile } from "node:fs/promises";
 import { expect, test, type Page } from "playwright/test";
 
@@ -6,6 +7,7 @@ interface PlaySnapshot {
     phase: string;
     position: number;
     pending: number;
+    upgrade: { pending: number };
     sounds: number;
     entityCount: number;
     player: { position: Point; target: Point; bodyY: number };
@@ -31,6 +33,7 @@ test("the full 72-second demo can be won through normal movement and aiming", as
     page.on("pageerror", error => errors.push(error.message));
     await boot(page);
     await page.getByRole("button", { name: "Enter the arena" }).click();
+    await chooseStartingUpgrade(page);
     await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible({ timeout: 20_000 });
 
     // A reproducible ordinary playthrough: circle inside the spawn perimeter and
@@ -72,15 +75,7 @@ test("the full 72-second demo can be won through normal movement and aiming", as
                 nextCheckpoint += 12;
             }
             if (state.phase === "results") break;
-            if (state.phase === "upgrade-slowing" || state.phase === "upgrading") {
-                for (const key of held) await page.keyboard.up(key);
-                held.clear();
-                if (state.phase === "upgrading") {
-                    // Make an ordinary card choice; no test API modifies XP/stats.
-                    await page.locator("[data-upgrade-id]").first().click();
-                } else await page.waitForTimeout(50);
-                continue;
-            }
+            if (state.upgrade.pending > 0) await page.keyboard.press("1");
             expect(state.phase, "normal play should remain active until the result").toBe("playing");
             const player = state.player.position;
             let target = route[waypoint]!;
@@ -141,6 +136,7 @@ test.describe("high-density viewport", () => {
         await boot(page);
         expect(await page.evaluate(() => devicePixelRatio)).toBe(2);
         await page.getByRole("button", { name: "Practice", exact: true }).click();
+        await chooseStartingUpgrade(page);
         await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
         await page.keyboard.down("KeyD");
         try {

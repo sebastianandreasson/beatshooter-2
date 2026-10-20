@@ -1,3 +1,4 @@
+import { chooseStartingUpgrade } from "./starting-upgrade";
 import { expect, test, type Page } from "playwright/test";
 import { DEFAULT_EXPERIENCE_TUNING } from "../src/experience/state";
 
@@ -125,6 +126,7 @@ test("enemy gems wait on the floor, attract nearby, level the player, and reset 
     await boot(page);
     const initial = await snapshot(page);
     await page.getByRole("button", { name: "Practice", exact: true }).click();
+    await chooseStartingUpgrade(page);
     await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
     await assertClearLayout(page);
     // The HUD remains visible but becomes inert behind the level-up dialog.
@@ -182,7 +184,7 @@ test("enemy gems wait on the floor, attract nearby, level the player, and reset 
     try {
         while (Date.now() < collectDeadline) {
             const observed = await observe(page), state = observed.state;
-            expect(["playing", "upgrade-slowing", "upgrading"]).toContain(state.phase);
+            expect(state.phase).toBe("playing");
             sawAttraction ||= state.experience.drops.some(drop => drop.attracted && drop.speed > 0);
             if (state.experience.totalXp >= 10 && !sawFirstAward) {
                 sawFirstAward = true;
@@ -227,11 +229,11 @@ test("enemy gems wait on the floor, attract nearby, level the player, and reset 
     const levelScreenshot = "output/playwright/experience-level-up.png";
     await page.screenshot({ path: levelScreenshot });
     await testInfo.attach("experience-level-up", { path: levelScreenshot, contentType: "image/png" });
-    await expect(page.locator('.bs-ui[data-phase="upgrading"]')).toBeVisible();
+    await expect(page.locator(".bs-upgrade-panel")).toBeVisible();
     await expect(page.locator(".bs-upgrade-card")).toHaveCount(3);
     await expect(page.locator(".bs-upgrade-card").first()).toBeEnabled();
     await page.keyboard.press("Escape");
-    await expect(page.locator('.bs-ui[data-phase="upgrading"]')).toBeVisible();
+    await expect(page.locator('.bs-ui[data-phase="paused"]')).toBeVisible();
     await page.evaluate(() => new Promise<void>(resolve =>
         requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
     const heldLevel = await snapshot(page);
@@ -242,7 +244,9 @@ test("enemy gems wait on the floor, attract nearby, level the player, and reset 
     expect(stillLevel.experience).toEqual(heldLevel.experience);
     expect(stillLevel.visuals.particlePoses).toEqual(heldLevel.visuals.particlePoses);
     expect(stillLevel.visuals.levelUpBursts).toEqual(heldLevel.visuals.levelUpBursts);
+    await page.getByRole("button", { name: "Resume session" }).click();
     await page.locator(".bs-upgrade-card").first().click();
+    await chooseStartingUpgrade(page);
     await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
     await pause(page);
     await page.getByRole("button", { name: "Restart session" }).click();
@@ -267,6 +271,7 @@ test("the XP strip remains readable without covering health or beat timing on a 
     await page.setViewportSize({ width: 390, height: 844 });
     await boot(page);
     await page.getByRole("button", { name: "Practice", exact: true }).click();
+    await chooseStartingUpgrade(page);
     await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
     await assertClearLayout(page);
     const bar = page.getByRole("progressbar", { name: "Experience to next level", exact: true });

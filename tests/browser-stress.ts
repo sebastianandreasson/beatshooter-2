@@ -1,3 +1,4 @@
+import { chooseStartingUpgrade } from "./starting-upgrade";
 /**
  * Explicit rendering/physics benchmark; not discovered as a unit/browser test.
  * Serve an existing production build first; this script never rebuilds it.
@@ -54,6 +55,7 @@ try {
         () => Boolean((window as StressWindow).__beatshooter), undefined, { timeout: 60_000 },
     );
     await page.getByRole("button", { name: /^Practice/ }).click();
+    await chooseStartingUpgrade(page);
     await page.waitForFunction(
         () => (window as StressWindow).__beatshooter!.snapshot().phase === "playing",
     );

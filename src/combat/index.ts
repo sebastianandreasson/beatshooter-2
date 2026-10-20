@@ -166,8 +166,6 @@ export interface CombatState {
     playerStats: PlayerStatsState;
     upgrades: UpgradeState;
     regenerationDueAt: number;
-    /** The owner protects the player while slowing into upgrade selection. */
-    protectPlayer: boolean;
     health: number;
     score: number;
     kills: number;
@@ -222,7 +220,6 @@ export function createCombat(
         tuning, enemies: [], pendingSpawns: [], projectiles: [], effects: [], experience: createExperience(),
         playerStats: stats, upgrades: createUpgradeState(seed),
         regenerationDueAt: stats.effective.healthRegen > 0 ? 5 : Infinity,
-        protectPlayer: false,
         health: stats.effective.maxHealth, score: 0, kills: 0, time: 0,
         invulnerableUntil: 0, defeated: false,
         randomState: seed >>> 0, nextId: 1, eventSequence: 0,
@@ -535,7 +532,7 @@ export function advanceCombat(
     };
     if (state.defeated || !Number.isFinite(dt) || dt <= 0) return result;
     const damagePlayer = (amount: number, hitTime = state.time) => {
-        if (state.defeated || state.protectPlayer || amount <= 0 || hitTime < state.invulnerableUntil) return;
+        if (state.defeated || amount <= 0 || hitTime < state.invulnerableUntil) return;
         state.health = Math.max(0, state.health - amount);
         state.invulnerableUntil = hitTime + state.tuning.invulnerabilitySeconds;
         result.playerDamaged = true;

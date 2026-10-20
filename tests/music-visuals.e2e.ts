@@ -1,3 +1,4 @@
+import { chooseStartingUpgrade } from "./starting-upgrade";
 import { expect, test, type Page } from "playwright/test";
 import type { MusicFloorInput } from "../src/music-visuals/floor";
 import type { MusicalFrame } from "../src/rhythm/visual";
@@ -40,6 +41,7 @@ async function boot(page: Page, shaderStatus: "ready" | "fallback" = "ready"): P
 
 async function practice(page: Page): Promise<void> {
     await page.getByRole("button", { name: "Practice", exact: true }).click();
+    await chooseStartingUpgrade(page);
     await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
     await expect.poll(async () => (await snapshot(page)).position, { timeout: 10_000 }).toBeGreaterThan(0.05);
 }
@@ -100,6 +102,7 @@ test("actual floor uniforms follow music and particles freeze, resume, and clear
     await testInfo.attach("music-floor-and-combat", { path: screenshotPath, contentType: "image/png" });
     await pause(page);
     await page.getByRole("button", { name: "Restart session" }).click();
+    await chooseStartingUpgrade(page);
     await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
     await expect.poll(async () => (await snapshot(page)).generation).toBe(held.generation + 1);
     await expect.poll(async () => (await snapshot(page)).visuals.acceptedEvents).toBe(0);
@@ -173,6 +176,8 @@ test("live OS reduced-motion changes suppress travelling effects and survive ret
     await page.emulateMedia({ reducedMotion: "reduce" });
     await expect.poll(async () => (await snapshot(page)).visuals.motionAllowed).toBe(false);
     await page.keyboard.press("KeyR");
+    await chooseStartingUpgrade(page);
+    await chooseStartingUpgrade(page);
     await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
     await expect.poll(async () => (await snapshot(page)).generation).toBe(reduced.generation + 1);
     await expect.poll(async () => (await snapshot(page)).visuals.activeShards).toBe(0);

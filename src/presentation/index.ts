@@ -7,6 +7,8 @@ import { PlayerState, PresentPlayer, sampleAim } from "../player";
 import { isArenaPhase, Session, SessionEntity } from "../session";
 import { MusicVisuals, PresentMusicalVisuals } from "../music-visuals";
 import { damageNumberPose, feedbackAge } from "../music-visuals/effects";
+import { SectionEffects } from "../section-effects/runtime";
+import { shockwaveHeight } from "../shockwave/surface";
 
 export const Presentation: Resource<{
     generation: number; projectiles: Map<number, number>; effects: Map<number, HTMLElement>;
@@ -20,6 +22,8 @@ export const Presentation: Resource<{
 function present(world: World): void {
     const s = world.resource(Session), p = world.resource(Presentation), arena = world.resource(Arena);
     const player = world.resource(PlayerState), pose = world.storage(Transform), visuals = world.resource(MusicVisuals);
+    const section = world.resource(SectionEffects);
+    const surfaceLift = (x: number, z: number) => shockwaveHeight(section.frame.progress, section.strength, x, z);
     if (p.layer) p.layer.hidden = !isArenaPhase(s.phase) || s.phase === "paused";
     if (p.generation !== s.generation) {
         p.projectiles.clear();
@@ -88,8 +92,11 @@ function present(world: World): void {
             p.healthbars.set(enemy.id, bar);
         }
         if (bar) {
+            const x = pose.translation.x.get(body), z = pose.translation.z.get(body);
+            const lift = surfaceLift(x, z);
             const pixel = worldToViewport(world, arena.camera,
-                [pose.translation.x.get(body), 1.8, pose.translation.z.get(body)]);
+                [x, 1.8 + lift, z]);
+            bar.dataset.surfaceLift = String(lift);
             const health = String(enemy.health), maxHealth = String(enemy.maxHealth);
             if (bar.dataset.health !== health || bar.dataset.maxHealth !== maxHealth) {
                 bar.dataset.health = health;
@@ -161,8 +168,10 @@ function present(world: World): void {
             p.effects.set(effect.id, element);
         }
         const numberPose = damageNumberPose(visuals.timeline, effect, s.visualPosition, visuals.motionAllowed);
-        const pixel = worldToViewport(world, arena.camera, [effect.x, 2.45 + numberPose.rise, effect.z]);
+        const lift = surfaceLift(effect.x, effect.z);
+        const pixel = worldToViewport(world, arena.camera, [effect.x, 2.45 + numberPose.rise + lift, effect.z]);
         if (element) {
+            element.dataset.surfaceLift = String(lift);
             element.dataset.progress = String(numberPose.progress);
             element.dataset.rise = String(numberPose.rise);
             element.dataset.scale = String(numberPose.scale);

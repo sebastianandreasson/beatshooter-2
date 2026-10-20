@@ -1,3 +1,4 @@
+import { chooseStartingUpgrade } from "./starting-upgrade";
 /** Local-only LinkSeg evaluation. Run a production preview separately, then:
  * bun tests/section-analysis.ts http://127.0.0.1:4187
  * Existing private test audio is read locally; no audio is uploaded.
@@ -106,6 +107,7 @@ try {
             SECTION_STYLE[section.label].name);
         await page.locator('[data-action="preview-local"]').click();
         await page.locator('[data-action="start-local"]').click();
+        await chooseStartingUpgrade(page);
         await phase("playing");
         await page.waitForFunction(() => (window as SectionWindow).__beatshooter!.snapshot().position > 0);
         const id = (await state()).chart.id;
@@ -130,6 +132,7 @@ try {
         await page.waitForTimeout(150);
         assert(await page.locator('.bs-run-progress progress').getAttribute("aria-valuetext") === paused, "Paused player advanced.");
         await page.getByRole("button", { name: "Restart session", exact: true }).click();
+        await chooseStartingUpgrade(page);
         await phase("playing");
         assert((await state()).chart.id === id, "Retry changed chart identity.");
         assert(await page.locator(".bs-run-progress .bs-player-band").count() === structure!.sections.length, "Retry lost sections.");
@@ -147,6 +150,7 @@ try {
     }
     // A non-analyzed session must not show the previous local track's predictions.
     await page.getByRole("button", { name: "Enter the arena", exact: true }).click();
+    await chooseStartingUpgrade(page);
     await phase("playing");
     assert(await page.locator(".bs-run-progress .bs-player-band").count() === 0, "Bundled demo inherited local sections.");
     assert(errors.length === 0, `Uncaught errors: ${errors}`);
