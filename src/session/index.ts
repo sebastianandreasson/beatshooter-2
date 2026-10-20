@@ -20,6 +20,7 @@ import { mountUI, type UIView } from "../ui";
 import { analyzeAudio } from "../analysis";
 import { createAnalyzedChart } from "../analysis/chart";
 import type { BeatAnalysis } from "../analysis/types";
+import { publishVisualEvents, VisualEvents } from "../music-visuals/events";
 
 export type Phase = "menu" | "loading" | "playing" | "paused" | "results";
 export type Selection = { mode: "demo" } | { mode: "dojo"; bpm: number } | { mode: "local"; file: File; bpm: number; offset: number; useAnalysis?: boolean };
@@ -53,6 +54,7 @@ function clearSession(world: World): void {
     const session = world.resource(Session);
     session.transport?.stop();
     session.pending.length = 0;
+    world.resource(VisualEvents).pending.length = 0;
     session.completePending = false;
     session.enemyBodies.clear();
     for (const eid of [...world.query([SessionEntity])]) world.destroy(eid);
@@ -83,6 +85,9 @@ export function applySettings(world: World, patch?: Partial<Settings>): void {
     const settings = session.preferences.settings;
     session.transport?.setVolumes({ master: settings.masterVolume, music: settings.musicVolume, effects: settings.effectsVolume });
     session.transport?.setVisualOffset(settings.timingOffsetMs);
+    // Use the retained accepted position while paused, including calibration
+    // edits. The next observation uses the same offset on the live music clock.
+    session.visualPosition = session.position + settings.timingOffsetMs / 1000;
     const camera = world.resource(Arena).camera;
     if (camera >= 0) {
         world.storage(Camera).antialias.set(camera, settings.graphics === "high" ? 1 : 0);
@@ -150,6 +155,7 @@ export async function analyzeLocal(world: World, file: File): Promise<void> {
                 session.analysis = {
                     state: "running", fileName: file.name,
                     message: `${progress.stage}${percent}`,
+                    progress: progress.total > 0 ? progress.completed / progress.total : 0,
                 };
                 renderUI(world);
             },
@@ -425,7 +431,8 @@ export const PrepareCombat: System = {
         const s = world.resource(Session), p = world.resource(PlayerState);
         if (s.phase !== "playing") return;
         for (const beat of s.pending.splice(0)) {
-            onCombatBeat(s.combat, { index: beat.index, barIndex: beat.bar, isDownbeat: beat.downbeat }, p.position, p.aim);
+            const events = onCombatBeat(s.combat, { index: beat.index, barIndex: beat.bar, isDownbeat: beat.downbeat }, p.position, p.aim);
+            publishVisualEvents(world, events, s.position, s.visualPosition, s.generation, beat.time);
             const settings = s.preferences.settings;
             play(world, s.shotClip, { volume: settings.masterVolume * settings.effectsVolume * 0.35 });
         }
@@ -456,6 +463,7 @@ export const ResolveCombat: System = {
         const pose = world.storage(GlobalTransform).translation;
         for (const [id, eid] of s.enemyBodies) positions.set(id, { x: pose.x.get(eid), z: pose.z.get(eid) });
         const result = advanceCombat(s.combat, world.time.deltaTime, world.resource(PlayerState).position, positions);
+        publishVisualEvents(world, result.events, s.position, s.visualPosition, s.generation);
         const live = new Set(s.combat.enemies.map(enemy => enemy.id));
         for (const [id, eid] of s.enemyBodies) {
             if (!live.has(id)) { world.destroy(eid); s.enemyBodies.delete(id); }

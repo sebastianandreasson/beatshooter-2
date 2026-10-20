@@ -66,10 +66,34 @@ Detected-chart scores use a file-content hash plus versioned chart identity.
 Dojo has a six-hour metronome horizon and can be reset at any time.
 
 Settings include master/music/effects gain, graphics detail, reduced flashes,
-and visual timing offset. **Positive milliseconds advance the visual pulse;
+visual effects intensity, and visual timing offset. **Positive milliseconds advance the visual pulse;
 negative values delay it.** Audio and combat timestamps remain unchanged.
 Focus loss, hidden tabs, suspended audio, and long stalls pause the session and
 require explicit resume. A load that finishes after focus loss also waits paused.
+
+The arena's floor patterns, bar ripples, perimeter lights, death shards and
+damage-number envelopes follow the same music clock. Floor geometry, collision
+boundaries and aiming remain stable. Deaths and scores resolve immediately;
+larger death accents wait at most 100 ms for a nearby sixteenth-note subdivision.
+When no suitable subdivision exists, a small local dissolve confirms the kill.
+Long detection gaps settle the decoration without inventing extra beats.
+
+In **Settings → Visual effects**, choose **Standard** for the full restrained
+effect set, **Calm** for softer motion, or **Off** for a static arena and essential
+feedback. Graphics detail controls rendering cost independently. **Reduced
+flashes** and the device's **reduced-motion** preference disable travelling
+decoration and keep small local fades. Automatic local-track analysis also
+computes optional 20 Hz loudness/bass curves in its existing worker; these
+modulate detail without triggering beats. Demo, dojo and manual-BPM tracks use
+a neutral energy response.
+
+The visual implementation passes production browser checks and the dense
+60 FPS stress fixture on the recorded M1 Max. All four local test tracks pass
+energy integration without changing detected timestamps. Human listening and
+comfort review remains open. See the
+[visual implementation record](docs/music-visuals-plan.md) and
+[verification record](docs/music-visuals-verification.md). The earlier M0–M6
+release evidence is separate from the new visual measurements.
 
 ## Verification
 
@@ -99,13 +123,17 @@ bun ./tests/stress.ts
 bun run preview --port 4175 --strictPort
 bun ./tests/browser-stress.ts http://127.0.0.1:4175
 
+# Off/Standard visual comparison with dense, repeatable death bursts
+bun tests/music-visuals-benchmark.ts http://127.0.0.1:4175
+
 # Full Beat This! experiment, using private files from gitignored local-audio/
 bun tests/audio-analysis.ts http://127.0.0.1:4175
 ```
 
 The explicit `?stress=1` fixture replenishes 200 enemies and 500 projectiles
 before each fixed step and disables contact damage for measurement. It is never
-active in normal play. `?test=1` installs a read-only browser inspection API.
+active in normal play. Adding `&visualStress=1` emits 16 cosmetic kill events
+per beat to exercise the particle caps. `?test=1` installs a read-only browser inspection API.
 See the release document for measured hardware, counts, and frame intervals.
 
 ## Structure and timing
@@ -114,11 +142,12 @@ See the release document for measured hardware, counts, and frame intervals.
 | --- | --- |
 | `src/app/`, `src/stress/` | Shallot plugin composition and opt-in inspection/stress fixture |
 | `src/arena/`, `src/player/` | Arena, collision walls, fixed movement, camera projection |
-| `src/rhythm/` | Authored timelines and Web Audio transport through public `AudioOutput` |
-| `src/analysis/` | Local Beat This! worker, preprocessing, detected-chart validation and bar mapping |
+| `src/rhythm/` | Authored timelines, shared musical visual sampling, and Web Audio transport through public `AudioOutput` |
+| `src/analysis/` | Local Beat This! worker, preprocessing, chart validation, bar mapping and optional energy curves |
 | `src/combat/`, `src/enemies/` | Seeded waves, pursuit, swept nearest hits, damage and scoring |
 | `src/session/` | Menu/loading/play/pause/results, audio/entity/listener ownership |
-| `src/presentation/` | Shared materials, shots, hit flashes and bounded damage numbers |
+| `src/music-visuals/` | Floor shader, bounded musical effect queues, pooled shards/rings and comfort controls |
+| `src/presentation/` | Shared combat materials, steady damage tint and music-timed damage numbers |
 | `src/tracks/`, `public/tracks/` | Validated manifests, local decoding, original demo and generator |
 | `src/ui/`, `src/settings/` | Responsive DOM interface and validated versioned preferences |
 | `tests/` | Physics, browser acceptance, and stress checks |

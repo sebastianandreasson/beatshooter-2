@@ -7,6 +7,7 @@
       "dependencies": {
         "@dylanebert/shallot": "0.10.0",
         "@jgorset/beat-this": "1.0.0",
+        "typegpu": "0.12.8",
       },
       "devDependencies": {
         "@types/bun": "^1.4.3",

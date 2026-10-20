@@ -88,6 +88,22 @@ describe("swept projectile collision", () => {
 });
 
 describe("damage, feedback, and defeat", () => {
+    test("step events retain every impact even when the legacy feedback buffer is disabled", () => {
+        const state = createCombat(2, { effectCap: 0, damageMin: 30, damageMax: 30, criticalChance: 0 });
+        target(state, 4);
+        target(state, 8);
+        fireProjectile(state, origin, right);
+        fireProjectile(state, origin, right);
+        const result = advanceCombat(state, 0.5, origin, freezePositions(state));
+        expect(state.effects).toHaveLength(0);
+        expect(result.events.map(event => [event.kind, event.x, event.simulationTime])).toEqual([
+            ["kill", 4, 0.5], ["kill", 8, 0.5],
+        ]);
+        expect(new Set(result.events.map(event => event.id)).size).toBe(2);
+        expect(state.kills).toBe(2);
+        expect(advanceCombat(state, 1 / 60, origin).events).toHaveLength(0);
+    });
+
     test("critical damage, knockback, and feedback have bounded lifetimes", () => {
         const state = createCombat(1, {
             damageMin: 5, damageMax: 5, criticalChance: 1, criticalMultiplier: 2,

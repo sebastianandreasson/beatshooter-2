@@ -1,0 +1,199 @@
+{
+  "recordedAt": "2026-10-20T11:10:41.121Z",
+  "environment": {
+    "platform": "darwin",
+    "release": "24.6.0",
+    "architecture": "arm64",
+    "cpu": "Apple M1 Max",
+    "bun": "1.4.3",
+    "browser": "156.0.8078.4",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+    "crossOriginIsolated": true,
+    "devicePixelRatio": 1,
+    "gpu": {
+      "vendor": "apple",
+      "architecture": "metal-3"
+    }
+  },
+  "scenario": "Real local-file import, full-track WebGPU inference, preview, play, retry and cleanup. Generated demo has known timestamps; user tracks have no hand-labeled beat ground truth.",
+  "missingModelRecovery": {
+    "passed": true,
+    "message": "Automatic analysis could not finish. Try again or use manual BPM and offset."
+  },
+  "cancellation": {
+    "passed": true
+  },
+  "unexpectedRequests": [],
+  "pageErrors": [],
+  "results": [
+    {
+      "file": "neon-circuit.wav",
+      "durationSeconds": 72,
+      "beatCount": 144,
+      "downbeatCount": 36,
+      "estimatedBpm": 120,
+      "analysisMilliseconds": 4834.305,
+      "clickToReadyMilliseconds": 5165.963,
+      "backend": "webgpu",
+      "warnings": [],
+      "chartId": "analyzed-96a5618cf8f6d8f037d9163a8eb7d34a433115b4ee0bc79ffe30c84be5d9cc3a-chart-1-19d5dc50bb8031c3",
+      "previewPlayRetryCleanup": "passed",
+      "previewSections": "start/middle/end/full passed",
+      "musicalVisuals": {
+        "shader": "ready",
+        "energyFrames": 1440,
+        "sharedClockEnergy": "passed",
+        "gapGuardActive": false
+      },
+      "groundTruthComparison": {
+        "beats": {
+          "toleranceMilliseconds": 70,
+          "matched": 144,
+          "expected": 144,
+          "detected": 144,
+          "precision": 1,
+          "recall": 1,
+          "f1": 1,
+          "medianErrorMilliseconds": 20,
+          "p95ErrorMilliseconds": 20
+        },
+        "downbeats": {
+          "toleranceMilliseconds": 70,
+          "matched": 36,
+          "expected": 36,
+          "detected": 36,
+          "precision": 1,
+          "recall": 1,
+          "f1": 1,
+          "medianErrorMilliseconds": 0,
+          "p95ErrorMilliseconds": 20
+        }
+      }
+    },
+    {
+      "file": "Hyper Spoiler.mp3",
+      "durationSeconds": 272.039,
+      "beatCount": 533,
+      "downbeatCount": 165,
+      "estimatedBpm": 171.4285714285742,
+      "analysisMilliseconds": 5032.97,
+      "clickToReadyMilliseconds": 5388.139,
+      "backend": "webgpu",
+      "warnings": [
+        "Beat spacing varies noticeably; timestamps are preserved. Check for tempo changes or missed beats.",
+        "Beat spacing contains near 2:1 changes. Check for tempo changes or half-/double-time detection.",
+        "A long gap has no detected beats. Gameplay will keep that gap rather than invent extra shots.",
+        "Some detected beats are very close together. Check for extra detections before playing.",
+        "Downbeat spacing varies; this may reflect changing meter or missed detections. Check the metronome preview."
+      ],
+      "chartId": "analyzed-9fc598000cb259202a56fd9cea790be0c8e79c8ed95f28d8ca4651fe9ca974b4-chart-1-53d7b8d0c925b44a",
+      "previewPlayRetryCleanup": "passed",
+      "previewSections": "start passed",
+      "musicalVisuals": {
+        "shader": "ready",
+        "energyFrames": 5441,
+        "sharedClockEnergy": "passed",
+        "gapGuardActive": true
+      }
+    },
+    {
+      "file": "I Can't.mp3",
+      "durationSeconds": 188.32,
+      "beatCount": 309,
+      "downbeatCount": 78,
+      "estimatedBpm": 103.44827586206674,
+      "analysisMilliseconds": 4463.86,
+      "clickToReadyMilliseconds": 4726.269,
+      "backend": "webgpu",
+      "warnings": [],
+      "chartId": "analyzed-9e5b7856da443149e45169531273cb14cf9971889441abfcdb2facd18456e096-chart-1-89801fe679905954",
+      "previewPlayRetryCleanup": "passed",
+      "previewSections": "start passed",
+      "musicalVisuals": {
+        "shader": "ready",
+        "energyFrames": 3767,
+        "sharedClockEnergy": "passed",
+        "gapGuardActive": false
+      }
+    },
+    {
+      "file": "Magna Divide.mp3",
+      "durationSeconds": 256.157,
+      "beatCount": 452,
+      "downbeatCount": 130,
+      "estimatedBpm": 107.14285714285671,
+      "analysisMilliseconds": 5536.975,
+      "clickToReadyMilliseconds": 5993.929,
+      "backend": "webgpu",
+      "warnings": [
+        "Beat spacing varies noticeably; timestamps are preserved. Check for tempo changes or missed beats.",
+        "Beat spacing contains near 2:1 changes. Check for tempo changes or half-/double-time detection.",
+        "Some detected beats are very close together. Check for extra detections before playing.",
+        "Downbeat spacing varies; this may reflect changing meter or missed detections. Check the metronome preview."
+      ],
+      "chartId": "analyzed-a991f61b05ebfa4848c8ccf2bf513cfd9587d2b7daecc55674bbdce4f6dfd61e-chart-1-8a185ef67024a2a8",
+      "previewPlayRetryCleanup": "passed",
+      "previewSections": "start passed",
+      "musicalVisuals": {
+        "shader": "ready",
+        "energyFrames": 5124,
+        "sharedClockEnergy": "passed",
+        "gapGuardActive": false
+      }
+    },
+    {
+      "file": "Siriusmo Itchy from Enthusiast.mp3",
+      "durationSeconds": 212.611,
+      "beatCount": 470,
+      "downbeatCount": 136,
+      "estimatedBpm": 130.43478260869742,
+      "analysisMilliseconds": 5877.725,
+      "clickToReadyMilliseconds": 6257.145,
+      "backend": "webgpu",
+      "warnings": [
+        "Beat spacing varies noticeably; timestamps are preserved. Check for tempo changes or missed beats.",
+        "Beat spacing contains near 2:1 changes. Check for tempo changes or half-/double-time detection.",
+        "Some detected beats are very close together. Check for extra detections before playing.",
+        "Downbeat spacing varies; this may reflect changing meter or missed detections. Check the metronome preview."
+      ],
+      "chartId": "analyzed-78b892b68fabd4311fbfc3f342659eb531ad171a5e801f232b2a819ab62691c5-chart-1-b4081ec0b7b3b3b8",
+      "previewPlayRetryCleanup": "passed",
+      "previewSections": "start passed",
+      "musicalVisuals": {
+        "shader": "ready",
+        "energyFrames": 4253,
+        "sharedClockEnergy": "passed",
+        "gapGuardActive": false
+      }
+    }
+  ],
+  "retainedReferenceComparison": {
+    "scope": "New browser outputs compared with the saved official Beat This 1.1.0 final0 reference timestamps from the same private inputs. The original Python model was not rerun for this check.",
+    "tracks": [
+      {
+        "file": "Hyper Spoiler.mp3",
+        "beats": 533,
+        "downbeats": 165,
+        "exactMatch": true
+      },
+      {
+        "file": "I Can't.mp3",
+        "beats": 309,
+        "downbeats": 78,
+        "exactMatch": true
+      },
+      {
+        "file": "Magna Divide.mp3",
+        "beats": 452,
+        "downbeats": 130,
+        "exactMatch": true
+      },
+      {
+        "file": "Siriusmo Itchy from Enthusiast.mp3",
+        "beats": 470,
+        "downbeats": 136,
+        "exactMatch": true
+      }
+    ]
+  }
+}

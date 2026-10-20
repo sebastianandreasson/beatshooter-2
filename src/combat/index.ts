@@ -114,6 +114,15 @@ export interface CombatEffect {
     expiresAt: number;
 }
 
+/** Transient facts returned by the fixed step; presentation owns their scheduling. */
+export interface CombatEvent extends Vec2 {
+    id: number;
+    kind: CombatEffect["kind"] | "shot" | "spawn";
+    amount: number;
+    critical: boolean;
+    simulationTime: number;
+}
+
 export interface CombatState {
     tuning: CombatTuning;
     enemies: Enemy[];
@@ -127,6 +136,7 @@ export interface CombatState {
     defeated: boolean;
     randomState: number;
     nextId: number;
+    eventSequence: number;
     lastBeatIndex: number;
     lastBarIndex: number;
     lastSpawnBar: number;
@@ -143,6 +153,7 @@ export interface CombatStep {
     killedIds: number[];
     playerDamaged: boolean;
     defeated: boolean;
+    events: CombatEvent[];
 }
 
 export function createCombat(seed = 1, overrides: Partial<CombatTuning> = {}): CombatState {
@@ -161,7 +172,7 @@ export function createCombat(seed = 1, overrides: Partial<CombatTuning> = {}): C
         tuning, enemies: [], projectiles: [], effects: [],
         health: tuning.playerHealth, score: 0, kills: 0, time: 0,
         invulnerableUntil: 0, defeated: false,
-        randomState: seed >>> 0, nextId: 1,
+        randomState: seed >>> 0, nextId: 1, eventSequence: 0,
         lastBeatIndex: -1, lastBarIndex: -1, lastSpawnBar: -1,
         lastAim: { x: 0, z: -1 },
     };
@@ -233,13 +244,23 @@ export function fireProjectile(
 }
 
 /** Commands must be recorded/injected for replay; live audio time is external input. */
-export function onCombatBeat(state: CombatState, beat: CombatBeat, player: Vec2, aim: Vec2): void {
-    if (state.defeated || beat.index <= state.lastBeatIndex) return;
+export function onCombatBeat(state: CombatState, beat: CombatBeat, player: Vec2, aim: Vec2): CombatEvent[] {
+    if (state.defeated || beat.index <= state.lastBeatIndex) return [];
     state.lastBeatIndex = beat.index;
     state.lastBarIndex = beat.barIndex;
     state.score += state.tuning.beatSurvivalScore;
-    spawnOnBeat(state, beat, player);
-    if (beat.index % state.tuning.fireEveryBeats === 0) fireProjectile(state, player, aim);
+    const events: CombatEvent[] = spawnOnBeat(state, beat, player).map(enemy => ({
+        id: ++state.eventSequence, kind: "spawn", x: enemy.x, z: enemy.z,
+        amount: 0, critical: false, simulationTime: state.time,
+    }));
+    if (beat.index % state.tuning.fireEveryBeats === 0) {
+        const shot = fireProjectile(state, player, aim);
+        if (shot) events.push({
+            id: ++state.eventSequence, kind: "shot", x: shot.x, z: shot.z,
+            amount: 0, critical: shot.critical, simulationTime: state.time,
+        });
+    }
+    return events;
 }
 
 /** Fraction [0, 1] of the first intersection, including starting inside a circle. */
@@ -281,7 +302,11 @@ export function advanceCombat(
     player: Vec2,
     enemyPositions?: ReadonlyMap<number, Vec2>,
 ): CombatStep {
-    const result: CombatStep = { killedIds: [], playerDamaged: false, defeated: state.defeated };
+    const result: CombatStep = { killedIds: [], playerDamaged: false, defeated: state.defeated, events: [] };
+    const feedback = (effect: Omit<CombatEffect, "id" | "expiresAt">) => {
+        addEffect(state, effect);
+        result.events.push({ ...effect, id: ++state.eventSequence, simulationTime: state.time });
+    };
     if (state.defeated || !Number.isFinite(dt) || dt <= 0) return result;
     for (const enemy of state.enemies) {
         if (enemyPositions) {
@@ -325,7 +350,7 @@ export function advanceCombat(
             nearest.knockbackZ = speed > 0 ? projectile.velocityZ / speed * state.tuning.knockbackSpeed : 0;
             nearest.knockbackStartedAt = state.time;
             nearest.knockbackUntil = state.time + state.tuning.knockbackDuration;
-            addEffect(state, {
+            feedback({
                 x: nearest.x, z: nearest.z, amount: projectile.damage,
                 critical: projectile.critical, kind: nearest.health === 0 ? "kill" : "hit",
             });
@@ -354,7 +379,7 @@ export function advanceCombat(
                 state.health = Math.max(0, state.health - state.tuning.contactDamage);
                 state.invulnerableUntil = state.time + state.tuning.invulnerabilitySeconds;
                 result.playerDamaged = true;
-                addEffect(state, {
+                feedback({
                     ...player, amount: state.tuning.contactDamage, critical: false, kind: "player-hit",
                 });
                 state.defeated = state.health === 0;

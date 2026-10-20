@@ -1,0 +1,234 @@
+{
+  "recordedAt": "2026-10-20T11:09:40.684Z",
+  "machine": {
+    "platform": "darwin",
+    "release": "24.6.0",
+    "architecture": "arm64",
+    "cpu": "Apple M1 Max",
+    "logicalCores": 10,
+    "memoryGiB": 64
+  },
+  "runtime": {
+    "bun": "1.4.3",
+    "browser": "Chromium 156.0.8078.4",
+    "mode": "headless"
+  },
+  "scenario": {
+    "url": "http://127.0.0.1:4175/?test=1&stress=1&visualStress=1",
+    "viewport": {
+      "width": 1200,
+      "height": 924
+    },
+    "deviceScaleFactor": 1,
+    "order": [
+      "off",
+      "standard"
+    ],
+    "warmupMillisecondsAfterCountIn": 3000,
+    "measuredFramesPerMode": 600,
+    "fixture": {
+      "enemiesPerFixedStep": 200,
+      "projectilesPerFixedStep": 500,
+      "cosmeticKillBurstsPerBeat": 16
+    },
+    "scope": "Real Shallot rendering, physics, audio, combat, floor shader and bounded particles. Fresh contexts run sequentially, with a read-only snapshot each frame.",
+    "limitation": "Frame intervals include display pacing and inspection overhead. Vsync-limited comparisons do not measure GPU headroom and cannot establish a 2 ms GPU budget. CPU instrumentation, when available, excludes GPU work."
+  },
+  "runs": [
+    {
+      "mode": "off",
+      "settings": {
+        "masterVolume": 0.75,
+        "musicVolume": 0.8,
+        "effectsVolume": 0.55,
+        "timingOffsetMs": 0,
+        "graphics": "high",
+        "effectsIntensity": "off",
+        "reducedFlash": false
+      },
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+        "devicePixelRatio": 1,
+        "crossOriginIsolated": true,
+        "gpu": {
+          "vendor": "apple",
+          "architecture": "metal-3",
+          "device": "0x0000",
+          "description": "Apple M1 Max"
+        }
+      },
+      "frameIntervalsMilliseconds": {
+        "count": 600,
+        "mean": 16.666,
+        "p50": 16.665,
+        "p95": 16.67,
+        "p99": 16.67,
+        "max": 16.67
+      },
+      "averageFramesPerSecond": 60.002,
+      "target60Fps": {
+        "met": true,
+        "frameBudgetMilliseconds": 16.667,
+        "timestampToleranceMilliseconds": 0.1
+      },
+      "visualCpuMilliseconds": {
+        "count": 600,
+        "mean": 0.04,
+        "p50": 0.04,
+        "p95": 0.05,
+        "p99": 0.065,
+        "max": 0.09
+      },
+      "visualCpuScope": "Event consumption, particle updates and floor uniform upload; excludes musical frame sampling, damage-number DOM, and renderer/GPU work.",
+      "observedCounts": {
+        "enemies": {
+          "min": 197,
+          "max": 200
+        },
+        "projectiles": {
+          "min": 457,
+          "max": 488
+        },
+        "feedback": {
+          "min": 100,
+          "max": 100
+        },
+        "shards": {
+          "min": 0,
+          "max": 0
+        },
+        "rings": {
+          "min": 0,
+          "max": 0
+        },
+        "pendingBursts": {
+          "min": 0,
+          "max": 0
+        },
+        "entities": {
+          "min": 655,
+          "max": 688
+        }
+      },
+      "shaderStatus": [
+        "ready"
+      ],
+      "visualStressBursts": null,
+      "cleanup": {
+        "phase": "menu",
+        "sessionEntities": 0,
+        "sounds": 0,
+        "activeShards": 0,
+        "activeRings": 0,
+        "pendingBursts": 0,
+        "feedback": 0,
+        "retainedPoolCapacity": 256
+      },
+      "pageErrors": [],
+      "screenshot": "output/playwright/music-stress-off.png",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "mode": "standard",
+      "settings": {
+        "masterVolume": 0.75,
+        "musicVolume": 0.8,
+        "effectsVolume": 0.55,
+        "timingOffsetMs": 0,
+        "graphics": "high",
+        "effectsIntensity": "standard",
+        "reducedFlash": false
+      },
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+        "devicePixelRatio": 1,
+        "crossOriginIsolated": true,
+        "gpu": {
+          "vendor": "apple",
+          "architecture": "metal-3",
+          "device": "0x0000",
+          "description": "Apple M1 Max"
+        }
+      },
+      "frameIntervalsMilliseconds": {
+        "count": 600,
+        "mean": 16.666,
+        "p50": 16.665,
+        "p95": 16.67,
+        "p99": 16.67,
+        "max": 16.67
+      },
+      "averageFramesPerSecond": 60.002,
+      "target60Fps": {
+        "met": true,
+        "frameBudgetMilliseconds": 16.667,
+        "timestampToleranceMilliseconds": 0.1
+      },
+      "visualCpuMilliseconds": {
+        "count": 600,
+        "mean": 0.125,
+        "p50": 0.12,
+        "p95": 0.15,
+        "p99": 0.18,
+        "max": 0.265
+      },
+      "visualCpuScope": "Event consumption, particle updates and floor uniform upload; excludes musical frame sampling, damage-number DOM, and renderer/GPU work.",
+      "observedCounts": {
+        "enemies": {
+          "min": 197,
+          "max": 200
+        },
+        "projectiles": {
+          "min": 457,
+          "max": 488
+        },
+        "feedback": {
+          "min": 100,
+          "max": 100
+        },
+        "shards": {
+          "min": 206,
+          "max": 256
+        },
+        "rings": {
+          "min": 8,
+          "max": 8
+        },
+        "pendingBursts": {
+          "min": 0,
+          "max": 16
+        },
+        "entities": {
+          "min": 655,
+          "max": 688
+        }
+      },
+      "shaderStatus": [
+        "ready"
+      ],
+      "visualStressBursts": null,
+      "cleanup": {
+        "phase": "menu",
+        "sessionEntities": 0,
+        "sounds": 0,
+        "activeShards": 0,
+        "activeRings": 0,
+        "pendingBursts": 0,
+        "feedback": 0,
+        "retainedPoolCapacity": 256
+      },
+      "pageErrors": [],
+      "screenshot": "output/playwright/music-stress-standard.png",
+      "passed": true,
+      "failures": []
+    }
+  ],
+  "differenceStandardMinusOffMilliseconds": {
+    "meanFrameInterval": 0,
+    "p95FrameInterval": 0,
+    "meanVisualCpu": 0.085,
+    "p95VisualCpu": 0.1
+  },
+  "passed": true
+}

@@ -1,7 +1,8 @@
 import demoManifest from "../../public/tracks/neon-circuit.json";
 import { generateTimeline, type Beat, validateTempo, validateTimeline } from "../rhythm/timeline";
 import { createAnalyzedChart } from "../analysis/chart";
-import type { BeatAnalysis } from "../analysis/types";
+import type { BeatAnalysis, EnergyCurve } from "../analysis/types";
+import { validateEnergyCurve } from "../analysis/energy";
 
 export interface TrackManifest {
     schemaVersion: 1;
@@ -80,6 +81,7 @@ export function createPracticeTrack(bpm = 120): TrackManifest {
 export interface LoadedTrack {
     manifest: TrackManifest;
     buffer: AudioBuffer;
+    energy?: EnergyCurve;
     /** Releases this import's object URL; safe to call more than once. */
     dispose(): void;
 }
@@ -195,7 +197,8 @@ export class TrackLoader {
                 source: `User-selected file: ${file.name}`,
                 license: "User-provided; never uploaded or redistributed",
             });
-            const loaded = this.own(manifest, buffer, objectUrl);
+            const loaded = this.own(manifest, buffer, objectUrl,
+                validateEnergyCurve(analysis?.energy, buffer.duration));
             objectUrl = undefined;
             return loaded;
         } catch (error) {
@@ -261,11 +264,12 @@ export class TrackLoader {
         }
     }
 
-    private own(manifest: TrackManifest, buffer: AudioBuffer, objectUrl?: string): LoadedTrack {
+    private own(manifest: TrackManifest, buffer: AudioBuffer, objectUrl?: string, energy?: EnergyCurve): LoadedTrack {
         let released = false;
         const loaded: LoadedTrack = {
             manifest,
             buffer,
+            energy,
             dispose: () => {
                 if (released) return;
                 released = true;

@@ -9,6 +9,7 @@ import { arch, cpus, platform, release } from "node:os";
 import { chromium, type Page } from "playwright";
 import { BROWSER_CONFIG } from "@dylanebert/shallot/testing";
 import type { BeatAnalysis } from "../src/analysis/types";
+import { sampleEnergy, validateEnergyCurve } from "../src/analysis/energy";
 
 type Witness = {
     phase: string;
@@ -21,6 +22,11 @@ type Witness = {
     analysis?: { state: string; message: string; bpm?: number; warnings?: string[]; beatCount?: number; downbeatCount?: number; elapsedMs?: number };
     chart: { id: string; bpm: number; beatCount: number; downbeatCount: number };
     combat: { health: number; score: number; enemies: number; projectiles: number };
+    visuals: {
+        shaderStatus: string; activeShards: number; activeRings: number;
+        frame: { position: number; active: boolean; strength: number };
+        shaderInput: { energy: number; bass: number };
+    };
 };
 type InspectionWindow = Window & {
     __beatshooter?: { snapshot(): Witness; analysis(): BeatAnalysis | null };
@@ -128,6 +134,15 @@ try {
         if (state.analysis?.state !== "ready") throw new Error(`${path}: ${state.analysis?.message}`);
         const analysis = await page.evaluate(() => (window as InspectionWindow).__beatshooter!.analysis());
         if (!analysis) throw new Error("Ready analysis missing.");
+        if (!validateEnergyCurve(analysis.energy, analysis.duration)) throw new Error("Missing or invalid local energy curves.");
+        const ownsMetadata = await page.evaluate(() => {
+            const api = (window as InspectionWindow).__beatshooter!;
+            const copy = api.analysis()!;
+            const original = copy.energy!.loudness[0]!;
+            copy.energy!.loudness[0] = original === 0 ? 1 : 0;
+            return api.analysis()!.energy!.loudness[0] === original;
+        });
+        if (!ownsMetadata) throw new Error("Inspection exposed mutable retained energy metadata.");
         if (await page.locator("#bs-local-grid").inputValue() !== "detected") throw new Error("Detected chart not selected.");
         const wallMs = performance.now() - started;
         const stem = `track-${index}`;
@@ -170,6 +185,13 @@ try {
         if (!played.chart.id.startsWith("analyzed-") || played.chart.beatCount !== analysis.beats.length) {
             throw new Error("Gameplay did not consume the analyzed chart.");
         }
+        const energy = sampleEnergy(analysis.energy, played.visuals.frame.position);
+        if (played.visuals.shaderStatus !== "ready" ||
+            Math.abs(played.visuals.shaderInput.energy - energy.loudness) > 0.00001 ||
+            Math.abs(played.visuals.shaderInput.bass - energy.bass) > 0.00001 ||
+            played.visuals.activeShards > 256 || played.visuals.activeRings > 8) {
+            throw new Error("Gameplay did not sample local energy on the shared musical clock.");
+        }
         await page.getByRole("button", { name: "Restart session" }).click();
         await waitPhase(page, "playing");
         if ((await snapshot(page)).chart.id !== played.chart.id) throw new Error("Retry changed the chart.");
@@ -186,6 +208,8 @@ try {
             clickToReadyMilliseconds: round(wallMs), backend: analysis.backend,
             warnings: state.analysis.warnings, chartId: played.chart.id,
             previewPlayRetryCleanup: "passed", previewSections: index === 0 ? "start/middle/end/full passed" : "start passed",
+            musicalVisuals: { shader: "ready", energyFrames: analysis.energy!.loudness.length,
+                sharedClockEnergy: "passed", gapGuardActive: !played.visuals.frame.active },
             groundTruthComparison: demoTruth,
         };
         results.push(result);

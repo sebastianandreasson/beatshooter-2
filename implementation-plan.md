@@ -8,6 +8,14 @@ on the four private tracks in `local-audio/`. It is separate from the original
 M0–M6 scope. See [prototype results](docs/beat-this-prototype.md) for measured
 performance, exact parity with the original model, and pending listening review.
 
+Follow-up implementation: [music synchronized arena and combat effects](docs/music-visuals-plan.md)
+now includes the floor shader, musical particles, shared timing, comfort controls
+and optional local energy curves. Automated browser checks, the 60 FPS stress
+fixture and all four local-track energy checks pass. Human listening/comfort
+review remains open; see the
+[visual verification record](docs/music-visuals-verification.md).
+The original M0–M6 acceptance below remains historical evidence for that scope.
+
 ## Implementation record — 2026-10-20
 
 The original brief and acceptance criteria below are retained for traceability.

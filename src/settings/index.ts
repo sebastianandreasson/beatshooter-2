@@ -6,6 +6,7 @@ export interface Settings {
     /** Positive values advance the visual pulse; audio and combat timestamps stay unchanged. */
     timingOffsetMs: number;
     graphics: "low" | "high";
+    effectsIntensity: "off" | "calm" | "standard";
     reducedFlash: boolean;
 }
 
@@ -37,6 +38,7 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
     effectsVolume: 0.55,
     timingOffsetMs: 0,
     graphics: "high",
+    effectsIntensity: "standard",
     reducedFlash: false,
 });
 
@@ -59,6 +61,8 @@ export function validateSettings(value: unknown): Settings {
         effectsVolume: numberIn(source.effectsVolume, 0, 1, DEFAULT_SETTINGS.effectsVolume),
         timingOffsetMs: numberIn(source.timingOffsetMs, -250, 250, DEFAULT_SETTINGS.timingOffsetMs),
         graphics: source.graphics === "low" ? "low" : "high",
+        effectsIntensity: source.effectsIntensity === "off" || source.effectsIntensity === "calm"
+            ? source.effectsIntensity : DEFAULT_SETTINGS.effectsIntensity,
         reducedFlash: typeof source.reducedFlash === "boolean"
             ? source.reducedFlash
             : DEFAULT_SETTINGS.reducedFlash,

@@ -28,6 +28,7 @@ describe("versioned preferences", () => {
         value.settings.musicVolume = 0.3;
         value.settings.timingOffsetMs = -125;
         value.settings.graphics = "low";
+        value.settings.effectsIntensity = "calm";
         value.settings.reducedFlash = true;
         const scored = updateBest(value, "neon-circuit", 1200);
         expect(savePreferences(scored, storage)).toBe(true);
@@ -38,6 +39,19 @@ describe("versioned preferences", () => {
     test("rejects unknown schema versions, malformed JSON and invalid root types", () => {
         for (const value of ["{", "null", "[]", '{"version":99,"settings":{"masterVolume":0}}']) {
             expect(loadPreferences(memoryStorage(value))).toEqual(defaultPreferences());
+        }
+    });
+
+    test("old preferences acquire the visual default and intensity remains independent of quality", () => {
+        const legacy = validatePreferences({ version: 1, settings: { graphics: "low", reducedFlash: true } });
+        expect(legacy.settings.effectsIntensity).toBe("standard");
+        for (const effectsIntensity of ["off", "calm", "standard"] as const) {
+            expect(validateSettings({ graphics: "low", effectsIntensity, reducedFlash: true })).toEqual({
+                ...DEFAULT_SETTINGS, graphics: "low", effectsIntensity, reducedFlash: true,
+            });
+        }
+        for (const effectsIntensity of [null, "bright", 1, false]) {
+            expect(validateSettings({ effectsIntensity }).effectsIntensity).toBe("standard");
         }
     });
 

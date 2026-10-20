@@ -1,4 +1,5 @@
 import { createBeatThis, type BeatThis } from "@jgorset/beat-this";
+import { calculateEnergy } from "./energy";
 import {
     ANALYZER_VERSION,
     type AnalysisRequest,
@@ -40,6 +41,12 @@ scope.onmessage = async ({ data }) => {
             new URL(data.wasmPaths).origin !== scope.location.origin) {
             throw new Error("Audio analysis assets must be served from this application.");
         }
+        progress("Measuring track energy", 0, 1);
+        // Optional visual metadata must never make beat tracking unavailable.
+        let energy;
+        try { energy = calculateEnergy(data.pcm); }
+        catch (error) { console.warn("Visual energy unavailable; using neutral response.", error); }
+        progress("Measuring track energy", 1, 1);
         progress("Loading beat model", 0, 1);
         tracker = await createBeatThis({
             modelUrl: data.modelUrl,
@@ -59,6 +66,7 @@ scope.onmessage = async ({ data }) => {
             downbeats: validEvents(result.downbeats, data.duration),
             elapsedMs: performance.now() - started,
             backend: "webgpu" as const,
+            energy,
         };
         await tracker.dispose();
         tracker = undefined;
