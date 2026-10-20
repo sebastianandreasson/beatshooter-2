@@ -1,6 +1,10 @@
+> Implemented on 2026-10-20. See [campaign verification](campaign-verification.md),
+> [library verification](library-verification.md), and [encounter verification](encounter-verification.md).
+> The design below remains the implementation contract; real-playlist balance still needs playtesting.
+
 # Multi song runs and music library plan
 
-**Draft for review. No gameplay implementation is included.**
+**Approved design, now implemented.** The original decisions and acceptance criteria are retained below.
 
 Build a persistent local music library, an ordered playlist builder, and a
 ten-song run connected by arena choices. Songs follow the player's playlist;

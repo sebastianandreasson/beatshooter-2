@@ -22,14 +22,22 @@ import { createAnalyzedChart } from "../analysis/chart";
 import type { BeatAnalysis } from "../analysis/types";
 import { publishVisualEvents, VisualEvents } from "../music-visuals/events";
 import { DashState } from "../dash/state";
-import { chooseUpgrade, createUpgradeState, prepareUpgradeChoices } from "../upgrades";
+import { chooseUpgrade, createUpgradeState, describeOwnedUpgrades, prepareUpgradeChoices } from "../upgrades";
 import { advanceSectionDifficulty } from "../combat/difficulty";
 import { shieldReady } from "../combat/specials";
+import { stopEncounter } from "../encounters";
+import type { RunSong } from "../run";
+import { createPickups } from "../pickups/state";
+import {
+    beforeQuickPlay, campaignRecord, configureCampaignCombat, continueCampaign, finishCampaignSong,
+    hasSavedCampaign, initializeJourney, isCampaign, Journey, leaveCampaign, loadLibrarySong, mountJourney,
+    openJourney, renderJourney, retainLocalFile, selectCampaignUpgrade,
+} from "./journey";
 
-export type Phase = "menu" | "loading" | "starting" | "playing" | "paused" | "results";
+export type Phase = "menu" | "loading" | "starting" | "playing" | "paused" | "results" | "map" | "intermission" | "settling";
 export const isRunningPhase = (phase: Phase) => phase === "playing";
 export const isArenaPhase = (phase: Phase) => isRunningPhase(phase) || phase === "paused" || phase === "starting";
-export type Selection = { mode: "demo" } | { mode: "dojo"; bpm: number } | { mode: "local"; file: File; bpm: number; offset: number; useAnalysis?: boolean };
+export type Selection = { mode: "demo" } | { mode: "dojo"; bpm: number } | { mode: "local"; file: File; bpm: number; offset: number; useAnalysis?: boolean } | { mode: "library"; song: RunSong };
 export const SessionEntity = component("Beatshooter/SessionEntity", {});
 interface SessionData {
     phase: Phase; selection: Selection; track: TrackManifest; loaded?: LoadedTrack;
@@ -60,9 +68,11 @@ function stopEffects(world: World): void {
     for (const eid of [...world.query([Sound])]) world.destroy(eid);
 }
 
-function clearSession(world: World): void {
+export function clearSession(world: World): void {
     const session = world.resource(Session);
-    session.transport?.stop();
+    if (session.transport?.unload) session.transport.unload();
+    else session.transport?.stop();
+    session.loader?.clearLocalCache();
     world.setTimeScale(1);
     session.startBusy = false;
     session.pending.length = 0;
@@ -81,7 +91,7 @@ function clearSession(world: World): void {
     resetPlayer(world);
 }
 
-function audio(world: World): { transport: MusicTransport; loader: TrackLoader; context: AudioContext } {
+export function audio(world: World): { transport: MusicTransport; loader: TrackLoader; context: AudioContext } {
     const session = world.resource(Session), output = world.resource(AudioOutput);
     if (!output.context || !output.bus) {
         throw new Error("Audio output is unavailable. Enable sound in your browser and reload this page.");
@@ -121,11 +131,17 @@ export function stopPreview(world: World): void {
         session.loader?.cancel();
         session.previewLoading = false;
     }
-    if (!session.preview) return;
+    if (!session.preview) {
+        if (session.phase === "menu" && !session.analysisController && !session.previewLoading) void world.resource(Journey).library?.setGameplayActive(false);
+        return;
+    }
     session.preview = false;
-    session.transport?.stop();
+    if (session.transport?.unload) session.transport.unload();
+    else session.transport?.stop();
     session.previewLoaded?.dispose();
     session.previewLoaded = undefined;
+    session.loader?.clearLocalCache();
+    if (session.phase === "menu" && !session.analysisController) void world.resource(Journey).library?.setGameplayActive(false);
 }
 
 export function cancelAnalysis(world: World): void {
@@ -135,6 +151,8 @@ export function cancelAnalysis(world: World): void {
     session.analysisController = undefined;
     session.loader?.cancel();
     session.analysis = { state: "idle", message: "Analysis cancelled. You can retry or use manual BPM." };
+    session.loader?.clearLocalCache();
+    if (session.phase === "menu" && !session.preview) void world.resource(Journey).library?.setGameplayActive(false);
     renderUI(world);
 }
 
@@ -160,6 +178,13 @@ export async function analyzeLocal(world: World, file: File): Promise<void> {
     renderUI(world);
     try {
         const { loader } = audio(world);
+        await initializeJourney(world);
+        const library = world.resource(Journey).library;
+        await library?.setGameplayActive(true);
+        if (library?.snapshot.available) {
+            try { await library.persistOriginal(file); } catch { /* Quick Play remains available when storage fails. */ }
+        }
+        if (controller.signal.aborted) return;
         const prepared = await loader.prepareLocal(file);
         if (controller.signal.aborted) return;
         const analysis = await analyzeAudio(prepared.buffer, {
@@ -178,6 +203,8 @@ export async function analyzeLocal(world: World, file: File): Promise<void> {
         });
         if (controller.signal.aborted) return;
         const chart = createAnalyzedChart(analysis);
+        await retainLocalFile(world, file, analysis);
+        if (controller.signal.aborted) return;
         session.analyzedFile = file;
         session.analyzedTrack = analysis;
         session.analysis = {
@@ -196,6 +223,8 @@ export async function analyzeLocal(world: World, file: File): Promise<void> {
     } finally {
         if (session.analysisController === controller) {
             session.analysisController = undefined;
+            session.loader?.clearLocalCache();
+            if (session.phase === "menu") void world.resource(Journey).library?.setGameplayActive(false);
             renderUI(world);
         }
     }
@@ -209,8 +238,9 @@ function selectedAnalysis(session: SessionData, file: File, useAnalysis = false)
     return session.analyzedTrack;
 }
 
-export async function startSession(world: World, selection: Selection): Promise<void> {
+export async function startSession(world: World, selection: Selection, options?: { combat: CombatState; campaign: true }): Promise<void> {
     const session = world.resource(Session);
+    if (world.resource(Journey).retrySave) throw new Error("Resolve the checkpoint error with Retry or Reload saved checkpoint before starting another session.");
     cancelAnalysis(world);
     stopPreview(world);
     const token = ++session.loadToken;
@@ -230,8 +260,12 @@ export async function startSession(world: World, selection: Selection): Promise<
         const { loader, context } = audio(world);
         // Called before the first await, preserving the explicit button/key gesture.
         await context.resume();
+        if (token !== session.loadToken || world.signal.aborted) return;
+        if (options?.campaign) await world.resource(Journey).library?.setGameplayActive(true);
+        else await beforeQuickPlay(world);
         if (token !== session.loadToken) return;
-        const loaded = selection.mode === "demo" ? await loader.load(DEMO_TRACK)
+        const loaded = selection.mode === "library" ? await loadLibrarySong(world, selection.song)
+            : selection.mode === "demo" ? await loader.load(DEMO_TRACK)
             : selection.mode === "local" ? await loader.loadLocal(selection.file, selection.bpm, selection.offset,
                 selectedAnalysis(session, selection.file, selection.useAnalysis))
             : undefined;
@@ -243,11 +277,24 @@ export async function startSession(world: World, selection: Selection): Promise<
                 name: selection.file.name, bpm: session.track.bpm, offset: session.track.firstBeatOffset,
             };
             savePreferences(session.preferences);
+            await retainLocalFile(world, selection.file, selectedAnalysis(session, selection.file, selection.useAnalysis), { bpm: selection.bpm, offset: selection.offset, duration: session.track.duration });
+            if (token !== session.loadToken) return;
+        }
+        if (options?.campaign) {
+            session.combat = options.combat;
+            configureCampaignCombat(world);
+            session.combat.pickups = createPickups(session.combat.randomState, session.track.duration, session.combat.tuning.arenaHalfExtent);
+            session.phase = "starting";
+            await startPlayback(world);
+            return;
         }
         // The free level-one choice is separate from XP-earned levels. Keep the
         // transport stopped so the first beat and count-in wait for the player.
         // Seed offers once per new run, independently of the combat random stream.
         session.combat.upgrades = createUpgradeState(crypto.getRandomValues(new Uint32Array(1))[0]!);
+        if (selection.mode !== "dojo") {
+            session.combat.pickups = createPickups(session.combat.upgrades.randomState, session.track.duration, session.combat.tuning.arenaHalfExtent);
+        }
         session.combat.upgrades.pending = 1;
         prepareUpgradeChoices(session.combat);
         session.phase = "starting";
@@ -258,6 +305,11 @@ export async function startSession(world: World, selection: Selection): Promise<
         session.loaded = undefined;
         session.phase = "menu";
         session.error = error instanceof Error ? error.message : "The track could not be loaded. Please choose it again.";
+        if (options?.campaign) {
+            const journey = world.resource(Journey);
+            journey.error = `${session.error} Your song-entry checkpoint is safe. Relink missing audio in the library, then Continue.`;
+            journey.open = true;
+        } else void world.resource(Journey).library?.setGameplayActive(false);
     }
     renderUI(world);
 }
@@ -288,13 +340,22 @@ export async function resumeSession(world: World): Promise<void> {
         return;
     }
     if (session.phase !== "paused") return;
+    if (isCampaign(world) && !world.resource(Journey).store?.ownsRun) {
+        session.error = "This tab no longer owns the campaign. Return to menu, then Continue from the saved entry.";
+        renderUI(world); return;
+    }
     const token = session.loadToken;
     try {
         const { context, transport } = audio(world);
         await context.resume();
         if (token !== session.loadToken || session.phase !== "paused") return;
+        if (isCampaign(world) && !world.resource(Journey).store?.ownsRun) throw new Error("Campaign ownership was lost. Return to menu and reload its checkpoint.");
         await transport.resume();
         if (token !== session.loadToken || session.phase !== "paused") return;
+        if (isCampaign(world) && !world.resource(Journey).store?.ownsRun) {
+            transport.pause("user");
+            throw new Error("Campaign ownership was lost. Return to menu and reload its checkpoint.");
+        }
         session.phase = "playing";
         session.error = undefined;
         world.resource(PlayerState).enabled = true;
@@ -310,6 +371,10 @@ export async function resumeSession(world: World): Promise<void> {
 async function startPlayback(world: World): Promise<void> {
     const s = world.resource(Session);
     if (s.phase !== "starting" || s.startBusy || s.combat.upgrades.pending > 0) return;
+    if (isCampaign(world) && !world.resource(Journey).store?.ownsRun) {
+        s.error = "This tab no longer owns the campaign. Return to menu, then Continue from the saved entry.";
+        renderUI(world); return;
+    }
     const token = s.loadToken;
     s.startBusy = true;
     s.loadingLostFocus = false;
@@ -319,9 +384,11 @@ async function startPlayback(world: World): Promise<void> {
         const { transport, context } = audio(world);
         await context.resume();
         if (token !== s.loadToken || s.phase !== "starting") return;
+        if (isCampaign(world) && !world.resource(Journey).store?.ownsRun) throw new Error("Campaign ownership was lost. Return to menu and reload its checkpoint.");
         if (document.hidden || s.loadingLostFocus) throw new Error("Return to this window, then start your run.");
         await transport.start({ ...s.track, buffer: s.loaded?.buffer, metronome: s.selection.mode === "dojo" });
         if (token !== s.loadToken || s.phase !== "starting") return;
+        if (isCampaign(world) && !world.resource(Journey).store?.ownsRun) throw new Error("Campaign ownership was lost. Return to menu and reload its checkpoint.");
         s.position = transport.position;
         s.visualPosition = transport.visualPosition;
         s.phase = "playing";
@@ -340,6 +407,7 @@ async function startPlayback(world: World): Promise<void> {
 /** Apply immediately; the offer's level prevents a stale card spending a queued choice. */
 export function selectUpgrade(world: World, id: string, offeredLevel: number): boolean {
     const s = world.resource(Session);
+    if (isCampaign(world) && (s.phase === "starting" || s.phase === "intermission")) return selectCampaignUpgrade(world, id, offeredLevel);
     if ((s.phase !== "playing" && s.phase !== "starting") || s.startBusy || s.completePending
         || offeredLevel !== s.combat.upgrades.offeredLevel) return false;
     const choice = s.combat.upgrades.choices.find(item => item.id === id);
@@ -350,7 +418,9 @@ export function selectUpgrade(world: World, id: string, offeredLevel: number): b
     return true;
 }
 
-export function quitSession(world: World): void {
+export function quitSession(world: World, preserveCampaign = false): void {
+    if (!preserveCampaign && (world.resource(Journey).busy || world.resource(Journey).retrySave)) return;
+    if (!preserveCampaign) leaveCampaign(world);
     const session = world.resource(Session);
     cancelAnalysis(world);
     session.loadToken++;
@@ -371,7 +441,13 @@ export function quitSession(world: World): void {
 function finishSession(world: World, result: "complete" | "defeat"): void {
     const session = world.resource(Session);
     if (!isRunningPhase(session.phase)) return;
-    session.transport?.stop();
+    stopEncounter(session.combat);
+    if (isCampaign(world)) { stopEffects(world); finishCampaignSong(world, result); return; }
+    if (session.transport?.unload) session.transport.unload();
+    else session.transport?.stop();
+    session.loaded?.dispose(); session.loaded = undefined;
+    session.loader?.clearLocalCache();
+    void world.resource(Journey).library?.setGameplayActive(false);
     session.pending.length = 0;
     session.result = result;
     session.phase = "results";
@@ -397,6 +473,8 @@ async function previewLocal(
     try {
         const { context, loader, transport } = audio(world);
         await context.resume();
+        await initializeJourney(world);
+        await world.resource(Journey).library?.setGameplayActive(true);
         if (token !== session.loadToken) return;
         const loaded = await loader.loadLocal(file, bpm, offset, selectedAnalysis(session, file, useAnalysis));
         if (token !== session.loadToken) { loaded.dispose(); return; }
@@ -425,6 +503,8 @@ async function previewLocal(
 export function mountGameUI(container: HTMLElement, world: World): () => void {
     const session = world.resource(Session);
     session.ui = mountUI({
+        openLibrary: () => openJourney(world),
+        continueCampaign: () => continueCampaign(world),
         startDemo: () => void startSession(world, { mode: "demo" }),
         startDojo: bpm => void startSession(world, { mode: "dojo", bpm }),
         startLocal: (file, bpm, offset, useAnalysis) => startSession(world, { mode: "local", file, bpm, offset, useAnalysis }),
@@ -435,18 +515,20 @@ export function mountGameUI(container: HTMLElement, world: World): () => void {
         stopPreview: () => { ++session.loadToken; session.loader?.cancel(); stopPreview(world); },
         pause: () => pauseSession(world),
         resume: () => void resumeSession(world),
-        retry: () => void startSession(world, session.selection),
+        retry: () => isCampaign(world) ? continueCampaign(world) : startSession(world, session.selection),
         quit: () => quitSession(world),
         resetDojo: () => void startSession(world, session.selection),
         chooseUpgrade: (id, level) => selectUpgrade(world, id, level),
         updateSettings: patch => applySettings(world, patch),
         resetSettings: () => { session.preferences = resetPreferences(); applySettings(world); },
     }, container);
+    const disposeJourney = mountJourney(container, world);
     renderUI(world);
-    return () => { session.ui?.dispose(); session.ui = undefined; };
+    return () => { disposeJourney(); session.ui?.dispose(); session.ui = undefined; };
 }
 
 export function renderUI(world: World): void {
+    if (world.signal.aborted) return;
     const s = world.resource(Session);
     if (!s.ui) return;
     const currentBeat = beatAtPosition(s.track.beats, s.visualPosition);
@@ -457,7 +539,7 @@ export function renderUI(world: World): void {
         beatsPerBar = s.track.beats[end]!.beatInBar + 1;
     }
     const view: UIView = {
-        phase: s.phase, mode: s.selection.mode, settings: s.preferences.settings,
+        phase: s.phase, mode: s.selection.mode === "library" ? "local" : s.selection.mode, settings: s.preferences.settings,
         title: s.track.title, credit: s.track.artist, duration: s.track.duration, bpm: s.track.bpm,
         score: s.combat.score, kills: s.combat.kills, health: s.combat.health,
         level: s.combat.experience.level, xp: s.combat.experience.xp,
@@ -470,11 +552,22 @@ export function renderUI(world: World): void {
         generation: s.generation, beats: s.track.beats,
         structure: s.loaded?.structure,
         previewPosition: s.preview ? s.transport?.position : 0,
-        upgrade: s.phase === "starting" || (s.phase === "playing" && s.combat.upgrades.choices.length > 0) ? {
+        campaign: isCampaign(world), savedCampaign: hasSavedCampaign(world),
+        savedCampaignSummary: (() => {
+            const saved = world.resource(Journey).active;
+            if (!saved) return undefined;
+            const song = saved.songs[saved.songIndex];
+            return `Song ${saved.songIndex + 1} of ${saved.songs.length} · ${song?.title ?? ""}${saved.entry ? ` · ${saved.entry.encounterId.replaceAll("-", " ")} · This song restarts from its saved entry build.` : " · Your map and upgrade choices are saved."}`;
+        })(),
+        campaignCleared: campaignRecord(world) ? `${campaignRecord(world)!.route.length} / ${campaignRecord(world)!.songs.length}` : undefined,
+        resultDuration: s.phase === "results" && campaignRecord(world) ? campaignRecord(world)!.songs.slice(0, campaignRecord(world)!.route.length).reduce((sum, song) => sum + song.duration, 0) + (s.result === "defeat" ? s.position : 0) : undefined,
+        campaignStage: campaignRecord(world) ? `${campaignRecord(world)!.songIndex + 1} / ${campaignRecord(world)!.songs.length}` : undefined,
+        ownedUpgrades: s.phase === "paused" ? describeOwnedUpgrades(s.combat) : undefined,
+        upgrade: s.phase === "starting" || s.phase === "intermission" || ((s.phase === "playing" || s.phase === "paused") && s.combat.upgrades.choices.length > 0) ? {
             choices: s.combat.upgrades.choices,
             level: s.combat.upgrades.offeredLevel,
             pending: s.combat.upgrades.pending,
-            busy: s.startBusy,
+            busy: s.startBusy || world.resource(Journey).busy,
         } : undefined,
         beat: currentBeat?.index ?? -1, beatInBar: currentBeat?.beatInBar ?? -1,
         beatsPerBar, downbeat: currentBeat?.downbeat ?? false, analysis: s.analysis,
@@ -490,6 +583,7 @@ export function renderUI(world: World): void {
             : undefined,
     };
     s.ui.render(view);
+    renderJourney(world);
 }
 
 export const ObserveMusic: System = {

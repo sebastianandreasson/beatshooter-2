@@ -1,0 +1,10 @@
+{
+    "name": "beatshooter-2",
+    "account_id": "a0188d959c370a90be93959612ee3e9e",
+    "compatibility_date": "2026-10-20",
+    "workers_dev": true,
+    "preview_urls": false,
+    "assets": {
+        "directory": ".artifacts/cloudflare/assets"
+    }
+}

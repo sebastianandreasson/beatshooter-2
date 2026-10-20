@@ -4,6 +4,7 @@ import { ObserveMusic, Session } from "../session";
 import { STALL_THRESHOLD_SECONDS } from "../rhythm/transport";
 import { createDashTiming } from "./timing";
 import { DashController, DashState } from "./state";
+import { leaveAfterImage } from "../combat/upgrade-effects";
 
 function synchronize(world: World) {
     const session = world.resource(Session), dash = world.resource(DashState);
@@ -29,10 +30,16 @@ export function tryDash(world: World): boolean {
     if (position < 0 || position >= session.track.duration ||
         position - session.position > STALL_THRESHOLD_SECONDS) return false;
     sampleAim(world);
-    return synchronize(world).controller.press(
+    const controller = synchronize(world).controller;
+    const accepted = controller.press(
         position, readMovementInput(player.keys), player.aim, player.position,
         session.combat.playerStats.effective.dashDistance,
     );
+    if (accepted) {
+        const nextBar = session.track.beats.find(beat => beat.bar > controller.lastUsedBar);
+        leaveAfterImage(session.combat, player.position, player.aim, position, nextBar?.time ?? session.track.duration);
+    }
+    return accepted;
 }
 
 export const SampleDash: System = {
@@ -40,6 +47,9 @@ export const SampleDash: System = {
     update(world) {
         const session = world.resource(Session), player = world.resource(PlayerState);
         const dash = synchronize(world);
+        if (session.combat.afterImage && session.position >= session.combat.afterImage.expiresAt) {
+            session.combat.afterImage = undefined;
+        }
         if (session.phase !== "playing" && session.phase !== "paused") dash.controller.active = undefined;
         dash.controller.update(session.position);
         const active = session.phase === "playing" && session.position >= (dash.controller.active?.startedAt ?? Infinity)

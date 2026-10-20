@@ -16,6 +16,12 @@ export interface PlayerStatsValues {
     wallBounces: number;
     homing: number;
     regenerativeShield: number;
+    afterImage: number;
+    forkingShots: number;
+    /** Fraction of the killing projectile's fired damage; zero disables death blasts. */
+    explosionDamageMultiplier: number;
+    /** Scales blast area, so the radius scales with its square root. */
+    explosionAreaMultiplier: number;
     /** Scales the range that starts attracting XP; collection contact is unchanged. */
     pickupRadiusMultiplier: number;
     /** World-space distance captured when a dash is accepted. */
@@ -39,6 +45,10 @@ export const DEFAULT_PLAYER_STATS: Readonly<PlayerStatsValues> = Object.freeze({
     wallBounces: 0,
     homing: 0,
     regenerativeShield: 0,
+    afterImage: 0,
+    forkingShots: 0,
+    explosionDamageMultiplier: 0,
+    explosionAreaMultiplier: 1,
     pickupRadiusMultiplier: 1,
     dashDistance: 3.6,
 });
@@ -69,6 +79,7 @@ const keys = [
     "damageMin", "damageMax", "damageMultiplier", "criticalChance", "criticalMultiplier",
     "maxHealth", "healthRegen", "projectileCount", "barrageCount", "bounces",
     "wallBounces", "homing", "regenerativeShield",
+    "afterImage", "forkingShots", "explosionDamageMultiplier", "explosionAreaMultiplier",
     "pickupRadiusMultiplier", "dashDistance",
 ] as const;
 
@@ -235,6 +246,7 @@ function resolveStats(
                 throw new RangeError(`${key} must resolve to a nonnegative safe number.`);
             }
             result[key] = key === "damageMultiplier" || key === "criticalMultiplier" || key === "pickupRadiusMultiplier" || key === "dashDistance"
+                || key === "explosionDamageMultiplier" || key === "explosionAreaMultiplier"
                 ? value : Math.round(value);
         }
     }
@@ -245,6 +257,8 @@ function resolveStats(
     result.wallBounces = Math.min(1, result.wallBounces);
     result.homing = Math.min(1, result.homing);
     result.regenerativeShield = Math.min(1, result.regenerativeShield);
+    result.afterImage = Math.min(1, result.afterImage);
+    result.forkingShots = Math.min(1, result.forkingShots);
     result.pickupRadiusMultiplier = Math.min(MAX_PICKUP_RADIUS_MULTIPLIER, result.pickupRadiusMultiplier);
     result.dashDistance = Math.min(MAX_DASH_DISTANCE, result.dashDistance);
     if (base.damageMin > base.damageMax || result.damageMin > result.damageMax) {

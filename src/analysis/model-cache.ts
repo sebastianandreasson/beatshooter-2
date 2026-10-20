@@ -2,9 +2,50 @@ import type { ModelAsset } from "./models";
 
 export const MODEL_CACHE_NAME = "beatshooter-models-v1";
 
+interface PartsManifest {
+    version: number;
+    bytes: number;
+    sha256: string;
+    parts: { url: string; bytes: number }[];
+}
+
+async function modelPayload(response: Response, model: ModelAsset): Promise<Uint8Array<ArrayBuffer>> {
+    if (!response.headers.get("Content-Type")?.includes("application/json")) {
+        return new Uint8Array(await response.arrayBuffer());
+    }
+    const manifest: PartsManifest = await response.json();
+    if (!manifest || manifest.version !== 1 || manifest.bytes !== model.bytes ||
+        manifest.sha256 !== model.sha256 || !Array.isArray(manifest.parts) ||
+        manifest.parts.length === 0 || manifest.parts.length > 128) {
+        throw new Error(`Invalid model parts: ${model.file}.`);
+    }
+    let total = 0;
+    const parts = manifest.parts.map(part => {
+        if (!part || typeof part.url !== "string" || !Number.isSafeInteger(part.bytes) || part.bytes <= 0) {
+            throw new Error(`Invalid model part: ${model.file}.`);
+        }
+        const url = new URL(part.url, location.href);
+        if (url.origin !== location.origin) throw new Error("Models must be loaded from this application.");
+        total += part.bytes;
+        return { url, bytes: part.bytes };
+    });
+    if (total !== model.bytes) throw new Error(`Invalid model parts size: ${model.file}.`);
+    const bytes = new Uint8Array(model.bytes);
+    let offset = 0;
+    for (const part of parts) {
+        const chunk = await fetch(part.url.href, { mode: "same-origin", cache: "no-cache" });
+        if (chunk.status !== 200) throw new Error(`Could not load ${model.file}: HTTP ${chunk.status}.`);
+        const data = new Uint8Array(await chunk.arrayBuffer());
+        if (data.length !== part.bytes) throw new Error(`Incomplete model part: ${model.file}.`);
+        bytes.set(data, offset);
+        offset += data.length;
+    }
+    return bytes;
+}
+
 async function verifiedBytes(response: Response, model: ModelAsset): Promise<Uint8Array<ArrayBuffer>> {
     if (response.status !== 200) throw new Error(`Could not load ${model.file}: HTTP ${response.status}.`);
-    const bytes = new Uint8Array(await response.arrayBuffer());
+    const bytes = await modelPayload(response, model);
     if (bytes.byteLength !== model.bytes) throw new Error(`Incomplete model: ${model.file}.`);
     const digest = await crypto.subtle.digest("SHA-256", bytes);
     const hash = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");

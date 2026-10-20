@@ -132,10 +132,12 @@ export function enemyVelocity(
     previousMusicPosition = musicPosition - dt,
 ): Vec2 {
     if (enemy.health <= 0 || state.defeated) return { x: 0, z: 0 };
+    // Marksmen commit both muzzle and aim for their visible warning interval.
+    if (state.encounter?.rangerWarnings.has(enemy.id)) return { x: 0, z: 0 };
     const dx = player.x - enemy.x;
     const dz = player.z - enemy.z;
     const distance = Math.hypot(dx, dz);
-    const speed = Math.min(
+    const speed = state.encounter?.enemySpeed ?? Math.min(
         state.tuning.enemyMaxSpeed,
         state.tuning.enemySpeed
             + Math.floor(Math.max(0, state.lastBarIndex) / state.tuning.speedIncreaseEveryBars)

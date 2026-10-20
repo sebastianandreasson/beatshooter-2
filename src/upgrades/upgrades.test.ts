@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { createCombat } from "../combat";
 import { removePlayerStatModifier, setPlayerStatModifier } from "../player-stats";
 import {
-    chooseUpgrade, prepareUpgradeChoices, queueUpgradeLevels,
+    chooseUpgrade, describeOwnedUpgrades, prepareUpgradeChoices, queueUpgradeLevels,
     UPGRADE_IDS, isSpecialUpgrade, SPECIAL_UPGRADE_IDS, type UpgradeId,
 } from "./index";
 
@@ -18,6 +18,35 @@ function offer(combat: ReturnType<typeof createCombat>, id: UpgradeId): void {
 }
 
 describe("upgrade choices", () => {
+    test("the acquired build reports current effects and ranks without changing offers or combat", () => {
+        const combat = createCombat(2026);
+        expect(describeOwnedUpgrades(combat)).toEqual([]);
+        for (const id of UPGRADE_IDS) {
+            if (combat.upgrades.ranks[id] > 0) continue;
+            offer(combat, id);
+            expect(chooseUpgrade(combat, id)).toBe(true);
+        }
+        queueUpgradeLevels(combat.upgrades, combat.upgrades.earnedThrough + 1);
+        prepareUpgradeChoices(combat);
+        const before = structuredClone(combat);
+        const owned = describeOwnedUpgrades(combat);
+        const plain = (parts: (typeof owned)[number]["detailParts"]) =>
+            parts.map(part => typeof part === "string" ? part : part.value).join("");
+        expect(owned.map(upgrade => upgrade.id)).toEqual([...UPGRADE_IDS]);
+        for (const upgrade of owned) {
+            expect(upgrade.rank).toBe(combat.upgrades.ranks[upgrade.id]);
+            expect(plain(upgrade.detailParts)).not.toContain("→");
+            expect(plain(upgrade.descriptionParts)).not.toContain("→");
+        }
+        const health = owned.find(upgrade => upgrade.id === "health")!;
+        const shots = owned.find(upgrade => upgrade.id === "projectiles")!;
+        expect(plain(health.detailParts)).toBe(`${combat.playerStats.effective.maxHealth} maximum health`);
+        expect(plain(health.descriptionParts)).not.toContain("health now");
+        expect(plain(shots.detailParts)).toBe(`${combat.playerStats.effective.projectileCount} projectiles`);
+        expect(plain(shots.descriptionParts)).toContain(`${Math.round(combat.playerStats.effective.damageMultiplier * 100)}%`);
+        expect(combat).toEqual(before);
+    });
+
     test("three distinct stable choices use an independent deterministic stream", () => {
         const first = createCombat(71);
         const second = createCombat(71);

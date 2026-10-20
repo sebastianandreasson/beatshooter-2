@@ -1,6 +1,6 @@
 import type { LocalTrackMetadata, Settings } from "../settings";
 import { DEMO_TRACK } from "../tracks";
-import type { UpgradeChoice, UpgradeTextPart } from "../upgrades";
+import type { OwnedUpgrade, UpgradeChoice, UpgradeTextPart } from "../upgrades";
 import type { SectionAnalysis } from "../analysis/sections";
 import type { Beat } from "../rhythm/timeline";
 import { UpgradeFeedback, sampleMenuUpgradeFeedback } from "./upgrade-feedback";
@@ -8,8 +8,11 @@ import { mountTrackPlayer } from "./track-player";
 import "./style.css";
 import "./track-player.css";
 import "./menus.css";
+import "./pause.css";
 
 export interface UIActions {
+    openLibrary?(): void | Promise<unknown>;
+    continueCampaign?(): void | Promise<unknown>;
     startDemo(): void | Promise<unknown>;
     startDojo(bpm: number): void | Promise<unknown>;
     startLocal(file: File, bpm: number, offsetSeconds: number, useAnalysis?: boolean): void | Promise<unknown>;
@@ -29,7 +32,8 @@ export interface UIActions {
 }
 
 export interface UIView {
-    phase: "menu" | "loading" | "starting" | "playing" | "paused" | "results";
+    phase: "menu" | "loading" | "starting" | "playing" | "paused" | "results" | "map" | "intermission" | "settling";
+    campaign?: boolean; savedCampaign?: boolean; savedCampaignSummary?: string; campaignStage?: string; campaignCleared?: string; resultDuration?: number;
     mode?: "demo" | "dojo" | "local";
     settings: Settings;
     title?: string;
@@ -45,6 +49,7 @@ export interface UIView {
     xp?: number;
     requiredXp?: number;
     totalXp?: number;
+    ownedUpgrades?: readonly OwnedUpgrade[];
     upgrade?: {
         choices: readonly UpgradeChoice[];
         level: number;
@@ -177,6 +182,7 @@ const template = `
                     </div>
                 </div>
             </section>
+            <div class="bs-campaign-menu"><button class="bs-button bs-button-primary" data-action="library">Music library & playlists</button><button class="bs-button bs-button-outline" data-action="continue-campaign" hidden>Continue campaign</button></div><p class="bs-j-note" data-value="saved-campaign-summary" hidden></p>
             <div class="bs-message" data-value="menu-error" role="alert" hidden></div>
             <section class="bs-controls" aria-label="How to play">
                 <div><span class="bs-key-group"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><span>Move</span></div>
@@ -190,7 +196,7 @@ const template = `
     </div>
     <div class="bs-hud" data-screen="hud" hidden>
         <div class="bs-hud-top">
-            <div class="bs-vitals"><div class="bs-hud-label"><span>HULL INTEGRITY</span><strong data-value="health-label">100 / 100</strong></div><progress class="bs-health" max="100" value="100" aria-label="Player health"></progress><div class="bs-shield-status" hidden><span>${icon("health")} Shield</span><strong data-value="shield-status"></strong></div><p class="bs-track-playing"><span class="bs-live-dot"></span><span data-value="track-title">Neon Circuit</span><span class="bs-mode-label" data-value="mode-label">LIVE</span></p></div>
+            <div class="bs-vitals"><div class="bs-hud-label"><span>HULL INTEGRITY</span><strong data-value="health-label">100 / 100</strong></div><progress class="bs-health" max="100" value="100" aria-label="Player health"></progress><div class="bs-shield-status" hidden><span>${icon("health")} Shield</span><strong data-value="shield-status"></strong></div><p class="bs-track-playing"><span class="bs-live-dot"></span><span data-value="track-title">Neon Circuit</span><span class="bs-mode-label" data-value="mode-label">LIVE</span></p><div class="bs-campaign-badge" data-value="campaign-stage" hidden></div></div>
             <div class="bs-hud-score"><span class="bs-hud-label">SCORE</span><strong data-value="score">0</strong><span class="bs-kills"><b data-value="kills">0</b> ELIMINATED</span></div>
             <button class="bs-icon-button" data-action="pause" aria-label="Pause game" title="Pause (Escape)">${icon("pause")}</button>
         </div>
@@ -213,7 +219,14 @@ const template = `
         <pre class="bs-diagnostics" data-value="diagnostics" hidden></pre>
     </div>
     <div class="bs-cover" data-screen="loading" hidden><section class="bs-dialog bs-loading-dialog" role="status"><div class="bs-loading-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div><h2>Loading</h2><p data-value="loading-message">Loading audio…</p><button class="bs-button bs-button-quiet" data-action="quit">Cancel</button></section></div>
-    <div class="bs-cover" data-screen="paused" hidden><section class="bs-dialog bs-pause-dialog" aria-labelledby="bs-pause-title"><h2 id="bs-pause-title">Paused</h2><p data-value="pause-reason"></p><div class="bs-message" data-value="session-error" role="alert" hidden></div><div class="bs-dialog-actions"><button class="bs-button bs-button-primary" data-action="resume">${icon("play")} Resume session</button><button class="bs-button bs-button-outline" data-action="settings">${icon("settings")} Settings</button><button class="bs-button bs-button-quiet" data-action="retry">${icon("reset")} Restart session</button><button class="bs-text-button" data-action="quit">Return to menu</button></div><p class="bs-dialog-footnote"><kbd>ESC</kbd> TO RESUME</p></section></div>
+    <div class="bs-cover bs-pause-overlay" data-screen="paused" hidden>
+        <aside class="bs-owned-upgrades" aria-labelledby="bs-owned-upgrades-title" tabindex="0">
+            <header><span class="bs-pause-eyebrow">YOUR BUILD</span><h2 id="bs-owned-upgrades-title">Current upgrades</h2></header>
+            <p class="bs-owned-empty">No upgrades acquired yet.</p>
+            <ul class="bs-owned-upgrade-list"></ul>
+        </aside>
+        <section class="bs-dialog bs-pause-dialog" aria-labelledby="bs-pause-title"><h2 id="bs-pause-title">Paused</h2><p data-value="pause-reason"></p><div class="bs-message" data-value="session-error" role="alert" hidden></div><div class="bs-dialog-actions"><button class="bs-button bs-button-primary" data-action="resume">${icon("play")} Resume session</button><button class="bs-button bs-button-outline" data-action="settings">${icon("settings")} Settings</button><button class="bs-button bs-button-quiet" data-action="retry">${icon("reset")} Restart session</button><button class="bs-text-button" data-action="quit">Return to menu</button></div><p class="bs-dialog-footnote"><kbd>ESC</kbd> TO RESUME</p></section>
+    </div>
     <aside class="bs-upgrade-panel" data-upgrade-screen aria-labelledby="bs-upgrade-title" hidden>
         <div class="bs-upgrade-content">
         <header class="bs-upgrade-heading">
@@ -221,13 +234,14 @@ const template = `
             <span class="bs-upgrade-pending" data-value="upgrade-pending" role="status" aria-live="polite" hidden></span>
         </header>
         <p class="bs-upgrade-intro" hidden>Choose an upgrade before the music starts. Later upgrades appear on the right while you keep playing. Press <kbd>1</kbd>, <kbd>2</kbd>, or <kbd>3</kbd> to choose. Extra upgrades queue until you select them.</p>
+        <p class="bs-upgrade-pause-note" hidden>Take your time to read. Resume to choose an upgrade.</p>
         <div class="bs-upgrade-cards" role="group" aria-label="Choose one of three upgrades"></div>
         <div class="bs-message" data-value="start-error" role="alert" hidden></div>
         <button class="bs-button bs-button-primary" data-action="start-ready" hidden>Start run</button>
         <button class="bs-text-button bs-start-quit" data-action="quit" hidden>Return to menu</button>
         </div>
     </aside>
-    <div class="bs-cover" data-screen="results" hidden><section class="bs-dialog bs-results-dialog" aria-labelledby="bs-results-title"><h2 id="bs-results-title" data-value="result-title">Track complete</h2><div class="bs-result-score"><span>FINAL SCORE</span><strong data-value="result-score">0</strong><span data-value="best-label">PERSONAL BEST</span></div><div class="bs-result-stats"><div><strong data-value="result-kills">0</strong><span>ELIMINATED</span></div><div><strong data-value="result-time">0:00</strong><span>SURVIVED</span></div><div><strong data-value="result-best">0</strong><span>BEST SCORE</span></div></div><p class="bs-result-experience"><span>LEVEL <b data-value="result-level">1</b></span><span><b data-value="result-xp">0</b> TOTAL XP</span></p><div class="bs-dialog-actions"><button class="bs-button bs-button-primary" data-action="retry">${icon("reset")} Play again</button><button class="bs-button bs-button-outline" data-action="quit">Back to sessions ${icon("arrow")}</button></div><p class="bs-score-rule">100 points per elimination + 2 per beat survived.</p></section></div>
+    <div class="bs-cover" data-screen="results" hidden><section class="bs-dialog bs-results-dialog" aria-labelledby="bs-results-title"><h2 id="bs-results-title" data-value="result-title">Track complete</h2><div class="bs-result-score"><span>FINAL SCORE</span><strong data-value="result-score">0</strong><span data-value="best-label">PERSONAL BEST</span></div><div class="bs-result-stats"><div><strong data-value="result-kills">0</strong><span>ELIMINATED</span></div><div><strong data-value="result-time">0:00</strong><span>SURVIVED</span></div><div><strong data-value="result-best">0</strong><span data-value="result-comparison-label">BEST SCORE</span></div></div><p class="bs-result-experience"><span>LEVEL <b data-value="result-level">1</b></span><span><b data-value="result-xp">0</b> TOTAL XP</span></p><div class="bs-dialog-actions"><button class="bs-button bs-button-primary" data-action="retry">${icon("reset")} Play again</button><button class="bs-button bs-button-outline" data-action="quit">Back to sessions ${icon("arrow")}</button></div><p class="bs-score-rule">100 points per elimination + 2 per beat survived.</p></section></div>
     <div class="bs-modal" data-modal="settings" hidden><section class="bs-dialog bs-settings-dialog" role="dialog" aria-modal="true" aria-labelledby="bs-settings-title"><button class="bs-icon-button bs-dialog-close" data-action="close-settings" aria-label="Close settings">${icon("cross")}</button><h2 id="bs-settings-title">Settings</h2><div class="bs-settings-section"><h3>Audio mix</h3><label class="bs-slider-label" for="bs-master">Master <output for="bs-master" data-output="masterVolume">75%</output></label><input id="bs-master" data-setting="masterVolume" type="range" min="0" max="1" step="0.01" value=".75"><label class="bs-slider-label" for="bs-music">Music <output for="bs-music" data-output="musicVolume">80%</output></label><input id="bs-music" data-setting="musicVolume" type="range" min="0" max="1" step="0.01" value=".8"><label class="bs-slider-label" for="bs-effects">Effects <output for="bs-effects" data-output="effectsVolume">55%</output></label><input id="bs-effects" data-setting="effectsVolume" type="range" min="0" max="1" step="0.01" value=".55"></div><div class="bs-settings-section"><h3>Timing</h3><label class="bs-slider-label" for="bs-offset">Visual timing offset <output for="bs-offset" data-output="timingOffsetMs">0 ms</output></label><input id="bs-offset" data-setting="timingOffsetMs" type="range" min="-250" max="250" step="5" value="0"><p class="bs-setting-help">Positive: earlier pulse. Negative: later pulse. Audio and combat timestamps stay unchanged.</p></div><div class="bs-settings-section"><h3>Visuals</h3><label class="bs-select-label" for="bs-intensity">Visual effects<select id="bs-intensity" data-setting="effectsIntensity"><option value="off">Off</option><option value="calm">Calm</option><option value="standard">Standard</option></select></label><p class="bs-setting-help bs-visual-help">Calm reduces motion. Off disables effects.</p><label class="bs-select-label" for="bs-graphics">Graphics detail<select id="bs-graphics" data-setting="graphics"><option value="high">High</option><option value="low">Low</option></select></label><label class="bs-checkbox-label" for="bs-reduced"><span>Reduced flashes<small>Soften beat pulses and hit feedback.</small></span><input id="bs-reduced" data-setting="reducedFlash" type="checkbox"></label></div><div class="bs-settings-footer"><span>Saved automatically.</span><button class="bs-text-button" data-action="reset-settings">Reset settings</button></div></section></div>
     <div class="bs-modal" data-modal="import" hidden>
         <section class="bs-dialog bs-import-dialog" role="dialog" aria-modal="true" aria-labelledby="bs-import-title">
@@ -314,12 +328,35 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
     };
     const upgradePanel = root.querySelector<HTMLElement>(".bs-upgrade-panel")!;
     const upgradeCards = root.querySelector<HTMLElement>(".bs-upgrade-cards")!;
+    const pauseOverlay = root.querySelector<HTMLElement>(".bs-pause-overlay")!;
+    const ownedList = root.querySelector<HTMLElement>(".bs-owned-upgrade-list")!;
+    let ownedKey = "";
+    const renderOwnedUpgrades = (next: UIView) => {
+        if (next.phase !== "paused") return;
+        const upgrades = next.ownedUpgrades ?? [];
+        const key = JSON.stringify(upgrades);
+        if (key === ownedKey) return;
+        ownedKey = key;
+        root.querySelector<HTMLElement>(".bs-owned-empty")!.hidden = upgrades.length > 0;
+        ownedList.replaceChildren(...upgrades.map(upgrade => {
+            const item = document.createElement("li");
+            item.dataset.ownedUpgrade = upgrade.id;
+            item.dataset.rarity = upgrade.rarity;
+            item.innerHTML = '<div class="bs-owned-upgrade-heading"><h3></h3><span class="bs-upgrade-rank"></span></div><p class="bs-upgrade-detail"></p><p class="bs-upgrade-description"></p>';
+            item.querySelector("h3")!.textContent = upgrade.title;
+            item.querySelector(".bs-upgrade-rank")!.textContent = upgrade.rarity === "special" ? "RARE · UNIQUE" : `Rank ${upgrade.rank}`;
+            renderUpgradeText(item.querySelector<HTMLElement>(".bs-upgrade-detail")!, upgrade.detailParts);
+            renderUpgradeText(item.querySelector<HTMLElement>(".bs-upgrade-description")!, upgrade.descriptionParts);
+            return item;
+        }));
+    };
     const upgradeArt: Record<string, keyof typeof icons> = {
         damage: "damage", health: "health", regeneration: "regeneration",
         projectiles: "projectiles", barrage: "barrage",
         "crit-chance": "critical", "crit-damage": "critical", bounce: "bounce",
         "pickup-radius": "pickup", "dash-distance": "dash",
         "wall-bounce": "bounce", homing: "target", "regenerative-shield": "health",
+        "exploding-enemies": "barrage", "after-image": "dash", "forking-shots": "projectiles",
     };
     const clearSelection = () => {
         selection = undefined;
@@ -341,11 +378,11 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
         if (selection) selectionFrame = requestAnimationFrame(animateSelection);
     };
     const selectUpgrade = (id: string, level: number) => {
-        if (selection || modal || (view?.phase !== "playing" && view?.phase !== "starting") || view.upgrade?.busy || view.upgrade?.level !== level
+        if (selection || modal || (view?.phase !== "playing" && view?.phase !== "starting" && view?.phase !== "intermission") || view.upgrade?.busy || view.upgrade?.level !== level
             || !view.upgrade.choices.some(choice => choice.id === id)) return;
         selection = {
             id, offer: { ...view.upgrade, choices: [...view.upgrade.choices] },
-            generation: view.generation, starting: view.phase === "starting",
+            generation: view.generation, starting: view.phase === "starting" || view.phase === "intermission",
             feedback: new UpgradeFeedback(view.beats ?? [], view.position ?? 0),
             menuAge: 0, menuBeatDuration: 60 / Math.max(20, view.bpm ?? 120),
             lastFrame: performance.now(),
@@ -363,7 +400,7 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
     };
     const renderUpgrade = (next: UIView) => {
         if (selection && (selection.generation !== next.generation ||
-            !["starting", "playing", "paused"].includes(next.phase))) clearSelection();
+            !["starting", "playing", "paused", "intermission"].includes(next.phase))) clearSelection();
         let feedback = selection
             ? selection.starting
                 ? sampleMenuUpgradeFeedback(selection.menuAge, selection.menuBeatDuration)
@@ -380,9 +417,16 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
             clearSelection();
             feedback = undefined;
         }
-        const starting = next.phase === "starting" || (!!selection?.starting && next.phase === "playing");
-        const active = (starting || (next.phase === "playing" && (!!selection || !!next.upgrade?.choices.length))) && !modal;
+        const starting = next.phase === "starting" || next.phase === "intermission" || (!!selection?.starting && next.phase === "playing");
+        const paused = next.phase === "paused";
+        const active = (starting || ((next.phase === "playing" || paused) && (!!selection || !!next.upgrade?.choices.length))) && !modal;
+        // Let pause lay out the same cards beside the build, preserving their
+        // content, scroll position and in-flight selection receipt.
+        if (paused && upgradePanel.parentElement !== pauseOverlay) pauseOverlay.append(upgradePanel);
+        else if (!paused && upgradePanel.parentElement === pauseOverlay) pauseOverlay.after(upgradePanel);
         upgradePanel.hidden = !active;
+        upgradePanel.tabIndex = paused ? 0 : -1;
+        upgradePanel.querySelector<HTMLElement>(".bs-upgrade-pause-note")!.hidden = !paused || !!selection;
         upgradePanel.classList.toggle("bs-start-upgrade", starting);
         upgradePanel.dataset.selectionState = selection ? "confirming" : "offered";
         upgradePanel.setAttribute("role", starting ? "dialog" : "complementary");
@@ -401,9 +445,10 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
             return;
         }
         const choiceState = selection?.offer ?? next.upgrade!;
-        text("upgrade-title", starting ? "Start of run upgrade" : "Upgrade");
-        upgradePanel.querySelector<HTMLElement>(".bs-upgrade-intro")!.hidden = !starting;
+        text("upgrade-title", next.phase === "intermission" ? "Stage cleared · Upgrade" : starting ? "Start of run upgrade" : "Upgrade");
+        upgradePanel.querySelector<HTMLElement>(".bs-upgrade-intro")!.hidden = !starting || next.phase === "intermission";
         upgradePanel.querySelector<HTMLElement>(".bs-start-quit")!.hidden = !starting;
+        upgradePanel.querySelector<HTMLElement>(".bs-start-quit")!.textContent = next.campaign ? "Save & exit" : "Return to menu";
         message("start-error", starting ? next.error ?? "" : "");
         const startButton = upgradePanel.querySelector<HTMLButtonElement>('[data-action="start-ready"]')!;
         startButton.hidden = !starting || !!selection || choiceState.pending > 0;
@@ -438,7 +483,7 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
         }
         text("upgrade-level", count(choiceState.level));
         for (const button of upgradeCards.querySelectorAll<HTMLButtonElement>("button")) {
-            button.disabled = !!selection || !!choiceState.busy;
+            button.disabled = paused || !!selection || !!choiceState.busy;
             if (selection && feedback) {
                 const chosen = button.dataset.upgradeId === selection.id;
                 button.dataset.selection = chosen ? "selected" : "dismissed";
@@ -484,7 +529,7 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
         progress.hidden = !running;
         progress.value = Number.isFinite(analysis?.progress) ? Math.min(1, Math.max(0, analysis!.progress!)) : 0;
         message("analysis-message", running ? analysis.message
-            : analysis?.state === "error" ? "Analysis failed. Try again."
+            : analysis?.state === "error" ? analysis.message || "Analysis failed. Try again."
             : selectedFile && !ready ? "Analysis cancelled." : "");
         const summary = ready ? [
             analysis.bpm === undefined ? "" : `${Math.round(analysis.bpm)} BPM`,
@@ -569,7 +614,9 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
         const button = target.closest<HTMLElement>("[data-action]");
         if (!button) return;
         const action = button.dataset.action;
-        if (action === "choose-upgrade") {
+        if (action === "library") void run(() => actions.openLibrary?.());
+        else if (action === "continue-campaign") void run(() => actions.continueCampaign?.());
+        else if (action === "choose-upgrade") {
             if (event.detail <= 1) selectUpgrade(button.dataset.upgradeId ?? "", Number(button.dataset.upgradeLevel));
         }
         else if (action === "start-ready") void actions.resume();
@@ -709,6 +756,7 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
                     : screen !== next.phase;
             }
             renderUpgrade(next);
+            renderOwnedUpgrades(next);
             if (phaseChanged && next.phase === "paused") root.querySelector<HTMLElement>('[data-action="resume"]')?.focus();
             if (phaseChanged && next.phase === "results") root.querySelector<HTMLElement>('[data-screen="results"] [data-action="retry"]')?.focus();
             const demo = next.demo ?? (next.mode !== "local" && next.phase === "menu" ? {
@@ -740,7 +788,17 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
                 }
             }
             text("track-title", next.title ?? (next.mode === "dojo" ? "The dojo" : "Neon Circuit"));
-            text("mode-label", next.mode === "dojo" ? "PRACTICE" : "LIVE");
+            text("mode-label", next.mode === "dojo" ? "PRACTICE" : next.campaign ? "CAMPAIGN" : "QUICK PLAY");
+            root.querySelector<HTMLButtonElement>('[data-action="continue-campaign"]')!.hidden = !next.savedCampaign;
+            text("saved-campaign-summary", next.savedCampaignSummary ?? "");
+            refs.get("saved-campaign-summary")!.hidden = !next.savedCampaign;
+            text("campaign-stage", next.campaignStage ? `CAMPAIGN · SONG ${next.campaignStage}` : "");
+            refs.get("campaign-stage")!.hidden = !next.campaign;
+            const pause = root.querySelector('[data-screen="paused"]')!;
+            pause.querySelector('[data-action="quit"]')!.textContent = next.campaign ? "Save & exit · replay this song on return" : "Return to menu";
+            pause.querySelector('[data-action="retry"]')!.textContent = next.campaign ? "Replay song from saved entry" : "Restart session";
+            const resultRetry = root.querySelector<HTMLElement>('[data-screen="results"] [data-action="retry"]')!;
+            resultRetry.hidden = !!next.campaign;
             text("health-label", `${Math.ceil(Math.max(0, next.health ?? 100))} / ${next.maxHealth ?? 100}`);
             const health = root.querySelector<HTMLProgressElement>(".bs-health")!;
             health.max = next.maxHealth ?? 100;
@@ -791,14 +849,15 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
             reset.hidden = next.mode !== "dojo";
             text("loading-message", next.loadingMessage ?? "Loading audio…");
             text("pause-reason", next.pauseReason ?? "");
-            text("result-title", next.result === "defeat" ? "Game over" : "Track complete");
+            text("result-title", next.result === "defeat" ? "Game over" : next.campaign ? "Campaign complete" : "Track complete");
             text("result-score", count(next.score));
             text("result-kills", count(next.kills));
-            text("result-time", clock(next.position ?? 0));
-            text("result-best", count(next.bestScore));
+            text("result-time", clock(next.resultDuration ?? next.position ?? 0));
+            text("result-best", next.campaign ? next.campaignCleared ?? "0" : count(next.bestScore));
+            text("result-comparison-label", next.campaign ? "SONGS CLEARED" : "BEST SCORE");
             text("result-level", count(level));
             text("result-xp", count(next.totalXp));
-            text("best-label", (next.score ?? 0) >= (next.bestScore ?? 0) && (next.score ?? 0) > 0 ? "PERSONAL BEST" : "");
+            text("best-label", !next.campaign && (next.score ?? 0) >= (next.bestScore ?? 0) && (next.score ?? 0) > 0 ? "PERSONAL BEST" : "");
             text("diagnostics", next.diagnostics ?? "");
             refs.get("diagnostics")!.hidden = !next.diagnostics;
             for (const input of root.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-setting]")) {

@@ -18,6 +18,10 @@ import { shockwaveHeight } from "../shockwave/surface";
 import { Neon } from "../neon";
 import { NeonTrails } from "../neon-trails";
 import { MusicStage } from "../music-stage";
+import { Journey } from "../session/journey";
+import { EncounterPresentation } from "../hazards";
+import { PickupPresentation } from "../pickups";
+import { UpgradeEffectPresentation } from "../presentation/upgrade-effects";
 
 /** Read-only opt-in witnesses for browser tests; never enables an on-screen overlay. */
 export function installInspection(world: World): void {
@@ -36,6 +40,10 @@ export function installInspection(world: World): void {
             const wave = world.resource(Shockwave);
             const neon = world.resource(Neon), trails = world.resource(NeonTrails);
             const stage = world.resource(MusicStage);
+            const journey = world.resource(Journey), encounter = s.combat.encounter;
+            const encounterPresentation = world.resource(EncounterPresentation);
+            const pickups = world.resource(PickupPresentation);
+            const upgradeEffects = world.resource(UpgradeEffectPresentation);
             const waveRadius = wave.progress * 30;
             const surfaceSamples = [waveRadius, waveRadius + 4, Math.max(0, waveRadius - 4), 0]
                 .map(x => ({ x, z: 0, height: shockwaveHeight(wave.progress, wave.strength, x, 0) }));
@@ -53,6 +61,41 @@ export function installInspection(world: World): void {
                 position: s.position, audioState: s.transport?.state,
                 playbackRate: s.transport?.playbackRate ?? 0,
                 simulationScale: world.time.scale,
+                afterImage: s.combat.afterImage ? {
+                    ...s.combat.afterImage, aim: { ...s.combat.afterImage.aim },
+                    meshes: upgradeEffects.clone.map(mesh),
+                } : undefined,
+                explosions: s.combat.explosions.map(blast => ({ ...blast,
+                    mesh: upgradeEffects.explosions.has(blast.id) ? mesh(upgradeEffects.explosions.get(blast.id)!) : undefined })),
+                pickups: {
+                    schedule: structuredClone(s.combat.pickups.schedule), nextSpawn: s.combat.pickups.nextSpawn,
+                    collected: { ...s.combat.pickups.collected },
+                    drops: s.combat.pickups.drops.map(drop => ({ ...drop, meshes: (pickups.drops.get(drop.id) ?? []).map(mesh) })),
+                    waves: s.combat.pickups.waves.map(wave => ({
+                        id: wave.id, x: wave.x, z: wave.z, radius: wave.radius, maxRadius: wave.maxRadius,
+                        mesh: pickups.waves.has(wave.id) ? mesh(pickups.waves.get(wave.id)!) : undefined,
+                    })),
+                },
+                currentRun: journey.current ? structuredClone(journey.current) : undefined,
+                savedRun: journey.active ? structuredClone(journey.active) : undefined,
+                encounter: encounter ? {
+                    id: encounter.id, stageIndex: encounter.stageIndex,
+                    ordinaryXp: encounter.ordinaryXp, eliteDefeated: encounter.eliteDefeated,
+                    eliteId: encounter.eliteId, eliteWindow: encounter.eliteWindow ? { ...encounter.eliteWindow } : undefined,
+                    enemySpeed: encounter.enemySpeed, healthMultiplier: encounter.healthMultiplier,
+                    spawnBudget: encounter.spawnBudget, stopped: encounter.stopped,
+                    variants: [...encounter.enemies].map(([id, variant]) => ({ id, ...variant })),
+                    rangerWarnings: [...encounter.rangerWarnings.values()].map(warning => structuredClone(warning)),
+                    grid: encounter.hazards.grid ? structuredClone(encounter.hazards.grid) : undefined,
+                    pendingStrikes: encounter.hazards.pendingStrikes.length,
+                    presentation: {
+                        capacity: encounterPresentation.tiles.flat().length + encounterPresentation.lanes.flat().length
+                            + encounterPresentation.elite.length,
+                        visibleCount: encounterPresentation.visibleCount,
+                        samples: [...encounterPresentation.tiles.flat(), ...encounterPresentation.lanes.flat(),
+                            ...encounterPresentation.elite].filter(eid => transform.scale.x.get(eid) > 0).slice(0, 8).map(mesh),
+                    },
+                } : undefined,
                 musicStage: {
                     frame: stage.frame ? structuredClone(stage.frame) : undefined,
                     counts: { ...stage.counts }, hasFeatures: stage.hasFeatures, cpuMs: stage.cpuMs,

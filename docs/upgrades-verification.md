@@ -50,8 +50,25 @@ deliberately focused live card transfers focus to the next queued offer.
 Space remains dash when a card has focus. The current offer remains fixed as
 additional levels queue; a counter shows how many offers follow it. Each choice
 spends one level. Held keys, double clicks and stale offer IDs are guarded.
-Escape and focus loss use normal pause and retain all choices. Selection is
-unavailable during pause/results; retry resets the run.
+Escape and focus loss use normal pause and retain all choices. Pause leaves the
+arena and HUD visible without a full-screen dim or blur. Acquired upgrades appear
+on the left with ranks, current numeric effects and full descriptions; offered
+cards remain readable on the right with selection disabled until resume. The
+pause controls sit between them. Long builds and offers scroll, and narrow
+screens stack the panels inside the arena area below the upper HUD.
+Selection is unavailable during pause/results; retry resets the run.
+
+Pause layout verification (2026-10-20):
+
+- All 471 unit tests passed; type checking and the production build passed.
+- The two existing live-upgrade browser checks passed, including frozen clocks,
+  unchanged offers, retained confirmation, blocked selections and normal resume.
+  The layout check passed again after the final mobile scroll adjustment.
+- Reviewed desktop and narrow screenshots at 1280×800 and 390×844:
+  `output/playwright/upgrades-paused-1280.png` and
+  `output/playwright/upgrades-paused-390.png`.
+- The acquired-build regression covers all 13 upgrade types, current effects,
+  owned ranks and preserving combat/offer state while reading the build.
 
 Readability and confirmation verification:
 

@@ -14,6 +14,18 @@ import {
 import { createUpgradeState, queueUpgradeLevels, type UpgradeState } from "../upgrades";
 import { scaleEnemyHealth } from "./difficulty";
 import {
+    EXPLOSION_BASE_RADIUS, EXPLOSION_VISUAL_SECONDS, forkShots, mirrorShots,
+    type AfterImage, type EnemyExplosion,
+} from "./upgrade-effects";
+import {
+    advanceEncounterBeat, attackEncounterEnemies, encounterKillXp, spawnEncounterWave, type EncounterState,
+} from "../encounters/runtime";
+import { intersectsTile } from "../hazards/state";
+import {
+    advanceBombWaves, advancePickups, BOMB_DAMAGE, createPickups, HEALTH_PICKUP_AMOUNT,
+    PICKUP_RADIUS, startBomb, type PickupState,
+} from "../pickups/state";
+import {
     firstWallHit, HOMING_TURN_BUDGET, shieldReady, SHIELD_RECHARGE_SECONDS,
     steerProjectile, wallFlightLifetime,
 } from "./specials";
@@ -134,6 +146,9 @@ export interface Projectile {
     hitEnemyIds: number[];
     waitingForBounce: boolean;
     lastBounceBeat: number;
+    forksOnHit?: boolean;
+    forked?: boolean;
+    fromAfterImage?: boolean;
 }
 
 export interface CombatEffect {
@@ -168,11 +183,16 @@ export interface PendingEnemySpawn {
 
 export interface CombatState {
     tuning: CombatTuning;
+    /** Present only for playlist songs; Quick Play retains its existing rules. */
+    encounter?: EncounterState;
     enemies: Enemy[];
     pendingSpawns: PendingEnemySpawn[];
     projectiles: Projectile[];
     effects: CombatEffect[];
+    explosions: EnemyExplosion[];
+    afterImage?: AfterImage;
     experience: ExperienceState;
+    pickups: PickupState;
     playerStats: PlayerStatsState;
     upgrades: UpgradeState;
     regenerationDueAt: number;
@@ -233,7 +253,8 @@ export function createCombat(
     }
     const stats = createPlayerStats({ maxHealth: tuning.playerHealth, ...playerStats });
     return {
-        tuning, enemies: [], pendingSpawns: [], projectiles: [], effects: [], experience: createExperience(),
+        tuning, enemies: [], pendingSpawns: [], projectiles: [], effects: [], explosions: [], experience: createExperience(),
+        pickups: createPickups(seed),
         playerStats: stats, upgrades: createUpgradeState(seed),
         regenerationDueAt: stats.effective.healthRegen > 0 ? 5 : Infinity,
         health: stats.effective.maxHealth, healthSection: 0, score: 0, kills: 0, time: 0,
@@ -266,6 +287,7 @@ export function spawnOnBeat(state: CombatState, beat: CombatBeat, player: Vec2):
     const endTime = beat.nextBeatTime === undefined ? startTime + 0.5 : beat.nextBeatTime;
     if (endTime === null || !Number.isFinite(startTime) || !Number.isFinite(endTime)
         || endTime <= startTime || endTime - startTime > 3.05) return [];
+    if (state.encounter) return spawnEncounterWave(state, beat, player);
     const count = Math.min(
         waveSize(beat.barIndex, state.tuning),
         Math.max(0, state.tuning.enemyCap - state.enemies.length - state.pendingSpawns.length),
@@ -334,6 +356,7 @@ export function fireProjectile(
         wallBouncesRemaining: state.playerStats.effective.wallBounces,
         homingTurnRemaining: state.playerStats.effective.homing > 0 ? HOMING_TURN_BUDGET : 0,
         bouncesRemaining: state.playerStats.effective.bounces,
+        forksOnHit: state.playerStats.effective.forkingShots > 0,
         hitEnemyIds: [], waitingForBounce: false, lastBounceBeat: state.lastBeatIndex,
     };
     state.projectiles.push(projectile);
@@ -454,6 +477,12 @@ function attackOnDownbeat(state: CombatState, beat: CombatBeat, player: Vec2): v
     const downbeat = beat.isDownbeat ?? beat.index % state.tuning.beatsPerBar === 0;
     if (!downbeat || beat.barIndex <= state.lastEnemyAttackBar) return;
     state.lastEnemyAttackBar = beat.barIndex;
+    if (state.encounter) {
+        attackEncounterEnemies(state, beat, player,
+            (enemy, direction) => fireEnemyProjectile(state, enemy, direction),
+            () => enemyProjectileSlots(state));
+        return;
+    }
     for (const enemy of state.enemies) {
         // Wait a bar from the arrival telegraph before a shooter's first shot.
         if (enemy.health <= 0 || enemy.spawnBar >= beat.barIndex) continue;
@@ -476,11 +505,12 @@ function attackOnDownbeat(state: CombatState, beat: CombatBeat, player: Vec2): v
 
 /** Commands must be recorded/injected for replay; live audio time is external input. */
 export function onCombatBeat(state: CombatState, beat: CombatBeat, player: Vec2, aim: Vec2): CombatEvent[] {
-    if (state.defeated || beat.index <= state.lastBeatIndex) return [];
+    if (state.defeated || state.encounter?.stopped || beat.index <= state.lastBeatIndex) return [];
     state.lastBeatIndex = beat.index;
     state.lastBarIndex = beat.barIndex;
     state.movementBeat = movementBeat(beat.time ?? state.time, beat.nextBeatTime, state.movementBeat);
     state.score += state.tuning.beatSurvivalScore;
+    advanceEncounterBeat(state, beat);
     activateEnemySpawns(state, beat);
     const events: CombatEvent[] = spawnOnBeat(state, beat, player).map(enemy => ({
         id: ++state.eventSequence, kind: "spawn", x: enemy.x, z: enemy.z,
@@ -503,6 +533,7 @@ export function onCombatBeat(state: CombatState, beat: CombatBeat, player: Vec2,
     }
     // Barrage requires an explicitly authored accent, never an inferred grouping.
     if (beat.isDownbeat === true) shots.push(...fireBarrage(state, player));
+    shots.push(...mirrorShots(state, shots, player, aim, beatTime));
     const shot = shots[0];
     if (shot) {
         events.push({
@@ -560,7 +591,39 @@ export function advanceCombat(
         addEffect(state, effect);
         result.events.push({ ...effect, id: ++state.eventSequence, simulationTime: state.time });
     };
-    if (state.defeated || !Number.isFinite(dt) || dt <= 0) return result;
+    if (state.defeated || state.encounter?.stopped || !Number.isFinite(dt) || dt <= 0) return result;
+    const explosions: EnemyExplosion[] = [];
+    const stats = state.playerStats.effective;
+    // Non-projectile kills (e.g. bombs) use the current average normal shot.
+    const normalShotDamage = Math.round((stats.damageMin + stats.damageMax) / 2 * stats.damageMultiplier);
+    const damageEnemy = (enemy: Enemy, amount: number, critical: boolean, direction: Vec2, sourceDamage = normalShotDamage) => {
+        if (enemy.health <= 0) return;
+        const appliedDamage = Math.min(enemy.health, amount);
+        enemy.health = Math.max(0, enemy.health - amount);
+        recordPlayerHit(state.playerStats, appliedDamage, critical);
+        const length = Math.hypot(direction.x, direction.z);
+        enemy.knockbackX = length > 0 ? direction.x / length * state.tuning.knockbackSpeed : 0;
+        enemy.knockbackZ = length > 0 ? direction.z / length * state.tuning.knockbackSpeed : 0;
+        enemy.knockbackStartedAt = state.time;
+        enemy.knockbackUntil = state.time + state.tuning.knockbackDuration;
+        feedback({ x: enemy.x, z: enemy.z, amount, targetId: enemy.id,
+            critical, kind: enemy.health === 0 ? "kill" : "hit" });
+        if (enemy.health === 0) {
+            state.kills++;
+            state.score += state.tuning.killScore;
+            result.killedIds.push(enemy.id);
+            dropExperience(state.experience, enemy, encounterKillXp(state, enemy));
+            if (stats.explosionDamageMultiplier > 0) {
+                const blast: EnemyExplosion = {
+                    id: state.nextId++, x: enemy.x, z: enemy.z,
+                    sourceDamage, damage: Math.round(sourceDamage * stats.explosionDamageMultiplier),
+                    radius: EXPLOSION_BASE_RADIUS * Math.sqrt(stats.explosionAreaMultiplier), bornAt: state.time,
+                };
+                explosions.push(blast);
+                state.explosions.push(blast);
+            }
+        }
+    };
     const damagePlayer = (amount: number, hitTime = state.time) => {
         if (state.defeated || amount <= 0 || hitTime < state.invulnerableUntil) return;
         if (shieldReady(state, songPosition)) {
@@ -586,12 +649,14 @@ export function advanceCombat(
             enemy.x = Math.max(-limit, Math.min(limit, enemy.x + velocity.x * dt));
             enemy.z = Math.max(-limit, Math.min(limit, enemy.z + velocity.z * dt));
         }
-        if (enemy.kind === "ranger") {
+        if (enemy.kind === "ranger" && !state.encounter?.rangerWarnings.has(enemy.id)) {
             enemy.heading = Math.atan2(player.x - enemy.x, player.z - enemy.z);
         }
     }
     state.time += dt;
+    if (state.afterImage && songPosition >= state.afterImage.expiresAt) state.afterImage = undefined;
     const survivingProjectiles: Projectile[] = [];
+    const forked: Projectile[] = [];
     projectileLoop: for (const projectile of state.projectiles) {
         if (projectile.waitingForBounce) {
             projectile.previousX = projectile.x;
@@ -647,25 +712,12 @@ export function advanceCombat(
                 }
             }
             if (nearest && nearestFraction <= (wall?.fraction ?? Infinity)) {
-                const appliedDamage = Math.min(nearest.health, projectile.damage);
-                nearest.health = Math.max(0, nearest.health - projectile.damage);
-                recordPlayerHit(state.playerStats, appliedDamage, projectile.critical);
-                const speed = Math.hypot(projectile.velocityX, projectile.velocityZ);
-                nearest.knockbackX = speed > 0 ? projectile.velocityX / speed * state.tuning.knockbackSpeed : 0;
-                nearest.knockbackZ = speed > 0 ? projectile.velocityZ / speed * state.tuning.knockbackSpeed : 0;
-                nearest.knockbackStartedAt = state.time;
-                nearest.knockbackUntil = state.time + state.tuning.knockbackDuration;
-                feedback({
-                    x: nearest.x, z: nearest.z, amount: projectile.damage,
-                    targetId: nearest.id,
-                    critical: projectile.critical, kind: nearest.health === 0 ? "kill" : "hit",
-                });
-                if (nearest.health === 0) {
-                    state.kills++;
-                    state.score += state.tuning.killScore;
-                    result.killedIds.push(nearest.id);
-                    dropExperience(state.experience, nearest);
-                }
+                damageEnemy(nearest, projectile.damage, projectile.critical,
+                    { x: projectile.velocityX, z: projectile.velocityZ }, projectile.initialDamage);
+                forked.push(...forkShots(state, projectile, {
+                    x: start.x + (end.x - start.x) * nearestFraction,
+                    z: start.z + (end.z - start.z) * nearestFraction,
+                }, nearest.id, Math.max(0, state.tuning.projectileCap - state.projectiles.length - forked.length)));
                 projectile.hitEnemyIds.push(nearest.id);
                 if (projectile.bouncesRemaining > 0) {
                     projectile.x = start.x + (end.x - start.x) * nearestFraction;
@@ -703,8 +755,61 @@ export function advanceCombat(
             continue projectileLoop;
         }
     }
-    state.projectiles = survivingProjectiles;
+    state.projectiles = [...survivingProjectiles, ...forked];
+    if (!state.defeated) {
+        advancePickups(state.pickups, songPosition);
+        state.pickups.drops = state.pickups.drops.filter(pickup => {
+            if (segmentCircleHit(previousPlayer, player, pickup, state.tuning.playerRadius + PICKUP_RADIUS) === undefined) return true;
+            let amount = 0;
+            if (pickup.kind === "health") {
+                amount = Math.min(HEALTH_PICKUP_AMOUNT, Math.max(0, state.playerStats.effective.maxHealth - state.health));
+                state.health += amount;
+            } else if (pickup.kind === "magnet") {
+                for (const drop of state.experience.drops) {
+                    drop.attracted = true;
+                    drop.speed = Math.max(drop.speed, state.experience.tuning.attractionSpeed);
+                    amount += drop.value;
+                }
+            } else {
+                startBomb(state.pickups, pickup, state.tuning.arenaHalfExtent);
+                amount = BOMB_DAMAGE;
+            }
+            state.pickups.collected[pickup.kind]++;
+            state.pickups.notice = { kind: pickup.kind, amount, at: state.pickups.position };
+            return false;
+        });
+        advanceBombWaves(state.pickups);
+        for (const wave of state.pickups.waves) {
+            for (const enemy of state.enemies) {
+                if (enemy.health <= 0 || wave.hitIds.has(enemy.id)) continue;
+                const distance = Math.hypot(enemy.x - wave.x, enemy.z - wave.z);
+                if (distance - enemy.radius > wave.radius || distance + enemy.radius < wave.previousRadius) continue;
+                wave.hitIds.add(enemy.id);
+                damageEnemy(enemy, BOMB_DAMAGE, false, { x: enemy.x - wave.x, z: enemy.z - wave.z });
+            }
+        }
+    }
+    // Iterative chain: every enemy can die once. Inherit the original shot's
+    // damage through the chain, rather than compounding the blast multiplier.
+    for (let index = 0; index < explosions.length; index++) {
+        const blast = explosions[index]!;
+        for (const enemy of state.enemies) {
+            if (enemy.health <= 0 || !(enemy.collisionGroup & ENEMY_COLLISION_GROUP)
+                || Math.hypot(enemy.x - blast.x, enemy.z - blast.z) > blast.radius + enemy.radius) continue;
+            damageEnemy(enemy, blast.damage, false,
+                { x: enemy.x - blast.x, z: enemy.z - blast.z }, blast.sourceDamage);
+        }
+    }
+    state.explosions = state.explosions.filter(blast => state.time - blast.bornAt < EXPLOSION_VISUAL_SECONDS)
+        .slice(-state.tuning.enemyCap);
     state.enemies = state.enemies.filter((enemy) => enemy.health > 0);
+    // An accepted strike is consumed once in the authoritative physics step.
+    // It shares shield and contact/projectile immunity, including dash immunity.
+    for (const tiles of state.encounter?.hazards.pendingStrikes.splice(0) ?? []) {
+        if (tiles.some(tile => intersectsTile(player, state.tuning.playerRadius, tile))) {
+            damagePlayer(state.tuning.contactDamage);
+        }
+    }
     if (state.time >= state.invulnerableUntil) {
         for (const enemy of state.enemies) {
             const range = enemy.radius + state.tuning.playerRadius + state.tuning.contactExtraRange;

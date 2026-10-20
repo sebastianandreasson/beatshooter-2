@@ -39,6 +39,8 @@ interface Snapshot {
     enemies: EnemyWitness[];
     projectiles: ProjectileWitness[];
     presentation: { enemyAccentGroups: number; enemyAccentCount: number; projectiles: number };
+    chart: { bpm: number; beatsPerBar: number };
+    encounter?: { id: string };
 }
 type InspectedWindow = Window & {
     __beatshooter: {
@@ -76,32 +78,40 @@ test("new enemies show distinct silhouettes and main-beat attacks, freeze on pau
         return s.position > 2.2 && s.enemies.some(enemy => enemy.kind === "spinner");
     }, undefined, { polling: "raf", timeout: 10_000 });
     const first = await snapshot(page);
+    expect(first.encounter).toBeUndefined();
     const spinner = first.enemies.find(enemy => enemy.kind === "spinner")!;
     expect(spinner.spawnBar).toBe(1);
     expect(spinner.accents).toHaveLength(3);
     expect(first.projectiles.filter(shot => shot.shooterId === spinner.id)).toHaveLength(0);
 
-    await page.waitForFunction(id => {
+    const volley = await page.waitForFunction(id => {
         const s = (window as unknown as InspectedWindow).__beatshooter.snapshot();
-        return s.position > 4.02 && s.enemies.some(enemy => enemy.kind === "ranger")
-            && s.projectiles.filter(shot => shot.shooterId === id).length === 3;
+        const fresh = s.projectiles.filter(shot => shot.shooterId === id && shot.remainingLifetime > 4.8);
+        return s.position > 4.02 && fresh.length === 3 ? fresh.map(shot => shot.id) : false;
     }, spinner.id, { polling: "raf", timeout: 10_000 });
-    // Freeze the three-ray volley immediately: the ranger now finishes its
-    // arrival half a second after the volley, and screenshot readback can let
-    // an outward-moving ray reach the arena boundary before it is witnessed.
+    const volleyIds = await volley.jsonValue() as number[];
+    // Capture one freshly fired cohort. Waiting for ranger activation can let
+    // its outward rays hit walls; three later surviving bullets can instead
+    // belong to two overlapping volleys and do not form one 120-degree triple.
     await pause(page);
     const held = await snapshot(page);
     const rotated = held.enemies.find(enemy => enemy.id === spinner.id)!;
-    const ranger = held.enemies.find(enemy => enemy.kind === "ranger")!;
     expect(rotated.x).toBeCloseTo(spinner.x, 3);
     expect(rotated.z).toBeCloseTo(spinner.z, 3);
-    expect(Math.atan2(Math.sin(rotated.heading - spinner.heading), Math.cos(rotated.heading - spinner.heading)))
-        .toBeCloseTo(Math.PI / 6, 5);
-    expect(ranger.accents).toHaveLength(3);
-    expect(ranger.body).toBeDefined();
+    expect(held.encounter).toBeUndefined();
+    const barDuration = 60 / first.chart.bpm * first.chart.beatsPerBar;
+    const crossedBars = Math.floor(held.position / barDuration) - Math.floor(first.position / barDuration);
+    const expectedTurn = crossedBars * Math.PI / 6;
+    const actualTurn = Math.atan2(Math.sin(rotated.heading - spinner.heading), Math.cos(rotated.heading - spinner.heading));
+    await testInfo.attach("spinner-authored-bar-witness", {
+        body: JSON.stringify({ firstPosition: first.position, heldPosition: held.position, barDuration,
+            crossedBars, expectedTurn, actualTurn, quickPlay: !held.encounter }, null, 2),
+        contentType: "application/json",
+    });
+    expect(crossedBars).toBeGreaterThanOrEqual(1);
+    expect(actualTurn).toBeCloseTo(Math.atan2(Math.sin(expectedTurn), Math.cos(expectedTurn)), 5);
     expect(rotated.body).toBeDefined();
-    expect(ranger.body!.material).not.toBe(rotated.body!.material);
-    const shots = held.projectiles.filter(shot => shot.shooterId === spinner.id);
+    const shots = held.projectiles.filter(shot => volleyIds.includes(shot.id));
     expect(shots).toHaveLength(3);
     for (const shot of shots) {
         expect(shot.collisionMask).toBe(1);
@@ -130,9 +140,21 @@ test("new enemies show distinct silhouettes and main-beat attacks, freeze on pau
     await page.getByRole("button", { name: "Resume session" }).click();
     await expect.poll(async () => (await snapshot(page)).position).toBeGreaterThan(held.position + 0.2);
     const resumed = await snapshot(page);
-    const movingShot = resumed.projectiles.find(shot => shot.id === shots[0]!.id);
+    // Follow the ray pointing furthest into the arena; an outward ray may
+    // legitimately disappear against the nearest wall during these 200ms.
+    const inwardShot = [...shots].sort((a, b) =>
+        (a.velocityX * a.x + a.velocityZ * a.z) - (b.velocityX * b.x + b.velocityZ * b.z))[0]!;
+    const movingShot = resumed.projectiles.find(shot => shot.id === inwardShot.id);
     expect(movingShot).toBeDefined();
-    expect(Math.hypot(movingShot!.x - shots[0]!.x, movingShot!.z - shots[0]!.z)).toBeGreaterThan(0.5);
+    expect(Math.hypot(movingShot!.x - inwardShot.x, movingShot!.z - inwardShot.z)).toBeGreaterThan(0.5);
+    await page.waitForFunction(() => {
+        const s = (window as unknown as InspectedWindow).__beatshooter.snapshot();
+        return s.enemies.some(enemy => enemy.kind === "ranger" && enemy.body && enemy.accents.length === 3);
+    }, undefined, { polling: "raf", timeout: 5000 });
+    const ranger = (await snapshot(page)).enemies.find(enemy => enemy.kind === "ranger")!;
+    expect(ranger.accents).toHaveLength(3);
+    expect(ranger.body).toBeDefined();
+    expect(ranger.body!.material).not.toBe(rotated.body!.material);
     const playingScreenshot = "output/playwright/enemy-types-playing.png";
     await page.screenshot({ path: playingScreenshot });
     await testInfo.attach("enemy-types-and-projectiles", { path: playingScreenshot, contentType: "image/png" });

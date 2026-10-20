@@ -7,7 +7,62 @@ music's beats. Survive the track or practice in the dojo.
 The M0–M6 implementation is present. The [implementation plan](implementation-plan.md)
 records scope and acceptance evidence; the [release smoke test](docs/release-smoke.md)
 records browser checks, performance measurements, and the remaining human
-headphone/display latency check. Deployment is outside this scope.
+headphone/display latency check. Cloudflare hosting is documented separately in
+[Cloudflare deployment](docs/cloudflare-deployment.md).
+
+## Music library and campaign runs
+
+Open **Music library & playlists** to import multiple recordings. Audio stays in
+this browser's IndexedDB library; each original is identified by its SHA-256
+hash, so importing it again does not duplicate it. Beat This! and LinkSeg run
+locally, one track at a time. Failed analysis keeps the recording and offers
+retry or manual BPM/first-beat timing. Saved tracks have **Preview timing** and
+**Quick Play** controls, plus title/artist editing and exact-file relinking.
+
+Build and save an ordered playlist. Ten songs is the suggested length; shorter
+playlists work too. Add repeated songs explicitly and check the total duration
+before starting. **Quick Play** and **Practice** are independent single-song
+sessions and never replace a saved campaign.
+
+A campaign grants one starting upgrade, then presents three arena choices for
+each song. The music follows the playlist; the choice changes the encounter:
+Mixed Assault, Swarm Nest, Marksman Outpost, Spinner Crossfire, Elite Hunt or
+Pulse Grid. The route shows future songs, cleared arenas, the current build,
+challenge rules and completion rewards. Campaigns start with twice the original
+enemy pressure. Each cleared song adds 35% of the first song's baseline to spawn
+rate and enemy health, including beyond song ten. Within each song, spawn rate
+rises to 2.5× its opening rate and enemy health to 1.9× its opening health;
+pursuit speed also increases. Waves release on downbeats and live enemies plus
+pending arrivals share the 100-enemy arena limit.
+
+Level, partial XP, upgrades, score and combat metrics carry between songs.
+Clearing a song collects every already-dropped XP gem, awards the arena bonus,
+resolves pending upgrades and restores full upgraded health. The last song ends
+the campaign; death ends it immediately. No enemies or hazards continue dealing
+damage on the route screen. Trap warnings and locked firing lines follow the
+actual chart and remain visible when visual effects are off.
+
+**Save & exit** keeps the last song-entry checkpoint. Continue replays that song
+from the beginning with the same arena, entry build and random seeds; gains made
+inside an unfinished attempt are replayed. Ordinary pause keeps the exact state
+in memory. Cleared songs and intermission choices commit atomically. Failed saves
+stay paused with Retry, recovery export and a way to reload the last committed
+checkpoint. Abandoning a run is separate and requires confirmation.
+
+Only one tab can own a campaign. Library analysis pauses for playback, including
+playback in another tab. Original audio and chart revisions used by an active
+campaign are protected from deletion. Editing a playlist or reanalyzing a song
+changes future runs without changing an existing campaign.
+
+Use **Save & recovery** to inspect storage, request persistence and export/import
+a recovery JSON. **Audio is not included**: retain your originals and relink them
+after restoring elsewhere. Browser data is local to this device, browser and
+site address, including its port; clearing site data removes the library and
+checkpoints. Quick Play remains usable if persistent storage is unavailable.
+
+See the [campaign verification](docs/campaign-verification.md),
+[library verification](docs/library-verification.md), and
+[encounter verification](docs/encounter-verification.md).
 
 ## Play and develop
 
@@ -37,7 +92,7 @@ Bun 1.4.3+ before running these commands.
 | F3 | Toggle development diagnostics; off by default |
 
 Choose **Neon Circuit**, the original 72-second, 120 BPM demo; enter the dojo at
-20–300 BPM; or import a local audio file. Each run first offers a full-screen **Start of run
+20–300 BPM; or import a local audio file. Each Quick Play or Practice session first offers a full-screen **Start of run
 upgrade** choice. Each new run or restart rolls three random, distinct options.
 Choose one free upgrade before the music starts; then four
 count-in clicks lead into play. Kills award **100 points** and each survived beat awards **2 points**.
@@ -117,7 +172,22 @@ Once attracted, they keep following you until picked up, including after a dash.
 The blue bar at the top shows your level and progress toward the next one.
 You start at level 1; level 2 needs 36 XP, then each next requirement grows by
 18 XP. Excess XP carries over, and the results screen shows your final level
-and total collected XP. Each run starts fresh.
+and total collected XP. Quick Play and Practice start fresh; campaign progression carries between songs.
+
+Campaign and Quick Play songs also scatter **four pickups** across the floor,
+with randomized positions and timing from roughly 12% through 82% of the song.
+Every song includes one of each kind plus a random fourth. Fly over one to use it:
+
+- **Health** · green cross: restores **50 health**, up to your upgraded maximum.
+- **Magnet** · blue horseshoe: draws every existing XP gem toward the ship,
+  awarding its XP and upgrades when it arrives.
+- **Bomb** · orange charge: sends out a **100-damage** wave over 0.75 song seconds,
+  reaching a radius of **25% of the arena width** (nine units in the normal arena).
+  Each enemy can be hit once per wave; kills award normal score and XP.
+
+Pickups remain until collected or the song ends. Pause freezes them and bomb
+travel; their symbols and damage rings remain visible with effects Off.
+Campaign Continue replays the same pickup schedule from the song-entry checkpoint.
 
 Level-ups produce blue-and-gold rising particles and expanding rings timed to
 a nearby musical subdivision. Comfort settings soften or disable the
@@ -202,8 +272,11 @@ the next offer appears after it finishes. Reduced-motion/flash settings retain
 the highlight and fade without the pulse. The starting choice uses the track's
 tempo for its brief confirmation during the count-in.
 Holding a number key or double-clicking cannot spend multiple choices.
-Escape and focus loss still pause normally and retain the queue; resume to
-continue choosing. Waiting grants no damage protection. Finishing or losing a
+Escape and focus loss pause normally and retain the queue. Pause keeps the arena
+visible, shows acquired upgrades with ranks and current effects on the left,
+and leaves offered upgrades readable on the right. Narrow screens stack the
+panels in a scrollable view. Resume to continue choosing. Waiting during live
+play grants no damage protection. Finishing or losing a
 run closes the panel, and restart clears upgrades and pending choices before
 offering a new starting upgrade. The free starting choice does not consume XP
 or replace the first earned level-up.
@@ -405,6 +478,7 @@ bun test
 bun test ./tests/player.node.ts
 bunx playwright install chromium
 bunx playwright test --workers=1
+bunx playwright test --config playwright.dev.config.ts
 bun run build
 bun run preview
 ```
@@ -412,7 +486,9 @@ bun run preview
 The tests cover the actual Shallot solver, fake and real Web Audio clocks,
 swept collision/filtering, deterministic combat, settings corruption, production
 startup/error handling, local files, pause and loading cancellation, and repeated
-retries. Browser tests run against the production build. The original welcome
+retries. Browser tests run against the production build; the separate dev config
+checks the real analysis worker's dependency loading, runtime module serving,
+and actionable errors under Vite dev, without requiring downloaded models. The original welcome
 fixture remains as a small upstream baseline test; it is not the application.
 
 Performance checks:

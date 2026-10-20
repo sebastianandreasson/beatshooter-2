@@ -1,6 +1,7 @@
 import type { SongSection } from "../analysis/sections";
 import type { Enemy } from "../enemies";
 import type { CombatState } from "./index";
+import { advanceEncounterDifficulty } from "../encounters/runtime";
 
 export const SECTION_HEALTH_GAIN = 1.1;
 
@@ -17,6 +18,10 @@ export function scaleEnemyHealth(enemy: Enemy, sectionIndex: number): void {
 export function advanceSectionDifficulty(
     combat: CombatState, sections: readonly SongSection[] | undefined, position: number,
 ): void {
+    if (combat.encounter) {
+        advanceEncounterDifficulty(combat, position);
+        return;
+    }
     if (combat.defeated || !sections?.length || !Number.isFinite(position) || position < 0) return;
     let low = 0, high = sections.length;
     while (low < high) {

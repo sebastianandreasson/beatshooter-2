@@ -56,3 +56,5 @@ jobs:
         run: bunx playwright install chromium
       - name: browser tier
         run: bunx playwright test
+      - name: development analysis worker
+        run: bunx playwright test --config playwright.dev.config.ts

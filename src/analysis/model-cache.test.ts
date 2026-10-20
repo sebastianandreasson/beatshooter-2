@@ -125,3 +125,59 @@ test("the Beat This local URL contains cached bytes and is revoked on success an
     }
     expect(f.requests.length).toBe(1);
 });
+
+function partsFixture() {
+    const f = fixture();
+    const manifest = {
+        version: 1,
+        bytes: f.model.bytes,
+        sha256: f.model.sha256,
+        parts: [{ url: "/models/part-0.bin", bytes: 2 }, { url: "/models/part-1.bin", bytes: 2 }],
+    };
+    const responses = new Map<string, () => Response>([
+        [source, () => Response.json(manifest)],
+        ["https://game.example/models/part-0.bin", () => new Response(f.bytes.slice(0, 2))],
+        ["https://game.example/models/part-1.bin", () => new Response(f.bytes.slice(2))],
+    ]);
+    replaceGlobal("fetch", async (url: string) => {
+        f.requests.push(url);
+        return responses.get(url)?.() ?? new Response("Missing", { status: 404 });
+    });
+    return { ...f, manifest, responses };
+}
+
+test("static model parts reconstruct verified bytes and cache the complete model", async () => {
+    const f = partsFixture();
+    expect(await loadModelBytes(source, f.model)).toEqual(f.bytes);
+    expect(await loadModelBytes(source, f.model)).toEqual(f.bytes);
+    expect(f.requests).toEqual([source, ...f.manifest.parts.map(part => `https://game.example${part.url}`)]);
+    expect(new Uint8Array(await [...f.entries.values()][0]!.arrayBuffer())).toEqual(f.bytes);
+});
+
+test("invalid or cross-origin part manifests are rejected before downloading parts", async () => {
+    for (const mutate of [
+        (value: ReturnType<typeof partsFixture>["manifest"]) => { value.sha256 = "stale"; },
+        (value: ReturnType<typeof partsFixture>["manifest"]) => { value.parts[0]!.url = "https://other.example/part.bin"; },
+        (value: ReturnType<typeof partsFixture>["manifest"]) => { value.parts[0]!.bytes = 3; },
+        (value: ReturnType<typeof partsFixture>["manifest"]) => { value.parts = []; },
+    ]) {
+        const f = partsFixture();
+        mutate(f.manifest);
+        await expect(loadModelBytes(source, f.model)).rejects.toThrow();
+        expect(f.requests).toEqual([source]);
+        expect(f.entries.size).toBe(0);
+    }
+});
+
+test("missing, truncated and corrupt static parts never reach the verified cache", async () => {
+    for (const bad of [
+        () => new Response("Missing", { status: 404 }),
+        () => new Response(new Uint8Array([3])),
+        () => new Response(new Uint8Array([9, 9])),
+    ]) {
+        const f = partsFixture();
+        f.responses.set("https://game.example/models/part-1.bin", bad);
+        await expect(loadModelBytes(source, f.model)).rejects.toThrow();
+        expect(f.entries.size).toBe(0);
+    }
+});

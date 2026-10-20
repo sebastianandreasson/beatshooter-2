@@ -1,0 +1,88 @@
+/* Pause leaves the frozen arena and HUD clear behind three readable panels. */
+.bs-cover.bs-pause-overlay {
+    inset: var(--bs-upgrade-top) 0 100px;
+    grid-template-columns: minmax(220px, 1fr) minmax(240px, .8fr) minmax(300px, 1.3fr);
+    grid-template-rows: minmax(0, 1fr);
+    gap: 24px;
+    padding: 0 clamp(16px, 2vw, 32px);
+    background: none;
+    backdrop-filter: none;
+    pointer-events: none;
+    overflow: hidden;
+}
+.bs-owned-upgrades, .bs-pause-overlay .bs-upgrade-panel {
+    align-self: stretch;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    pointer-events: auto;
+}
+.bs-owned-upgrades {
+    grid-column: 1;
+    width: 100%;
+    min-width: 0;
+    padding: 20px;
+    border: 1px solid #aacfb330;
+    border-radius: 10px;
+    background: #102023ee;
+}
+.bs-pause-eyebrow { color: #9ce6c6; font: 11px ui-monospace, monospace; letter-spacing: 1.8px; }
+.bs-owned-upgrades h2 { margin-top: 6px; font-size: 24px; line-height: 1.2; }
+.bs-owned-empty { color: #b2c7bf; margin-top: 20px !important; }
+.bs-owned-upgrade-list { list-style: none; padding: 0; margin: 18px 0 0; }
+.bs-owned-upgrade-list li { padding: 18px 0; border-top: 1px solid #aacfb324; }
+.bs-owned-upgrade-heading { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; }
+.bs-owned-upgrade-heading h3 { font-size: 20px; line-height: 1.2; font-weight: 650; }
+.bs-owned-upgrade-list [data-rarity="special"] .bs-upgrade-rank { color: #f2d482; }
+.bs-owned-upgrade-list .bs-upgrade-detail { font-size: 14px; }
+.bs-owned-upgrade-list .bs-upgrade-description { font-size: 14px; line-height: 1.6; }
+.bs-pause-overlay .bs-pause-dialog {
+    grid-column: 2;
+    max-width: 320px;
+    max-height: 100%;
+    padding: 24px;
+    overflow-y: auto;
+    pointer-events: auto;
+    background: #15282aee;
+    box-shadow: 0 12px 35px #0004;
+}
+.bs-pause-overlay .bs-dialog-actions { margin-top: 20px; }
+.bs-pause-overlay .bs-dialog-footnote { margin-top: 18px; }
+.bs-pause-overlay .bs-upgrade-panel {
+    position: relative;
+    inset: auto;
+    grid-column: 3;
+    width: 100%;
+    padding: 6px;
+}
+.bs-upgrade-pause-note { margin-bottom: 14px !important; color: #c6d9d1; font-size: 14px; }
+.bs-pause-overlay .bs-upgrade-card {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+    padding: 18px;
+}
+.bs-pause-overlay .bs-upgrade-name { font-size: 26px; }
+.bs-pause-overlay .bs-upgrade-card > kbd, .bs-pause-overlay .bs-upgrade-icon { display: none; }
+.bs-pause-overlay .bs-upgrade-card:disabled:not([data-selection]) { opacity: 1; cursor: default; }
+.bs-pause-overlay .bs-upgrade-card:disabled:hover { border-color: #aacfb330; background: #102023ee; }
+.bs-pause-overlay .bs-upgrade-card[data-rarity="special"]:disabled:hover { border-color: #d6b965; background: #302b20f5; }
+.bs-owned-upgrades:focus-visible, .bs-pause-overlay .bs-upgrade-panel:focus-visible {
+    outline: 2px solid #9ce6c6;
+    outline-offset: 2px;
+}
+@media (max-width: 1000px) {
+    .bs-cover.bs-pause-overlay {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: flex-start;
+        padding: 0 16px 16px;
+        overflow-y: auto;
+        pointer-events: auto;
+    }
+    .bs-pause-overlay > * { flex-shrink: 0; }
+    .bs-pause-overlay .bs-pause-dialog { order: 0; align-self: center; max-height: none; width: min(100%, 480px); max-width: none; }
+    .bs-pause-overlay .bs-upgrade-panel { order: 1; max-height: none; overflow: visible; }
+    .bs-owned-upgrades { order: 2; overflow: visible; }
+}

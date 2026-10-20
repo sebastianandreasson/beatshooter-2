@@ -11,6 +11,7 @@ import { SectionEffects } from "../section-effects/runtime";
 import { shockwaveHeight } from "../shockwave/surface";
 import { presentPlayerEngines } from "./player-ship";
 import { presentShield } from "./shield";
+import { presentUpgradeEffects } from "./upgrade-effects";
 
 export const Presentation: Resource<{
     generation: number; projectiles: Map<number, number>; effects: Map<number, HTMLElement>;
@@ -41,6 +42,7 @@ function present(world: World): void {
     }
     presentPlayerEngines(world);
     presentShield(world);
+    presentUpgradeEffects(world);
     deriveTransforms(world);
     sampleAim(world);
     for (const eid of arena.reticle) pose.translation.set(eid, player.target.x, 0.55, player.target.z);
@@ -62,7 +64,7 @@ function present(world: World): void {
         pose.translation.set(eid, shot.previousX + (shot.x - shot.previousX) * a, 0.55, shot.previousZ + (shot.z - shot.previousZ) * a);
         // A ricochet waits visibly at impact and releases only on a new beat.
         const scale = shot.waitingForBounce
-            ? 1.25 + (visuals.motionAllowed ? visuals.frame.beatPulse * 0.2 : 0) : 1;
+            ? 1.25 + (visuals.motionAllowed ? visuals.frame.beatPulse * 0.2 : 0) : shot.forked ? 0.55 : 1;
         const hostile = (shot.collisionMask & PLAYER_COLLISION_GROUP) !== 0;
         pose.scale.set(eid, (hostile ? 0.32 : 0.14) * scale,
             (hostile ? 0.22 : 0.14) * scale, (hostile ? 0.32 : 0.65) * scale);
@@ -89,6 +91,8 @@ function present(world: World): void {
             bar.className = "enemy-healthbar";
             bar.dataset.enemyId = String(enemy.id);
             bar.dataset.enemyKind = enemy.kind;
+            bar.dataset.elite = String(s.combat.encounter?.enemies.get(enemy.id)?.elite ?? false);
+            if (bar.dataset.elite === "true") bar.setAttribute("aria-label", "Elite enemy health");
             const fill = document.createElement("div");
             fill.className = "enemy-healthbar-fill";
             bar.append(fill);
@@ -231,6 +235,8 @@ export const PresentationPlugin: Plugin = {
                so following an enemy only updates the compositor transform. */
             .enemy-healthbar{box-sizing:border-box;width:32px;height:5px;border:1px solid #06100fe6;border-radius:2px;background:#081310e6;box-shadow:0 1px 3px #0009;opacity:.7;will-change:transform}
             .enemy-healthbar[data-damaged=true]{opacity:1}
+            .enemy-healthbar[data-elite=true]{width:58px;height:8px;opacity:1;border-color:#f4c76e}
+            .enemy-healthbar[data-elite=true]::before{content:"ELITE";position:absolute;bottom:9px;left:50%;transform:translateX(-50%);font:800 10px system-ui;color:#ffe0a6;text-shadow:0 1px 3px #000}
             .enemy-healthbar-fill{height:100%;border-radius:1px;background:#b8e4cf;transform-origin:left center}
             .damage-number{z-index:1;white-space:nowrap;font:800 16px ui-monospace,monospace;font-variant-numeric:tabular-nums;color:#e5fff5;-webkit-text-stroke:.35px #071411;text-shadow:0 1px 2px #000;transform-origin:center}
             .damage-number.critical{color:#ffe0a3;font-size:21px}

@@ -8,9 +8,9 @@ import {
 
 export const STANDARD_UPGRADE_IDS = [
     "damage", "health", "regeneration", "projectiles", "barrage",
-    "crit-chance", "crit-damage", "bounce", "pickup-radius", "dash-distance",
+    "crit-chance", "crit-damage", "bounce", "pickup-radius", "dash-distance", "exploding-enemies",
 ] as const;
-export const SPECIAL_UPGRADE_IDS = ["wall-bounce", "homing", "regenerative-shield"] as const;
+export const SPECIAL_UPGRADE_IDS = ["wall-bounce", "homing", "regenerative-shield", "after-image", "forking-shots"] as const;
 export const SPECIAL_OFFER_CHANCE = 0.12;
 export const UPGRADE_IDS = [...STANDARD_UPGRADE_IDS, ...SPECIAL_UPGRADE_IDS] as const;
 export type UpgradeId = typeof UPGRADE_IDS[number];
@@ -28,6 +28,9 @@ export interface UpgradeChoice {
     detailParts: readonly UpgradeTextPart[];
     descriptionParts: readonly UpgradeTextPart[];
 }
+
+export type OwnedUpgrade = Pick<UpgradeChoice,
+    "id" | "title" | "rank" | "rarity" | "detailParts" | "descriptionParts">;
 
 export interface UpgradeState {
     ranks: Record<UpgradeId, number>;
@@ -75,6 +78,8 @@ function available(id: UpgradeId, stats: Readonly<PlayerStatsValues>): boolean {
         case "wall-bounce": return stats.wallBounces < 1;
         case "homing": return stats.homing < 1;
         case "regenerative-shield": return stats.regenerativeShield < 1;
+        case "after-image": return stats.afterImage < 1;
+        case "forking-shots": return stats.forkingShots < 1;
         default: return true;
     }
 }
@@ -140,11 +145,47 @@ function description(id: UpgradeId, rank: number, stats: Readonly<PlayerStatsVal
         case "regenerative-shield": return card("Regenerative Shield",
             ["Block one hit, then recharge over 25 seconds of song time. Starts charged."],
             [health(1), " hit blocked · ", health(25), "s recharge"]);
+        case "exploding-enemies": return card("Exploding Enemies",
+            ["Defeated enemies explode and can chain through nearby enemies. Blast area: ",
+                damage(`${Math.round(stats.explosionAreaMultiplier * 100)}%`), " → ",
+                damage(`${Math.round((stats.explosionAreaMultiplier + (rank > 0 ? 0.05 : 0)) * 100)}%`),
+                ". Base radius: ", damage(2.5), " units."],
+            [damage(`${Math.round(stats.explosionDamageMultiplier * 100)}%`), " → ",
+                damage(`${Math.round((stats.explosionDamageMultiplier + (rank > 0 ? 0.1 : 0.5)) * 100)}%`), " projectile damage"]);
+        case "after-image": return card("After Image",
+            ["Dashing leaves a stationary clone that mirrors your shots and aim until the next bar."],
+            [utility(1), " clone · lasts until the next bar"]);
+        case "forking-shots": return card("Forking Shots",
+            ["The first enemy hit splits a shot into two smaller, short-range shots. Ricochets and forked shots cannot fork again."],
+            [damage(2), " shots · ", damage("20%"), " damage each · ", damage(8), " range"]);
     }
 }
 
 export function isSpecialUpgrade(id: UpgradeId): boolean {
     return (SPECIAL_UPGRADE_IDS as readonly string[]).includes(id);
+}
+
+/** Read the acquired build without preparing an offer or advancing any RNG. */
+export function describeOwnedUpgrades(combat: CombatState): OwnedUpgrade[] {
+    return UPGRADE_IDS.filter(id => combat.upgrades.ranks[id] > 0).map(id => {
+        const rank = combat.upgrades.ranks[id];
+        const choice = description(id, rank, combat.playerStats.effective);
+        // Offer details contain current value, arrow, next value, then units.
+        // Retain the current value and units; unique upgrades have no arrow.
+        const arrow = choice.detailParts.indexOf(" → ");
+        const detailParts = arrow < 0 ? choice.detailParts
+            : [...choice.detailParts.slice(0, arrow), ...choice.detailParts.slice(arrow + 2)];
+        const descriptionParts: readonly UpgradeTextPart[] = id === "health"
+            ? ["Increases your maximum health. Each rank restored 20 health when selected."]
+            : id === "projectiles" ? ["Fire additional projectiles on every firing beat. All weapon damage: ",
+                { value: `${Math.round(combat.playerStats.effective.damageMultiplier * 100)}%`, category: "damage" },
+                ". Each rank reduces weapon damage by 10 percentage points."]
+            : id === "exploding-enemies" ? ["Defeated enemies explode and can chain through nearby enemies. Blast area: ",
+                { value: `${Math.round(combat.playerStats.effective.explosionAreaMultiplier * 100)}%`, category: "damage" },
+                ". Base radius: ", { value: "2.5", category: "damage" }, " units."]
+            : choice.descriptionParts;
+        return { id, rank, title: choice.title, rarity: choice.rarity, detailParts, descriptionParts };
+    });
 }
 
 /** Repeated render calls keep the same three choices and never reroll the RNG. */
@@ -190,8 +231,20 @@ function modifierFor(id: UpgradeId, rank: number): PlayerStatModifier {
         case "wall-bounce": return { add: { wallBounces: 1 } };
         case "homing": return { add: { homing: 1 } };
         case "regenerative-shield": return { add: { regenerativeShield: 1 } };
+        case "after-image": return { add: { afterImage: 1 } };
+        case "forking-shots": return { add: { forkingShots: 1 } };
+        case "exploding-enemies": return { add: {
+            explosionDamageMultiplier: rank > 0 ? (50 + (rank - 1) * 10) / 100 : 0,
+            explosionAreaMultiplier: Math.max(0, rank - 1) * 0.05,
+        } };
     }
 }
+
+/** Checkpoint reconstruction uses these pure definitions without choosing/healing. */
+export {
+    description as describeUpgrade, modifierFor as upgradeModifierFor,
+    available as isUpgradeAvailable,
+};
 
 /** Only offered cards can mutate stats; the session also validates the offer level. */
 export function chooseUpgrade(

@@ -2,6 +2,7 @@ node_modules/
 dist/
 build/
 .artifacts/
+.wrangler/
 test-results/
 .env
 .env.*

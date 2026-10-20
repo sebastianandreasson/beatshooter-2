@@ -401,8 +401,30 @@ test("upgrade choices leave music and movement running, apply immediately, and r
     expect((await snapshot(page)).upgrade.choices).toEqual(heldOffer);
     await page.keyboard.press("Escape");
     await expect(page.locator('.bs-ui[data-phase="paused"]')).toBeVisible();
-    await expect(page.locator(".bs-upgrade-panel")).toBeHidden();
+    await expect(page.locator(".bs-pause-overlay .bs-upgrade-panel")).toBeVisible();
+    await expect(page.locator(".bs-upgrade-card:enabled")).toHaveCount(0);
+    await expect(page.locator(".bs-upgrade-pause-note")).toBeVisible();
     const paused = await snapshot(page);
+    const owned = Object.entries(paused.upgrade.ranks).filter(([, rank]) => rank > 0);
+    await expect(page.locator("[data-owned-upgrade]")).toHaveCount(owned.length);
+    for (const [id, rank] of owned) {
+        await expect(page.locator(`[data-owned-upgrade="${id}"] .bs-upgrade-rank`)).toHaveText(`Rank ${rank}`);
+    }
+    const buildBox = (await page.locator(".bs-owned-upgrades").boundingBox())!;
+    const pauseBox = (await page.locator(".bs-pause-dialog").boundingBox())!;
+    const offerBox = (await page.locator(".bs-upgrade-panel").boundingBox())!;
+    expect(buildBox.x + buildBox.width).toBeLessThan(pauseBox.x);
+    expect(pauseBox.x + pauseBox.width).toBeLessThan(offerBox.x);
+    expect(await page.locator(".bs-pause-overlay").evaluate(el => getComputedStyle(el).backdropFilter)).toBe("none");
+    await page.screenshot({ path: "output/playwright/upgrades-paused-1280.png" });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.locator(".bs-upgrade-card").last().scrollIntoViewIfNeeded();
+    await expect(page.locator(".bs-upgrade-card").last()).toBeInViewport();
+    await page.locator("[data-owned-upgrade]").last().scrollIntoViewIfNeeded();
+    await expect(page.locator("[data-owned-upgrade]").last()).toBeInViewport();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
+    await page.screenshot({ path: "output/playwright/upgrades-paused-390.png" });
+    await page.setViewportSize({ width: 1280, height: 800 });
     await page.keyboard.press("1");
     await page.waitForTimeout(120);
     expect((await snapshot(page)).position).toBe(paused.position);
@@ -555,7 +577,8 @@ test("queued upgrades wait for beat-synced selection feedback and ignore extra p
     expect(await cardIds(page)).toEqual(queued.upgrade.choices.map(item => item.id));
     await page.keyboard.press("Escape");
     await expect(page.locator('.bs-ui[data-phase="paused"]')).toBeVisible();
-    await expect(page.locator(".bs-upgrade-panel")).toBeHidden();
+    await expect(page.locator(".bs-pause-overlay .bs-upgrade-panel")).toBeVisible();
+    await expect(page.locator(`[data-owned-upgrade="${choice.id}"]`)).toBeVisible();
     await page.evaluate(() => new Promise<void>(resolve =>
         requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
     const held = await snapshot(page);
