@@ -112,12 +112,14 @@ try {
         assert(await page.locator(".bs-run-progress .bs-player-band").count() === structure!.sections.length,
             "HUD does not show every section.");
         const desktop = await page.locator(".bs-run-progress .bs-player-rail").boundingBox();
-        assert(desktop?.x === 0 && desktop.width === 1440, "Player does not fill desktop width.");
+        assert(desktop && desktop.x >= 24 && desktop.x + desktop.width <= 1440 - 24 && desktop.height <= 8,
+            "Desktop player must stay slim and inset from the viewport.");
         await page.screenshot({ path: `${directory}/track-${index}-desktop.png` });
         if (index === 1) {
             await page.setViewportSize({ width: 390, height: 844 });
             const mobile = await page.locator(".bs-run-progress .bs-player-rail").boundingBox();
-            assert(mobile?.x === 0 && mobile.width === 390, "Player does not fill narrow viewport.");
+            assert(mobile && mobile.x >= 16 && mobile.x + mobile.width <= 390 - 16 && mobile.height <= 8,
+                "Mobile player must stay slim and inset from the viewport.");
             assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Horizontal overflow.");
             await page.screenshot({ path: `${directory}/player-narrow.png` });
             await page.setViewportSize({ width: 1440, height: 960 });

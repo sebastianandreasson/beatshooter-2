@@ -9,6 +9,14 @@ interface SectionSnapshot {
     bodyCount: number;
     analysis?: { state: string };
     chart: { beatCount: number; downbeatCount: number };
+    visuals: { shaderStatus: string };
+    starfield: {
+        distance: number;
+        speed: number;
+        boost: number;
+        motionAllowed: boolean;
+        entityCount: number;
+    };
     player: {
         position: { x: number; z: number };
         target: { x: number; z: number };
@@ -22,11 +30,15 @@ interface SectionSnapshot {
         startTime: number;
         endTime: number;
         progress: number;
-        roll: number;
-        zoom: number;
-        mapRoll: number;
+        strength: number;
         palette: unknown;
         motionAllowed: boolean;
+        shockwave: {
+            radius: number;
+            active: boolean;
+            from: unknown;
+            to: unknown;
+        };
         map: {
             position: { x: number; y: number; z: number };
             rotation: { x: number; y: number; z: number; w: number };
@@ -43,10 +55,13 @@ interface SectionSnapshot {
 interface MotionSample {
     position: number;
     progress: number;
-    mapRoll: number;
+    radius: number;
+    shockwaveActive: boolean;
     velocityX: number;
     cameraRotation: SectionSnapshot["sectionEffects"]["camera"]["rotation"];
     cameraSize: number;
+    map: SectionSnapshot["sectionEffects"]["map"];
+    starfield: SectionSnapshot["starfield"];
     screenVelocity: [number, number] | null;
     speed: number;
 }
@@ -172,50 +187,78 @@ async function pointerError(page: Page, x: number, y: number) {
 
 test.setTimeout(60_000);
 
-test("a detected section tumbles the decorative floor while camera, controls, pause, and replay stay stable", async ({ page }, testInfo) => {
+test("a section shockwave sends the drifting starfield into hyperspeed while map, controls, and replay stay stable", async ({ page }, testInfo) => {
     const errors: string[] = [];
     page.on("pageerror", error => errors.push(error.message));
     const baseline = await boot(page);
+    expect(baseline.visuals.shaderStatus).toBe("ready");
     expect(baseline.chart.beatCount).toBe(24);
     expect(baseline.chart.downbeatCount).toBe(6);
     expect(baseline.sectionEffects.sectionIndex).toBe(0);
     expect(baseline.sectionEffects.active).toBe(false);
-    expect(baseline.sectionEffects.roll).toBe(0);
-    expect(baseline.sectionEffects.zoom).toBe(1);
-    expect(baseline.sectionEffects.mapRoll).toBe(0);
+    expect(baseline.sectionEffects.shockwave.active).toBe(false);
+    expect(baseline.sectionEffects.shockwave.radius).toBe(0);
     expect(baseline.sectionEffects.camera.size).toBe(17);
+    expect(baseline.starfield.motionAllowed).toBe(true);
+    expect(baseline.starfield.distance).toBeGreaterThan(0);
+    expect(baseline.starfield.speed).toBe(1);
+    expect(baseline.starfield.boost).toBe(0);
+    expect(baseline.starfield.entityCount).toBeGreaterThan(0);
+    const driftingHandle = await page.waitForFunction(position => {
+        const state = (window as unknown as InspectedWindow).__beatshooter.snapshot();
+        return state.position > position + 0.15 && state.position < 1.5 ? state : false;
+    }, baseline.position, { polling: "raf", timeout: 3_000 });
+    const drifting = await driftingHandle.jsonValue() as SectionSnapshot;
+    expect(drifting.starfield.distance).toBeGreaterThan(baseline.starfield.distance);
+    expect(drifting.starfield.speed).toBe(1);
+    expect(drifting.starfield.entityCount).toBe(baseline.starfield.entityCount);
+    const baselinePath = "output/playwright/section-starfield-drift.png";
+    await page.screenshot({ path: baselinePath });
+    await testInfo.attach("section-starfield-drift", { path: baselinePath, contentType: "image/png" });
 
     const beginning = await atProgress(page, 0.08);
+    expect(beginning.visuals.shaderStatus).toBe("ready");
     expect(beginning.sectionEffects.active).toBe(true);
     expect(beginning.sectionEffects.label).toBe("chorus");
     expect(beginning.sectionEffects.startTime).toBe(2);
-    expect(beginning.sectionEffects.endTime).toBe(4);
-    expect(beginning.sectionEffects.progress).toBeCloseTo((beginning.position - 2) / 2, 5);
-    expect(beginning.sectionEffects.roll).toBe(0);
-    expect(beginning.sectionEffects.zoom).toBe(1);
+    expect(beginning.sectionEffects.endTime).toBeGreaterThan(2);
+    expect(beginning.sectionEffects.progress).toBeCloseTo(
+        (beginning.position - 2) / (beginning.sectionEffects.endTime - 2), 5);
+    expect(beginning.sectionEffects.shockwave.active).toBe(true);
+    expect(beginning.sectionEffects.shockwave.radius).toBeCloseTo(beginning.sectionEffects.progress * 30, 5);
+    expect(beginning.sectionEffects.shockwave.from).toEqual(baseline.sectionEffects.palette);
+    expect(beginning.sectionEffects.shockwave.to).not.toEqual(beginning.sectionEffects.shockwave.from);
     expect(beginning.sectionEffects.camera.rotation).toEqual(baseline.sectionEffects.camera.rotation);
     expect(beginning.sectionEffects.camera.size).toBe(17);
-    expect(beginning.sectionEffects.mapRoll).not.toBe(0);
-    expect(beginning.sectionEffects.map.rotation).not.toEqual(baseline.sectionEffects.map.rotation);
+    expect(beginning.sectionEffects.map).toEqual(baseline.sectionEffects.map);
     expect(beginning.sectionEffects.palette).not.toEqual(baseline.sectionEffects.palette);
+    expect(beginning.starfield.boost).toBeGreaterThan(0);
+    expect(beginning.starfield.speed).toBeGreaterThan(1);
+    expect(beginning.starfield.distance).toBeGreaterThan(drifting.starfield.distance);
+    expect(beginning.starfield.entityCount).toBe(baseline.starfield.entityCount);
     await expect(page.locator(".bs-run-progress .bs-player-section")).toHaveText("Chorus");
 
-    // Read-only per-frame samples witness real keyboard movement during the
-    // floor tumble. The camera and screen-space controls stay upright.
+    // Read-only per-frame samples witness one outward wave and real keyboard
+    // movement. No camera or map transform is part of the effect.
     await page.evaluate(() => {
         const target = window as unknown as InspectedWindow;
         target.__sectionMotion = [];
         const sample = () => {
             const state = target.__beatshooter.snapshot();
-            if (!["playing", "paused"].includes(state.phase) || state.position >= 4) return;
+            if (!["playing", "paused"].includes(state.phase)
+                || state.position >= state.sectionEffects.endTime) return;
             const player = state.player.position, velocity = state.player.velocity;
             const from = target.__beatshooter.project([player.x, 0.55, player.z]);
             const to = target.__beatshooter.project([player.x + velocity.x * 0.1, 0.55, player.z + velocity.z * 0.1]);
             target.__sectionMotion!.push({
                 position: state.position, progress: state.sectionEffects.progress,
-                mapRoll: state.sectionEffects.mapRoll, velocityX: velocity.x,
+                radius: state.sectionEffects.shockwave.radius,
+                shockwaveActive: state.sectionEffects.shockwave.active,
+                velocityX: velocity.x,
                 cameraRotation: state.sectionEffects.camera.rotation,
                 cameraSize: state.sectionEffects.camera.size,
+                map: state.sectionEffects.map,
+                starfield: state.starfield,
                 screenVelocity: from && to ? [to[0] - from[0], to[1] - from[1]] : null,
                 speed: Math.hypot(velocity.x, velocity.z),
             });
@@ -225,24 +268,27 @@ test("a detected section tumbles the decorative floor while camera, controls, pa
     });
     await atProgress(page, 0.32);
     await page.keyboard.down("KeyD");
-    const inverted = await atProgress(page, 0.48);
-    expect(Math.abs(Math.abs(inverted.sectionEffects.mapRoll) - Math.PI)).toBeLessThan(0.6);
-    expect(inverted.sectionEffects.map.position.y).toBeLessThan(baseline.sectionEffects.map.position.y);
-    expect(inverted.sectionEffects.camera.rotation).toEqual(baseline.sectionEffects.camera.rotation);
-    expect(inverted.sectionEffects.camera.size).toBe(17);
-    expect(inverted.sectionEffects.roll).toBe(0);
-    expect(inverted.sectionEffects.zoom).toBe(1);
-    expect(inverted.player.bodyY).toBeCloseTo(0.55, 4);
+    const middle = await atProgress(page, 0.48);
+    expect(middle.sectionEffects.shockwave.active).toBe(true);
+    expect(middle.sectionEffects.shockwave.radius).toBeGreaterThan(beginning.sectionEffects.shockwave.radius);
+    expect(middle.sectionEffects.shockwave.radius).toBeCloseTo(middle.sectionEffects.progress * 30, 5);
+    expect(middle.sectionEffects.map).toEqual(baseline.sectionEffects.map);
+    expect(middle.sectionEffects.camera.rotation).toEqual(baseline.sectionEffects.camera.rotation);
+    expect(middle.sectionEffects.camera.size).toBe(17);
+    expect(middle.player.bodyY).toBeCloseTo(0.55, 4);
+    expect(middle.starfield.speed).toBeGreaterThan(10);
+    expect(middle.starfield.distance).toBeGreaterThan(beginning.starfield.distance);
+    expect(middle.starfield.entityCount).toBe(baseline.starfield.entityCount);
     await page.keyboard.up("KeyD");
     const motion = await page.evaluate(() => (window as unknown as InspectedWindow).__sectionMotion!);
-    const movingInverted = motion.filter(frame =>
-        Math.abs(Math.abs(frame.mapRoll) - Math.PI) < 0.6 && frame.speed > 2 && frame.screenVelocity);
-    expect(movingInverted.length).toBeGreaterThan(2);
-    expect(movingInverted.every(frame => frame.screenVelocity![0] > 0)).toBe(true);
-    expect(movingInverted.every(frame => frame.velocityX > 0)).toBe(true);
-    const screenshotPath = "output/playwright/section-floor-tumble.png";
+    const moving = motion.filter(frame =>
+        frame.shockwaveActive && frame.speed > 2 && frame.screenVelocity);
+    expect(moving.length).toBeGreaterThan(2);
+    expect(moving.every(frame => frame.screenVelocity![0] > 0)).toBe(true);
+    expect(moving.every(frame => frame.velocityX > 0)).toBe(true);
+    const screenshotPath = "output/playwright/section-starfield-hyperspeed.png";
     await page.screenshot({ path: screenshotPath });
-    await testInfo.attach("section-floor-tumble", { path: screenshotPath, contentType: "image/png" });
+    await testInfo.attach("section-starfield-hyperspeed", { path: screenshotPath, contentType: "image/png" });
     await pause(page);
     const held = await snapshot(page);
     expect(held.sectionEffects.active).toBe(true);
@@ -251,13 +297,15 @@ test("a detected section tumbles the decorative floor while camera, controls, pa
     expect(frozen.position).toBe(held.position);
     expect(frozen.sectionEffects).toEqual(held.sectionEffects);
     expect(frozen.player.position).toEqual(held.player.position);
+    expect(frozen.starfield).toEqual(held.starfield);
 
     await page.mouse.move(830, 330);
     await expect.poll(() => pointerError(page, 830, 330)).toBeLessThan(2);
     await page.getByRole("button", { name: "Resume session", exact: true }).click();
     await page.waitForFunction(() => {
         const state = (window as unknown as InspectedWindow).__beatshooter.snapshot();
-        return state.position > 4.1 && state.position < 6 && !state.sectionEffects.active;
+        return state.position > state.sectionEffects.endTime + 0.1
+            && state.position < 6 && !state.sectionEffects.active;
     }, undefined, { polling: "raf", timeout: 5_000 });
     const settled = await snapshot(page);
     const allMotion = await page.evaluate(() => (window as unknown as InspectedWindow).__sectionMotion!);
@@ -265,14 +313,24 @@ test("a detected section tumbles the decorative floor while camera, controls, pa
     for (const frame of allMotion) {
         expect(frame.cameraRotation).toEqual(baseline.sectionEffects.camera.rotation);
         expect(frame.cameraSize).toBe(17);
+        expect(frame.map).toEqual(baseline.sectionEffects.map);
+        expect(frame.starfield.entityCount).toBe(baseline.starfield.entityCount);
+    }
+    for (let index = 1; index < allMotion.length; index++) {
+        expect(allMotion[index]!.radius).toBeGreaterThanOrEqual(allMotion[index - 1]!.radius);
+        expect(allMotion[index]!.starfield.distance).toBeGreaterThanOrEqual(allMotion[index - 1]!.starfield.distance);
     }
     expect(settled.sectionEffects.camera.rotation).toEqual(baseline.sectionEffects.camera.rotation);
     expect(settled.sectionEffects.camera.size).toBe(17);
-    expect(settled.sectionEffects.roll).toBe(0);
-    expect(settled.sectionEffects.zoom).toBe(1);
-    expect(settled.sectionEffects.mapRoll).toBe(0);
+    expect(settled.sectionEffects.shockwave.active).toBe(false);
+    expect(settled.sectionEffects.shockwave.radius).toBe(0);
     expect(settled.sectionEffects.map).toEqual(baseline.sectionEffects.map);
+    expect(settled.sectionEffects.palette).toEqual(beginning.sectionEffects.shockwave.to);
     expect(settled.sectionEffects.camera.clearColor).not.toBe(baseline.sectionEffects.camera.clearColor);
+    expect(settled.starfield.distance).toBeGreaterThan(held.starfield.distance);
+    expect(settled.starfield.speed).toBe(1);
+    expect(settled.starfield.boost).toBe(0);
+    expect(settled.starfield.entityCount).toBe(baseline.starfield.entityCount);
 
     await pause(page);
     await page.getByRole("button", { name: "Restart session", exact: true }).click();
@@ -283,6 +341,8 @@ test("a detected section tumbles the decorative floor while camera, controls, pa
     expect(restarted.sectionEffects.camera.rotation).toEqual(baseline.sectionEffects.camera.rotation);
     expect(restarted.sectionEffects.camera.size).toBe(17);
     expect(restarted.sectionEffects.map).toEqual(baseline.sectionEffects.map);
+    expect(restarted.starfield.boost).toBe(0);
+    expect(restarted.starfield.entityCount).toBe(baseline.starfield.entityCount);
     await atProgress(page, 0.2);
     await pause(page);
     await page.getByRole("button", { name: "Return to menu", exact: true }).click();
@@ -294,29 +354,35 @@ test("a detected section tumbles the decorative floor while camera, controls, pa
     expect(menu.sectionEffects.camera.clearColor).toBe(0x090f15);
     expect(menu.sectionEffects.map).toEqual(baseline.sectionEffects.map);
     expect(menu.bodyCount).toBe(baseline.bodyCount);
+    expect(menu.starfield.entityCount).toBe(baseline.starfield.entityCount);
     expect(errors).toEqual([]);
 });
 
 for (const mode of ["off", "reduced"] as const) {
-    test(`${mode} motion keeps section palette changes without floor or camera travel`, async ({ page }, testInfo) => {
+    test(`${mode} motion keeps section palette changes without a travelling shockwave`, async ({ page }, testInfo) => {
         const baseline = await boot(page, mode);
+        expect(baseline.starfield.motionAllowed).toBe(false);
+        expect(baseline.starfield.speed).toBe(0);
+        expect(baseline.starfield.boost).toBe(0);
         const middle = await atProgress(page, 0.5);
         expect(middle.sectionEffects.label).toBe("chorus");
         expect(middle.sectionEffects.motionAllowed).toBe(false);
-        expect(middle.sectionEffects.roll).toBe(0);
-        expect(middle.sectionEffects.zoom).toBe(1);
-        expect(middle.sectionEffects.mapRoll).toBe(0);
+        expect(middle.sectionEffects.shockwave.active).toBe(false);
+        expect(middle.sectionEffects.shockwave.radius).toBe(0);
         expect(middle.sectionEffects.map).toEqual(baseline.sectionEffects.map);
         expect(middle.sectionEffects.camera.rotation).toEqual(baseline.sectionEffects.camera.rotation);
         expect(middle.sectionEffects.camera.size).toBe(17);
         expect(middle.sectionEffects.camera.clearColor).not.toBe(baseline.sectionEffects.camera.clearColor);
         expect(middle.sectionEffects.palette).not.toEqual(baseline.sectionEffects.palette);
+        expect(middle.starfield).toEqual(baseline.starfield);
         const screenshotPath = `output/playwright/section-map-${mode}.png`;
         await page.screenshot({ path: screenshotPath });
         await testInfo.attach(`section-map-${mode}`, { path: screenshotPath, contentType: "image/png" });
         await pause(page);
         const held = await snapshot(page);
         await page.waitForTimeout(200);
-        expect((await snapshot(page)).sectionEffects).toEqual(held.sectionEffects);
+        const frozen = await snapshot(page);
+        expect(frozen.sectionEffects).toEqual(held.sectionEffects);
+        expect(frozen.starfield).toEqual(held.starfield);
     });
 }

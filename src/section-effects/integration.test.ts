@@ -6,25 +6,22 @@ import { Shape } from "@dylanebert/shallot/physics";
 import type { SectionAnalysis } from "../analysis/sections";
 import { Arena, box } from "../arena";
 import { MusicVisuals, PresentMusicalVisuals, SampleMusicalVisuals } from "../music-visuals";
-import { MusicFloorState } from "../music-visuals/floor";
+import { MusicFloorState, sectionShockwave } from "../music-visuals/floor";
 import { generateTimeline } from "../rhythm/timeline";
 import { Session } from "../session";
 import { DEMO_TRACK } from "../tracks";
-import { PresentSectionEffects, SampleSectionEffects, SectionEffects, SectionEffectsPlugin } from "./index";
+import { PresentSectionEffects, SampleSectionEffects, SectionEffects } from "./index";
 import { SECTION_PALETTES } from "./state";
 
 async function fixture() {
     const app = await createApp({ defaults: false, plugins: [] });
     const { world } = app;
-    const arena = world.resource(Arena);
-    const materials = world.resource(Materials);
+    const arena = world.resource(Arena), materials = world.resource(Materials);
     arena.materials.floor = materials.add(StandardMaterial({ baseColor: [0.006, 0.012, 0.018, 1] }));
     arena.materials.line = materials.add(StandardMaterial({ baseColor: [0.03, 0.09, 0.105, 1] }));
     arena.materials.wall = materials.add(StandardMaterial({ baseColor: [0.07, 0.19, 0.21, 1] }));
     arena.camera = world.create();
-    world.add(arena.camera, Camera, {
-        mode: CameraMode.Orthographic, size: 17, clearColor: 0x090f15,
-    });
+    world.add(arena.camera, Camera, { mode: CameraMode.Orthographic, size: 17, clearColor: 0x090f15 });
     world.add(arena.camera, Transform, {
         translation: [0, 32, 19], rotation: lookAtRotation(0, 32, 19, 0, 0, 0),
     });
@@ -33,16 +30,12 @@ async function fixture() {
         box(world, arena.materials.line, [6, -0.135, 0], [0.035, 0.025, 36]),
         box(world, arena.materials.line, [0, -0.135, -9], [36, 0.025, 0.035]),
     ];
-    for (const eid of [arena.floor, ...arena.lines]) {
-        arena.mapVisuals.set(eid, [...world.get(eid, Transform)!.translation]);
-    }
     const wall = box(world, arena.materials.wall, [18.5, 0.2, 0], [1, 0.8, 38]);
     const actor = box(world, arena.materials.wall, [3, 0.55, -2], [1, 1, 1]);
     for (const eid of [wall, actor]) {
         world.add(eid, Body);
         world.add(eid, Shape);
     }
-    await SectionEffectsPlugin.initialize!(world);
     const session = world.resource(Session);
     const structure: SectionAnalysis = {
         version: 1, analyzerVersion: "integration-fixture", duration: 12, elapsedMs: 0, backend: "wasm",
@@ -69,113 +62,80 @@ async function fixture() {
         PresentSectionEffects.update!(world);
         PresentMusicalVisuals.update!(world);
     };
-    const pose = () => ({
-        rotation: world.get(arena.camera, Transform)!.rotation,
-        size: world.get(arena.camera, Camera)!.size,
-        clearColor: world.get(arena.camera, Camera)!.clearColor,
-        map: [...arena.mapVisuals.keys()].map(eid => world.get(eid, Transform)),
-        wall: world.get(wall, Transform),
-        actor: world.get(actor, Transform),
-        portals: state.portals.map(eid => world.get(eid, Transform)),
-    });
-    const portalWidths = () => state.portals.map(eid => {
-        const scale = world.get(eid, Transform)!.scale;
-        return Math.min(scale[0], scale[2]);
-    });
-    return { app, world, arena, session, state, render, pose, portalWidths, wall, actor };
+    const poses = () => [...world.query([Transform])].map(eid => ({ eid, pose: world.get(eid, Transform) }));
+    const camera = () => world.get(arena.camera, Camera)!;
+    const wave = () => {
+        const p = world.resource(MusicFloorState).parameters;
+        return structuredClone({
+            section: p.section, floor: p.floorColor, line: p.lineColor, accent: p.accentColor,
+            fromFloor: p.fromFloor, fromLine: p.fromLine, fromAccent: p.fromAccent,
+        });
+    };
+    return { app, world, arena, session, state, render, poses, camera, wave, wall, actor };
 }
 
-test("the floor turns using raw song time while the camera, actors and walls stay fixed, and pauses freeze the effect", async () => {
+test("the color wave follows raw song time and freezes on pause without moving any camera or map entities", async () => {
     const f = await fixture();
     try {
-        const { world, session, state, arena, render, pose } = f;
+        const { world, session, state, render, poses, camera, wave } = f;
         const originalCombat = structuredClone(session.combat);
         render(1);
-        const original = pose();
-        expect(state.roll).toBe(0);
-        expect(state.zoom).toBe(1);
-        expect(state.mapRoll).toBe(0);
+        const originalPoses = poses(), originalSize = camera().size, originalBackground = camera().clearColor;
+        render(2.2);
+        expect(state.frame.progress).toBeCloseTo(0.1);
+        expect(wave().fromFloor.slice(0, 3)).toEqual([...SECTION_PALETTES.intro.floor]);
+        expect(wave().floor.slice(0, 3)).toEqual([...SECTION_PALETTES.chorus.floor]);
+        expect(sectionShockwave(state.frame.progress, state.strength, 0, 0.01).x).toBe(1);
+        expect(sectionShockwave(state.frame.progress, state.strength, 10, 0.01).x).toBe(0);
         render(3);
         expect(state.frame.progress).toBeCloseTo(0.5);
-        expect(state.mapRoll).toBeCloseTo(Math.PI);
-        expect(state.mapDrop).toBeGreaterThan(0);
-        expect(state.roll).toBe(0);
-        expect(state.zoom).toBe(1);
-        expect(pose().rotation).toEqual(original.rotation);
-        expect(pose().size).toBe(original.size);
-        expect(pose().wall).toEqual(original.wall);
-        expect(pose().actor).toEqual(original.actor);
-        // The floor's local right vector now points left: only this visual layer flips.
-        const q = world.get(arena.floor, Transform)!.rotation;
-        expect(1 - 2 * (q[1] ** 2 + q[2] ** 2)).toBeCloseTo(-1);
-        expect(pose().map).not.toEqual(original.map);
-        const floor = world.resource(MusicFloorState);
-        expect(floor.parameters.map[0]).toBeCloseTo(-1);
-        expect(floor.parameters.map[2]).toBe(state.mapDrop);
-        expect(f.portalWidths().filter(width => width > 0)).toHaveLength(12);
+        expect(sectionShockwave(state.frame.progress, state.strength, 15, 0.01).y).toBeGreaterThan(0.8);
+        expect(camera().clearColor).toBe(originalBackground);
+        expect(camera().size).toBe(originalSize);
+        expect(poses()).toEqual(originalPoses);
 
-        const held = structuredClone(pose());
-        const heldFrame = structuredClone(state.frame);
+        const held = wave(), heldFrame = structuredClone(state.frame);
         session.phase = "paused";
         world.pause();
         for (let draw = 0; draw < 20; draw++) render();
-        expect(pose()).toEqual(held);
+        expect(wave()).toEqual(held);
         expect(state.frame).toEqual(heldFrame);
         session.preferences.settings.timingOffsetMs = 250;
         render();
         expect(world.resource(MusicVisuals).frame.position).toBe(3.25);
         expect(state.frame).toEqual(heldFrame);
-        expect(pose()).toEqual(held);
+        expect(wave()).toEqual(held);
+        expect(poses()).toEqual(originalPoses);
 
         session.phase = "playing";
         world.resume();
-        for (const position of [2.1, 2.5, 2.9, 3.1, 3.5, 3.9]) {
-            render(position);
-            const map = world.get(arena.floor, Transform)!;
-            const [, , qz, qw] = map.rotation;
-            const sine = 2 * qz * qw, cosine = 1 - 2 * qz * qz;
-            // Even when edge-on, every floor-box corner stays below the actors' plane.
-            const highestCorner = map.translation[1] + 18.5 * Math.abs(sine) + 0.25 * Math.abs(cosine);
-            expect(highestCorner).toBeLessThanOrEqual(-0.14999);
-            expect(pose().rotation).toEqual(original.rotation);
-            expect(pose().wall).toEqual(original.wall);
-            expect(pose().actor).toEqual(original.actor);
-        }
+        render(3.5);
+        expect(camera().clearColor).not.toBe(originalBackground);
         render(4);
         expect(state.frame.active).toBe(false);
-        expect(state.mapRoll).toBe(0);
-        expect(state.mapDrop).toBe(0);
-        expect(pose().rotation).toEqual(original.rotation);
-        expect(pose().size).toBe(original.size);
-        expect(pose().map).toEqual(original.map);
-        expect(pose().wall).toEqual(original.wall);
-        expect(pose().actor).toEqual(original.actor);
+        expect(state.strength).toBe(0);
         expect(state.frame.palette).toEqual(SECTION_PALETTES.chorus);
-        expect(world.resource(MusicFloorState).parameters.floorColor.slice(0, 3))
-            .toEqual([...SECTION_PALETTES.chorus.floor]);
-        expect(f.portalWidths().every(width => width === 0)).toBe(true);
+        expect(wave().floor.slice(0, 3)).toEqual([...SECTION_PALETTES.chorus.floor]);
+        expect(world.resource(MusicFloorState).lastInput.section!.from).toBeUndefined();
+        expect(poses()).toEqual(originalPoses);
+        expect(camera().size).toBe(originalSize);
         expect(session.combat).toEqual(originalCombat);
     } finally {
         f.app.dispose();
     }
 });
 
-test("Calm limits the floor tilt, while Off and reduced motion retain only the section colors", async () => {
+test("Calm softens the one wave, while Off and reduced motion use a stationary palette fade", async () => {
     const f = await fixture();
     try {
-        const { world, session, state, render, pose } = f;
-        render(2.5);
-        const standardRoll = state.mapRoll;
-        const standardCamera = pose().rotation;
+        const { world, session, state, render, poses, wave } = f;
+        render(3);
+        const standardStrength = state.strength, originalPoses = poses();
         session.preferences.settings.effectsIntensity = "calm";
         render();
-        expect(Math.abs(state.mapRoll)).toBeCloseTo(0.08);
-        expect(Math.abs(state.mapRoll)).toBeLessThan(Math.abs(standardRoll));
-        expect(pose().rotation).toEqual(standardCamera);
-        expect(pose().size).toBe(17);
-        expect(state.mapDrop).toBeGreaterThan(0);
-        const palette = state.frame.palette;
-        const cameraColor = pose().clearColor;
+        expect(state.strength).toBeGreaterThan(0);
+        expect(state.strength).toBeLessThan(standardStrength);
+        expect(poses()).toEqual(originalPoses);
         const checks: Array<() => void> = [
             () => { session.preferences.settings.effectsIntensity = "off"; },
             () => {
@@ -190,86 +150,59 @@ test("Calm limits the floor tilt, while Off and reduced motion retain only the s
         for (const change of checks) {
             change();
             render();
-            expect(state.roll).toBe(0);
-            expect(state.zoom).toBe(1);
-            expect(state.mapRoll).toBe(0);
-            expect(state.mapDrop).toBe(0);
             expect(state.strength).toBe(0);
-            expect(state.frame.palette).toEqual(palette);
-            expect(pose().clearColor).toBe(cameraColor);
-            expect(f.portalWidths().every(width => width === 0)).toBe(true);
-            expect(world.resource(MusicFloorState).parameters.section[1]).toBe(0);
-            expect(world.resource(MusicFloorState).parameters.floorColor.slice(0, 3)).toEqual([...palette.floor]);
+            expect(wave().section[1]).toBe(0);
+            expect(wave().floor.slice(0, 3)).toEqual([...state.frame.palette.floor]);
+            expect(world.resource(MusicFloorState).lastInput.section!.from).toBeUndefined();
+            expect(poses()).toEqual(originalPoses);
+            expect(f.camera().size).toBe(17);
         }
         session.preferences.settings.reducedFlash = false;
         session.preferences.settings.graphics = "low";
         render();
-        expect(f.portalWidths().slice(0, 4).every(width => width > 0)).toBe(true);
-        expect(f.portalWidths().slice(4).every(width => width === 0)).toBe(true);
+        expect(state.strength).toBe(standardStrength);
         expect(world.resource(MusicFloorState).parameters.response[2]).toBe(0);
+        expect(sectionShockwave(state.frame.progress, state.strength, 15, 0.01).y).toBeGreaterThan(0.8);
+        expect(poses()).toEqual(originalPoses);
     } finally {
         f.app.dispose();
     }
 });
 
-test("retry, track replacement and menu restore the floor without leaking or moving physical entities", async () => {
+test("retry, menu and track replacement clear the wave and restore colors without creating any entities", async () => {
     const f = await fixture();
     try {
-        const { world, session, state, arena, render, pose } = f;
-        const pool = [...state.portals];
-        expect(pool).toHaveLength(12);
-        expect(new Set(pool).size).toBe(12);
-        for (const eid of [...pool, ...arena.mapVisuals.keys()]) {
-            expect(world.has(eid, MeshInstance)).toBe(true);
-            expect(world.has(eid, Body)).toBe(false);
-            expect(world.has(eid, Shape)).toBe(false);
-        }
+        const { world, session, state, arena, render, poses } = f;
         render(0);
-        const baseline = pose();
+        const baseline = poses();
         for (let retry = 0; retry < 5; retry++) {
             render(3);
-            expect(state.mapRoll).toBeCloseTo(Math.PI);
+            expect(state.strength).toBeGreaterThan(0);
             const oldTimeline = state.timeline;
             session.generation++;
             render(0);
             expect(state.timeline).not.toBe(oldTimeline);
-            expect(state.mapRoll).toBe(0);
-            expect(state.mapDrop).toBe(0);
-            expect(pose().rotation).toEqual(baseline.rotation);
-            expect(pose().size).toBe(baseline.size);
-            expect(pose().map).toEqual(baseline.map);
-            expect(pose().wall).toEqual(baseline.wall);
-            expect(pose().actor).toEqual(baseline.actor);
-            expect(state.portals).toEqual(pool);
+            expect(state.strength).toBe(0);
+            expect(poses()).toEqual(baseline);
         }
         render(8.8);
-        expect(state.mapRoll).not.toBe(0);
+        expect(state.strength).toBeGreaterThan(0);
         session.phase = "menu";
         render();
         expect(state.frame.index).toBe(-1);
-        expect(state.roll).toBe(0);
-        expect(state.zoom).toBe(1);
-        expect(state.mapRoll).toBe(0);
-        expect(state.mapDrop).toBe(0);
-        expect(pose().rotation).toEqual(baseline.rotation);
-        expect(pose().map).toEqual(baseline.map);
-        expect(pose().wall).toEqual(baseline.wall);
-        expect(pose().actor).toEqual(baseline.actor);
-        expect(pose().clearColor).toBe(0x090f15);
-        expect(f.portalWidths().every(width => width === 0)).toBe(true);
+        expect(state.strength).toBe(0);
+        expect(f.camera().clearColor).toBe(0x090f15);
+        expect(poses()).toEqual(baseline);
         expect(world.resource(MusicFloorState).lastInput.section).toBeUndefined();
         expect(world.resource(Materials).get(arena.materials.wall)!.baseColor.x).toBeCloseTo(0.07);
-
         session.phase = "playing";
         session.track = { ...session.track, id: "replacement-no-analysis" };
         session.loaded = undefined;
         render(3);
         expect(state.frame.index).toBe(-1);
-        expect(state.mapRoll).toBe(0);
-        expect(pose().rotation).toEqual(baseline.rotation);
-        expect(pose().map).toEqual(baseline.map);
-        expect(state.portals).toEqual(pool);
-        expect([...world.query([MeshInstance])]).toHaveLength(17);
+        expect(state.strength).toBe(0);
+        expect(poses()).toEqual(baseline);
+        expect([...world.query([MeshInstance])]).toHaveLength(5);
         expect([...world.query([Body])]).toEqual([f.wall, f.actor]);
         expect([...world.query([Shape])]).toEqual([f.wall, f.actor]);
     } finally {

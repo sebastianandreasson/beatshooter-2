@@ -72,6 +72,8 @@ export const PresentMusicalVisuals: System = {
         }
         const energy = sampleEnergy(s.loaded?.energy, s.visualPosition);
         const section = world.resource(SectionEffects);
+        const waveActive = section.strength > 0 && section.frame.active;
+        const sectionPalette = waveActive ? section.frame.to : section.frame.palette;
         updateMusicFloor(world, {
             ...v.frame,
             intensity: visible ? v.intensity * v.frame.strength * (s.loaded?.energy ? 0.25 + energy.loudness * 0.75 : 1) : 0,
@@ -81,10 +83,14 @@ export const PresentMusicalVisuals: System = {
             highQuality: s.preferences.settings.graphics === "high",
             section: visible && section.frame.index >= 0 ? {
                 progress: section.frame.progress, strength: section.strength,
-                mapRoll: section.mapRoll, mapDrop: section.mapDrop,
-                floor: [...section.frame.palette.floor],
-                line: [...section.frame.palette.line],
-                accent: [...section.frame.palette.accent],
+                from: waveActive ? {
+                    floor: [...section.frame.from.floor],
+                    line: [...section.frame.from.line],
+                    accent: [...section.frame.from.accent],
+                } : undefined,
+                floor: [...sectionPalette.floor],
+                line: [...sectionPalette.line],
+                accent: [...sectionPalette.accent],
             } : undefined,
         });
         if (v.profileCpu) v.visualCpuMs = performance.now() - cpuStart;

@@ -58,11 +58,8 @@ export interface SectionTransitionFrame {
     startTime: number;
     endTime: number;
     progress: number;
-    /** Smooth zero-ended intensity for the cinematic travel and floor accents. */
+    /** Smooth zero-ended intensity for the section's outward light wave. */
     envelope: number;
-    /** A full map turn ends flat; callers suppress it for comfort modes. */
-    roll: number;
-    travel: number;
     from: SectionPalette;
     to: SectionPalette;
     palette: SectionPalette;
@@ -80,8 +77,8 @@ interface Transition {
 
 const EPSILON = 1e-9;
 const TRANSITION_BEATS = 4;
-const MIN_TURN_SECONDS = 0.65;
-const MAX_TURN_SECONDS = 3.5;
+const MIN_TRANSITION_SECONDS = 0.65;
+const MAX_TRANSITION_SECONDS = 3.5;
 const QUIET_FADE_SECONDS = 0.6;
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
 const smooth = (value: number) => value * value * (3 - 2 * value);
@@ -147,14 +144,14 @@ export class SectionTransitionTimeline {
             };
             let requestedBeats = TRANSITION_BEATS;
             let endTime = endAfterBeats(requestedBeats);
-            // Slow songs use fewer real beats, not a long twelve-second map turn.
-            while (endTime - startTime > MAX_TURN_SECONDS && requestedBeats > 0.5) {
+            // Slow songs use fewer real beats to keep the wave's duration bounded.
+            while (endTime - startTime > MAX_TRANSITION_SECONDS && requestedBeats > 0.5) {
                 requestedBeats /= 2;
                 endTime = endAfterBeats(requestedBeats);
             }
             const beatSpan = this.music.sample(endTime).beatCoordinate - birth.beatCoordinate;
-            // A tiny remaining interval must not compress a full map turn into a snap.
-            if (endTime - startTime < MIN_TURN_SECONDS - EPSILON || beatSpan < 0.5 - EPSILON) return fallback;
+            // Tiny fragments use a gentle palette fade instead of a rushed wave.
+            if (endTime - startTime < MIN_TRANSITION_SECONDS - EPSILON || beatSpan < 0.5 - EPSILON) return fallback;
             return { startTime, endTime, startCoordinate: birth.beatCoordinate, beatSpan, musical: true };
         });
     }
@@ -163,7 +160,7 @@ export class SectionTransitionTimeline {
         if (!this.sections.length) {
             return {
                 index: -1, label: undefined, active: false, startTime: 0, endTime: 0,
-                progress: 1, envelope: 0, roll: 0, travel: 0, musical: false,
+                progress: 1, envelope: 0, musical: false,
                 from: DEFAULT_SECTION_PALETTE, to: DEFAULT_SECTION_PALETTE, palette: DEFAULT_SECTION_PALETTE,
             };
         }
@@ -189,9 +186,7 @@ export class SectionTransitionTimeline {
         const envelope = active && musical ? Math.sin(Math.PI * progress) ** 2 : 0;
         return {
             index, label: section.label, active, startTime, endTime, progress, musical,
-            envelope, travel: envelope,
-            roll: active && musical ? Math.PI * 2 * eased : 0,
-            from, to, palette: mixPalette(from, to, eased),
+            envelope, from, to, palette: mixPalette(from, to, eased),
         };
     }
 }

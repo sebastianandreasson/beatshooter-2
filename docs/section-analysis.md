@@ -25,6 +25,11 @@ can be analyzed by importing its WAV. Changing files clears old predictions.
 
 - Pinned LinkSeg 7-class ONNX model: 1,574,039 bytes, prepared and SHA-256-verified
   by `setup:audio`. The existing ONNX Runtime Web 1.23.2 is shared.
+- Beat This and LinkSeg weights also persist in browser Cache Storage, using
+  the pinned model hashes as versions. Worker disposal and page reloads retain
+  the saved weights; normal repeated analysis makes no model download request.
+  Invalid cache entries are replaced. Storage denial/quota failures fall back to
+  a verified download. Uploaded audio and analysis results remain session-only.
 - Selected MIT-licensed numerical frontend/decoder files from LinkSeg-web commit
   `694d27356082712dc82a3e06dbf9c7d543c9e399` are vendored because the advertised
   npm package returned 404 during integration. The loader/cache/demo were not
@@ -41,7 +46,7 @@ can be analyzed by importing its WAV. Changing files clears old predictions.
   or failed section results preserve the beat chart and keep playback available.
   The import dialog omits warning text. Manual timing is under **Timing**; displayed
   BPM is rounded without changing the detected beat timestamps.
-- Metadata is session-only. No gameplay changes, persistent cache,
+- Metadata is session-only. No gameplay changes, persistent analysis-result cache,
   section correction UI or calibrated confidence score were added.
 
 ## Measured results

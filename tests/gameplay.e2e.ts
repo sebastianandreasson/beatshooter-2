@@ -180,6 +180,9 @@ test("a user-selected WAV completes naturally, retries, saves its result, and re
     await page.locator("#bs-audio-file").setInputFiles({
         name: "browser-smoke.wav", mimeType: "audio/wav", buffer: silentWav(),
     });
+    await page.getByRole("button", { name: "Cancel analysis", exact: true }).click();
+    await page.locator(".bs-timing-options summary").click();
+    await page.locator("#bs-local-grid").selectOption("manual");
     await page.locator("#bs-local-bpm").fill("120");
     await page.locator("#bs-local-offset").fill("0");
     await page.getByRole("button", { name: "Play this track" }).click();
@@ -210,6 +213,9 @@ test("invalid timing and undecodable audio return actionable errors without losi
     await page.locator("#bs-audio-file").setInputFiles({
         name: "broken.wav", mimeType: "audio/wav", buffer: Buffer.from("This is deliberately not audio."),
     });
+    await expect(page.locator('.bs-analysis[data-analysis-state="error"]')).toBeVisible();
+    await page.locator(".bs-timing-options summary").click();
+    await page.locator("#bs-local-grid").selectOption("manual");
     await page.locator("#bs-local-bpm").fill("0");
     await page.getByRole("button", { name: "Play this track" }).click();
     await expect(page.locator('[data-value="import-error"]')).toContainText("20 and 300");

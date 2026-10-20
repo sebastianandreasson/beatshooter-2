@@ -11,6 +11,7 @@ import { ExperiencePresentation } from "../experience";
 import { EnemySpawnPresentation } from "../enemy-spawn";
 import { enemySpawnPose } from "../enemy-spawn/pose";
 import { SectionEffects } from "../section-effects/runtime";
+import { Starfield } from "../starfield";
 
 /** Read-only opt-in witnesses for browser tests; never enables an on-screen overlay. */
 export function installInspection(world: World): void {
@@ -25,6 +26,7 @@ export function installInspection(world: World): void {
             const experience = world.resource(ExperiencePresentation);
             const arrivals = world.resource(EnemySpawnPresentation);
             const sections = world.resource(SectionEffects);
+            const stars = world.resource(Starfield);
             const transform = world.storage(Transform), materials = world.storage(MeshMaterial);
             const mesh = (eid: number) => ({
                 position: {
@@ -39,11 +41,20 @@ export function installInspection(world: World): void {
                 position: s.position, audioState: s.transport?.state,
                 playbackRate: s.transport?.playbackRate ?? 0,
                 simulationScale: world.time.scale,
+                starfield: {
+                    distance: stars.distance, speed: stars.speed, boost: stars.boost,
+                    motionAllowed: stars.motionAllowed, entityCount: stars.stars.length,
+                    samples: stars.stars.slice(0, 3).map(mesh),
+                },
                 sectionEffects: {
                     active: sections.frame.active, sectionIndex: sections.frame.index, label: sections.frame.label,
                     startTime: sections.frame.startTime, endTime: sections.frame.endTime,
-                    progress: sections.frame.progress, roll: sections.roll, zoom: sections.zoom,
-                    mapRoll: sections.mapRoll, mapDrop: sections.mapDrop,
+                    progress: sections.frame.progress,
+                    shockwave: {
+                        active: sections.strength > 0 && sections.frame.active,
+                        radius: sections.strength > 0 && sections.frame.active ? sections.frame.progress * 30 : 0,
+                        from: structuredClone(sections.frame.from), to: structuredClone(sections.frame.to),
+                    },
                     map: {
                         position: {
                             x: transform.translation.x.get(arena.floor),

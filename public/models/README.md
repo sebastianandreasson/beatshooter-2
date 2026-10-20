@@ -25,6 +25,15 @@ files are not duplicated in the generated bundle.
 The browser worker uses WebGPU and mono PCM at exactly 22,050 Hz. It returns
 detected beat/downbeat timestamps; they remain estimates and can need correction.
 
+The browser stores verified model weights in Cache Storage under
+`beatshooter-models-v1`. Keys include the pinned SHA-256 from
+`src/analysis/models.ts`, shared with the setup scripts. Repeat analysis and
+page reloads reuse these bytes without requesting the model URL. Damaged
+entries are discarded; after a new model is saved, older versions of that
+same asset are removed. Cache access/quota failures preserve normal loading.
+Browser eviction or clearing site data removes this cache. Music is never
+stored here. ONNX JS/WASM assets retain normal HTTP caching.
+
 ## LinkSeg section analysis
 
 `setup:audio` also prepares `linkseg-7c.onnx` using the same local runtime.

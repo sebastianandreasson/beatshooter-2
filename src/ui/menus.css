@@ -5,14 +5,14 @@
     border: 0;
 }
 .bs-menu-main {
-    width: min(calc(100% - 64px), 1120px);
-    max-width: 1120px;
+    width: 60vw;
+    max-width: none;
     padding: 12px 0 28px;
 }
 .bs-menu .bs-intro { margin-bottom: 32px; }
 .bs-menu .bs-intro h1 {
     margin: 0;
-    font-size: clamp(60px, 11.6vw, 150px);
+    font-size: clamp(60px, 9vw, 150px);
     line-height: .98;
     font-weight: 700;
     letter-spacing: -.065em;
@@ -43,20 +43,21 @@
     width: 46px;
     height: 46px;
 }
-.bs-menu .bs-dojo-controls { margin-top: 16px; gap: 16px; }
+.bs-menu .bs-dojo-controls { margin-top: 16px; gap: 16px; flex-wrap: wrap; }
 .bs-menu .bs-dojo-controls > label { font-size: 10px; }
 .bs-menu .bs-number-wrap { min-height: 48px; padding: 10px 12px; }
 .bs-menu .bs-number-wrap input { width: 62px; font-size: 18px; }
 .bs-menu .bs-number-wrap > span { font-size: 11px; }
 .bs-menu .bs-local-card .bs-button { margin-top: 22px; }
 .bs-menu .bs-controls {
+    justify-content: center;
     flex-wrap: wrap;
     gap: 18px 30px;
     margin-top: 24px;
     padding-top: 24px;
     color: #b2c6bd;
 }
-.bs-menu .bs-controls > div { font-size: 14px; gap: 12px; }
+.bs-menu .bs-controls > div { flex-shrink: 0; font-size: 14px; gap: 12px; }
 .bs-menu .bs-controls kbd {
     min-width: 30px;
     height: 34px;

@@ -1,7 +1,6 @@
-/* The music player spans the viewport; the beat/dash widget stays centered above it. */
+/* Keep the beat/dash widget centered above the inset gameplay timeline. */
 .bs-hud-bottom { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; padding-bottom: 12px; }
 .bs-hud-bottom .bs-hud-beat { max-width: calc(100% - 28px); }
-.bs-run-progress.bs-track-player { display: block; width: 100%; }
 .bs-track-player { min-width: 0; color: #b5ccbf; font: 10px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; background: #091619df; padding: 10px 0 8px; border-top: 1px solid #aecdbb20; }
 .bs-player-meta, .bs-player-footer { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 0 24px; }
 .bs-player-meta { margin-bottom: 8px; }
@@ -20,6 +19,14 @@
 .bs-player-next { text-align: right; letter-spacing: 0; color: #b3c5ba; }
 .bs-player-legend { display: flex; justify-content: center; flex-wrap: wrap; gap: 5px 16px; padding: 7px 16px 0; color: #b0c4b8; font-size: 9px; }
 .bs-player-legend span { display: inline-flex; align-items: center; gap: 6px; }
+/* Gameplay only needs section colors, a playhead, and a quiet time readout. */
+.bs-run-progress.bs-track-player { display: flex; align-items: center; gap: 12px; width: calc(100% - clamp(32px, 8vw, 160px)); margin-inline: auto; padding: 8px 12px; border: 1px solid #aecdbb14; border-radius: 7px; background: #09161980; }
+.bs-run-progress .bs-player-meta { order: 1; flex: 0 0 auto; margin: 0; padding: 0; }
+.bs-run-progress .bs-player-section, .bs-run-progress .bs-player-footer, .bs-run-progress .bs-player-legend { display: none; }
+.bs-run-progress .bs-player-time { color: #93aaa1; font-size: 9px; }
+.bs-run-progress .bs-player-rail { flex: 1; min-width: 0; height: 6px; border-radius: 3px; }
+.bs-run-progress .bs-player-sections { opacity: .8; }
+.bs-run-progress .bs-player-band { padding: 0; color: transparent; font-size: 0; pointer-events: none; }
 .bs-section-preview { margin-top: 16px; border: 1px solid #aecdbb20; border-radius: 4px; overflow: hidden; }
 .bs-section-preview .bs-player-meta, .bs-section-preview .bs-player-footer { padding-inline: 10px; }
 .bs-section-preview .bs-player-band { color: transparent; }

@@ -16,11 +16,9 @@ type ArenaMaterials = Record<
 export const Arena: Resource<{
     camera: number; reticle: number[]; floor: number; lines: number[];
     materials: ArenaMaterials;
-    /** Rest positions of the nonphysical floor and grid; walls stay fixed. */
-    mapVisuals: Map<number, [number, number, number]>;
 }> = {
     create: () => ({
-        camera: -1, reticle: [], floor: -1, lines: [], mapVisuals: new Map(),
+        camera: -1, reticle: [], floor: -1, lines: [],
         materials: {} as ArenaMaterials,
     }),
 };
@@ -75,9 +73,6 @@ export const ArenaPlugin: Plugin = {
         for (let i = -18; i <= 18; i += 3) {
             arena.lines.push(box(world, arena.materials.line, [i, -0.135, 0], [0.035, 0.025, 36]));
             arena.lines.push(box(world, arena.materials.line, [0, -0.135, i], [36, 0.025, 0.035]));
-        }
-        for (const eid of [arena.floor, ...arena.lines]) {
-            arena.mapVisuals.set(eid, [...world.get(eid, Transform)!.translation]);
         }
         for (const [x, z, sx, sz] of [[-18.5, 0, 1, 38], [18.5, 0, 1, 38], [0, -18.5, 38, 1], [0, 18.5, 38, 1]]) {
             const wall = box(world, arena.materials.wall, [x!, 0.2, z!], [sx!, 0.8, sz!]);

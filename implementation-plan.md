@@ -17,32 +17,41 @@ review remains open; see the
 The original M0–M6 acceptance below remains historical evidence for that scope.
 
 Follow-up section effects: validated LinkSeg spans now drive cosmetic changes
-across the arena floor. Standard effects combine a full 360° turn of the visual
-floor and grid about the world's Z axis, expanding portal frames, a spiral grid
-and broad floor waves. The decorative floor flips beneath combat and returns
-flat. Floor, perimeter and background colors blend to a dark theme for each of
-the seven section labels. Section changes do not rotate or zoom the camera;
-normal player follow remains intact. Player/enemy/projectile motion stays under
-gameplay control, while perimeter walls and collision geometry stay in place.
-Combat timing, movement, directional dashes and pointer aiming keep their
-original behavior.
+across the arena floor. Standard effects send a single shockwave from the map
+center outward. Floor and grid colors switch behind its advancing front;
+perimeter and background colors blend to the new section's dark palette.
+The seven label colors match the track timeline. All map geometry, walls and
+camera poses remain stable throughout the effect, with normal player follow
+intact. Player/enemy/projectile motion stays under gameplay control. Combat
+timing, movement, directional dashes, pointer aiming and collision rules keep
+their original behavior.
+
+A starfield travels steadily outward behind the arena on the music clock,
+using a fixed pool of stars across three depth planes. During each eligible
+shockwave, speed smoothly rises from 1× to 15× and returns to 1× while stars
+stretch into hyperspeed streaks. Analytically integrated distance retains all
+travel from completed boosts, preventing a backward jump when speed settles.
+Pause and slowdown affect star travel with the song; seeking and retries sample
+the same deterministic path. Camera orientation and zoom remain unchanged.
 
 Each transition starts at the exact predicted section boundary on the raw
 music clock, independently of visual calibration, and normally spans four
 actual beat intervals. Slow tracks halve that span until it fits within
 3.5 song seconds. Transitions finish at the next section, last available beat,
 or first unusable interval when needed. Fragments under 0.65 song seconds and
-boundaries inside detection gaps use a bounded color fade without a roll.
+boundaries inside detection gaps use a bounded color fade without a travelling ring.
 Pause and upgrade slowdown freeze or stretch the presentation with the song;
 retry/seek sample the current section directly without queuing old transitions.
 The first section establishes its palette during count-in without an effect.
 
-Calm uses a small decorative floor sway. Off, reduced flashes and OS
-reduced motion retain the palette changes with stationary presentation.
-Graphics detail reduces the portal/floor decoration separately. Tracks without
-section analysis, including the current demo/dojo/manual-BPM paths, keep their
-existing presentation; no section boundaries are synthesized. Adjacent detected
-spans remain distinct even when their labels match. Model predictions remain
+Calm uses a subtler ring and weaker starfield boost. Off, reduced flashes and OS
+reduced motion keep stars static and use a simple palette fade. The wave and
+color wipe reuse the original floor material; stars reuse their fixed pool
+without allocating entities or materials at section boundaries. Tracks without
+section analysis, including the current demo/dojo/manual-BPM paths, retain
+normal star drift and their existing floor palette; no section boundaries are
+synthesized. Adjacent detected spans remain distinct even when their labels
+match. Model predictions remain
 estimates, and listening/comfort review remains open; see the
 [LinkSeg evaluation](docs/section-analysis.md) and
 [section-effects verification](docs/section-effects-verification.md).

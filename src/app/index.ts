@@ -10,12 +10,13 @@ import { DashPlugin } from "../dash";
 import { ExperiencePlugin } from "../experience";
 import { EnemySpawnPlugin } from "../enemy-spawn";
 import { SectionEffectsPlugin } from "../section-effects";
+import { StarfieldPlugin } from "../starfield";
 
 export async function startApp(): Promise<void> {
     const bootstrap = document.querySelector<HTMLElement>("[data-shallot-bootstrap]") ?? undefined;
     const app = await runApp({
         plugins: [
-            StandardPhysicsPlugin, StandardAudioPlugin, ArenaPlugin, PlayerPlugin, SessionPlugin, DashPlugin, MusicVisualsPlugin, SectionEffectsPlugin, EnemySpawnPlugin, PresentationPlugin, ExperiencePlugin,
+            StandardPhysicsPlugin, StandardAudioPlugin, ArenaPlugin, PlayerPlugin, SessionPlugin, DashPlugin, MusicVisualsPlugin, SectionEffectsPlugin, StarfieldPlugin, EnemySpawnPlugin, PresentationPlugin, ExperiencePlugin,
             ...(new URLSearchParams(location.search).get("stress") === "1" ? [StressPlugin] : []),
         ],
         loading: shallotDark({ bootstrap }),

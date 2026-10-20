@@ -1,5 +1,5 @@
 {
-  "recordedAt": "2026-10-20T13:44:35.807Z",
+  "recordedAt": "2026-10-20T14:08:26.260Z",
   "file": "Magna Divide.mp3",
   "browser": "156.0.8078.4",
   "viewport": {
@@ -15,12 +15,19 @@
     "start": 4.191201814058957,
     "end": 6.4112018140589555,
     "label": "verse",
-    "effect": "floor-only-world-z",
-    "cameraStable": true
+    "effect": "single-center-shockwave",
+    "cameraStable": true,
+    "mapStable": true
   },
   "denseFixture": {
     "enemies": 200,
     "projectiles": 488
+  },
+  "starfield": {
+    "entities": 240,
+    "peakSpeed": 14.999918213635388,
+    "settledSpeed": 1,
+    "distanceContinuous": true
   },
   "frames": 134,
   "averageFps": 60.00237322819488,
@@ -31,10 +38,22 @@
   "samples": [
     {
       "interval": 16.669999999998254,
-      "position": 4.192562358276636,
-      "progress": 0.000607385811463912,
-      "roll": 0,
-      "mapRoll": 0.000006951115685580263,
+      "position": 4.192562358276637,
+      "progress": 0.0006073858114648002,
+      "radius": 0.018221574343944006,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -42,125 +61,98 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 199,
-      "projectiles": 482,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 4.209977324263029,
-      "progress": 0.008381924198246795,
-      "roll": 0,
-      "mapRoll": 0.001316906555583799,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 484,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 4.227392290249426,
-      "progress": 0.01615646258503123,
-      "roll": 0,
-      "mapRoll": 0.004867327086499493,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 483,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 4.24480725623582,
-      "progress": 0.023931000971814116,
-      "roll": 0,
-      "mapRoll": 0.01062278158270229,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 483,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.669999999998254,
-      "position": 4.2622222222222135,
-      "progress": 0.031705539358596775,
-      "roll": 0,
-      "mapRoll": 0.01854783891846347,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 199,
-      "projectiles": 477,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 4.273832199546476,
-      "progress": 0.036888564949785436,
-      "roll": 0,
-      "mapRoll": 0.0250190485342919,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 476,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 4.291247165532873,
-      "progress": 0.04466310333656987,
-      "roll": 0,
-      "mapRoll": 0.03648137476770032,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 4.192562381394525,
+      "starSpeed": 1.000050974918387,
+      "starBoost": 0.0000036410655990705706,
+      "starEntities": 240,
       "enemies": 200,
       "projectiles": 479,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.659999999999854,
+      "position": 4.209977324263031,
+      "progress": 0.00838192419824746,
+      "radius": 0.2514577259474238,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 4.210038071356454,
+      "starSpeed": 1.0097054316625127,
+      "starBoost": 0.0006932451187509126,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 478,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.67000000000189,
+      "position": 4.2273922902494245,
+      "progress": 0.016156462585030344,
+      "radius": 0.4846938775509103,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 4.227827170421731,
+      "starSpeed": 1.0360368940881397,
+      "starBoost": 0.002574063863438545,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 475,
       "shader": "ready"
     },
     {
       "interval": 16.664999999997235,
-      "position": 4.308662131519267,
-      "progress": 0.05243764172335276,
-      "roll": 0,
-      "mapRoll": 0.05001882083872144,
+      "position": 4.244807256235818,
+      "progress": 0.023931000971813228,
+      "radius": 0.7179300291543969,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -168,17 +160,32 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 197,
-      "projectiles": 474,
+      "starDistance": 4.2462196187305885,
+      "starSpeed": 1.0789825422462394,
+      "starBoost": 0.005641610160445674,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 478,
       "shader": "ready"
     },
     {
       "interval": 16.665000000000873,
-      "position": 4.32607709750566,
-      "progress": 0.06021218011013542,
-      "roll": 0,
-      "mapRoll": 0.0655959556216279,
+      "position": 4.262222222222215,
+      "progress": 0.03170553935859766,
+      "radius": 0.9511661807579299,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -186,17 +193,32 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 4.265503916990537,
+      "starSpeed": 1.1384399191071077,
+      "starBoost": 0.009888565650507688,
+      "starEntities": 240,
       "enemies": 200,
-      "projectiles": 481,
+      "projectiles": 480,
       "shader": "ready"
     },
     {
       "interval": 16.67000000000189,
-      "position": 4.343492063492054,
-      "progress": 0.0679867184969183,
-      "roll": 0,
-      "mapRoll": 0.08317734799069167,
+      "position": 4.279637188208609,
+      "progress": 0.039480077745380544,
+      "radius": 1.1844023323614163,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -204,323 +226,32 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 474,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.659999999999854,
-      "position": 4.360907029478451,
-      "progress": 0.07576125688370274,
-      "roll": 0,
-      "mapRoll": 0.10272756682018747,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 484,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.669999999998254,
-      "position": 4.3783219954648445,
-      "progress": 0.08353579527048562,
-      "roll": 0,
-      "mapRoll": 0.12421118098437853,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 199,
-      "projectiles": 485,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 4.395736961451238,
-      "progress": 0.0913103336572685,
-      "roll": 0,
-      "mapRoll": 0.1475927593575396,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 483,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 4.4073469387755,
-      "progress": 0.09649335924845717,
-      "roll": 0,
-      "mapRoll": 0.1642174059813077,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 478,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.669999999998254,
-      "position": 4.424761904761898,
-      "progress": 0.10426789763524161,
-      "roll": 0,
-      "mapRoll": 0.19068352220113782,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 478,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 4.442176870748291,
-      "progress": 0.11204243602202427,
-      "roll": 0,
-      "mapRoll": 0.21895311962798814,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 479,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.659999999999854,
-      "position": 4.459591836734685,
-      "progress": 0.11981697440880715,
-      "roll": 0,
-      "mapRoll": 0.24899076713613646,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 478,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.669999999998254,
-      "position": 4.477006802721082,
-      "progress": 0.12759151279559158,
-      "roll": 0,
-      "mapRoll": 0.28076103359985954,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 199,
-      "projectiles": 473,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 4.4944217687074755,
-      "progress": 0.13536605118237446,
-      "roll": 0,
-      "mapRoll": 0.3142284878934158,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 483,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 4.511836734693869,
-      "progress": 0.14314058956915734,
-      "roll": 0,
-      "mapRoll": 0.34935769889108237,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 199,
-      "projectiles": 479,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 4.529251700680263,
-      "progress": 0.15091512795594023,
-      "roll": 0,
-      "mapRoll": 0.3861132354671304,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 479,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.669999999998254,
-      "position": 4.540861678004529,
-      "progress": 0.15609815354713044,
-      "roll": 0,
-      "mapRoll": 0.4115029438758373,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 484,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 4.558276643990922,
-      "progress": 0.1638726919339131,
-      "roll": 0,
-      "mapRoll": 0.45089028724756697,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 477,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.669999999998254,
-      "position": 4.575691609977316,
-      "progress": 0.17164723032069598,
-      "roll": 0,
-      "mapRoll": 0.49180947319573537,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 474,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.659999999999854,
-      "position": 4.593106575963709,
-      "progress": 0.17942176870747886,
-      "roll": 0,
-      "mapRoll": 0.5342250705946122,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 479,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 4.610521541950106,
-      "progress": 0.1871963070942633,
-      "roll": 0,
-      "mapRoll": 0.5781016483184779,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 483,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.67000000000189,
-      "position": 4.6279365079365,
-      "progress": 0.1949708454810462,
-      "roll": 0,
-      "mapRoll": 0.6234037752415855,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 4.285966438189481,
+      "starSpeed": 1.214267174995857,
+      "starBoost": 0.015304798213989775,
+      "starEntities": 240,
       "enemies": 200,
       "projectiles": 482,
       "shader": "ready"
     },
     {
       "interval": 16.664999999997235,
-      "position": 4.645351473922894,
-      "progress": 0.2027453838678291,
-      "roll": 0,
-      "mapRoll": 0.6700960202382149,
+      "position": 4.297052154195002,
+      "progress": 0.04725461613216343,
+      "radius": 1.417638483964903,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -528,17 +259,32 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 4.307890744385066,
+      "starSpeed": 1.3062834060085338,
+      "starBoost": 0.021877386143466702,
+      "starEntities": 240,
       "enemies": 200,
-      "projectiles": 481,
+      "projectiles": 474,
       "shader": "ready"
     },
     {
       "interval": 16.665000000000873,
-      "position": 4.662766439909287,
-      "progress": 0.21051992225461197,
-      "roll": 0,
-      "mapRoll": 0.7181429521826371,
+      "position": 4.314467120181396,
+      "progress": 0.05502915451894609,
+      "radius": 1.6508746355683828,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -546,17 +292,32 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 484,
+      "starDistance": 4.3315569102001055,
+      "starSpeed": 1.4142690856012443,
+      "starBoost": 0.02959064897151745,
+      "starEntities": 240,
+      "enemies": 199,
+      "projectiles": 475,
       "shader": "ready"
     },
     {
       "interval": 16.665000000000873,
-      "position": 4.674376417233553,
-      "progress": 0.21570294784580218,
-      "roll": 0,
-      "mapRoll": 0.7509093471532687,
+      "position": 4.326077097505662,
+      "progress": 0.06021218011013631,
+      "radius": 1.8063654033040892,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -564,17 +325,131 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 4.3484385011156155,
+      "starSpeed": 1.4950057820069942,
+      "starBoost": 0.035357555857642435,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 482,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.669999999998254,
+      "position": 4.3434920634920555,
+      "progress": 0.06798671849691919,
+      "radius": 2.0396015549075757,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 4.375618569161398,
+      "starSpeed": 1.6290161694717287,
+      "starBoost": 0.04492972639083776,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 475,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.659999999999854,
+      "position": 4.360907029478449,
+      "progress": 0.07576125688370207,
+      "radius": 2.272837706511062,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 4.405265263384246,
+      "starSpeed": 1.778226049962083,
+      "starBoost": 0.05558757499729164,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 479,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.67000000000189,
+      "position": 4.378321995464846,
+      "progress": 0.0835357952704865,
+      "radius": 2.506073858114595,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 4.437640234818713,
+      "starSpeed": 1.942279447917928,
+      "starBoost": 0.06730567485128057,
+      "starEntities": 240,
       "enemies": 200,
       "projectiles": 480,
       "shader": "ready"
     },
     {
       "interval": 16.665000000000873,
-      "position": 4.691791383219947,
-      "progress": 0.22347748623258484,
-      "roll": 0,
-      "mapRoll": 0.8011353548423912,
+      "position": 4.39573696145124,
+      "progress": 0.09131033365726939,
+      "radius": 2.7393100097180816,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -582,17 +457,164 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 4.472998625546939,
+      "starSpeed": 2.120784975047468,
+      "starBoost": 0.08005606964624773,
+      "starEntities": 240,
       "enemies": 199,
-      "projectiles": 473,
+      "projectiles": 478,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.664999999997235,
+      "position": 4.413151927437633,
+      "progress": 0.09908487204405206,
+      "radius": 2.972546161321562,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 4.51158845999674,
+      "starSpeed": 2.3133167640770447,
+      "starBoost": 0.09380834029121746,
+      "starEntities": 240,
+      "enemies": 199,
+      "projectiles": 481,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 4.430566893424027,
+      "progress": 0.10685941043083494,
+      "radius": 3.2057823129250482,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 4.553650053220477,
+      "starSpeed": 2.519415484758392,
+      "starBoost": 0.10852967748274231,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 483,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 4.447981859410424,
+      "progress": 0.11463394881761937,
+      "radius": 3.4390184645285813,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 4.59941543756652,
+      "starSpeed": 2.738589439709973,
+      "starBoost": 0.12418495997928379,
+      "starEntities": 240,
+      "enemies": 199,
+      "projectiles": 480,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 4.4595918367346865,
+      "progress": 0.11981697440880804,
+      "radius": 3.594509232264241,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 4.6320939556656375,
+      "starSpeed": 2.8917124572603874,
+      "starBoost": 0.13512231837574196,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 480,
       "shader": "ready"
     },
     {
       "interval": 16.669999999998254,
-      "position": 4.70920634920634,
-      "progress": 0.23125202461936772,
-      "roll": 0,
-      "mapRoll": 0.8526215664773641,
+      "position": 4.47700680272108,
+      "progress": 0.12759151279559092,
+      "radius": 3.8277453838677276,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -600,17 +622,131 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 4.684523711194815,
+      "starSpeed": 3.1315016463661154,
+      "starBoost": 0.15225011759757967,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 476,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 4.494421768707474,
+      "progress": 0.13536605118237358,
+      "radius": 4.060981535471207,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 4.741231375041598,
+      "starSpeed": 3.382905793026235,
+      "starBoost": 0.17020755664473108,
+      "starEntities": 240,
+      "enemies": 199,
+      "projectiles": 470,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 4.511836734693871,
+      "progress": 0.143140589569158,
+      "radius": 4.29421768707474,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 4.802414037879071,
+      "starSpeed": 3.6453251130198034,
+      "starBoost": 0.1889517937871288,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 485,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.664999999997235,
+      "position": 4.529251700680264,
+      "progress": 0.1509151279559409,
+      "radius": 4.527453838678227,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 4.868258114208786,
+      "starSpeed": 3.9181335428171047,
+      "starBoost": 0.20843811020122177,
+      "starEntities": 240,
       "enemies": 200,
       "projectiles": 482,
       "shader": "ready"
     },
     {
       "interval": 16.665000000000873,
-      "position": 4.726621315192734,
-      "progress": 0.2390265630061506,
-      "roll": 0,
-      "mapRoll": 0.9053325509324569,
+      "position": 4.546666666666658,
+      "progress": 0.15868966634272377,
+      "radius": 4.760689990281713,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -618,17 +754,98 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 4.938938897624833,
+      "starSpeed": 4.200680233203009,
+      "starBoost": 0.2286200166573578,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 478,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.67000000000189,
+      "position": 4.564081632653052,
+      "progress": 0.16646420472950665,
+      "radius": 4.9939261418852,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 5.014620142609342,
+      "starSpeed": 4.4922911020319365,
+      "starBoost": 0.2494493644308526,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 482,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.664999999997235,
+      "position": 4.581496598639449,
+      "progress": 0.1742387431162911,
+      "radius": 5.227162293488733,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 5.095453673857358,
+      "starSpeed": 4.792270442410817,
+      "starBoost": 0.2708764601722012,
+      "starEntities": 240,
       "enemies": 200,
       "projectiles": 477,
       "shader": "ready"
     },
     {
       "interval": 16.665000000000873,
-      "position": 4.744036281179131,
-      "progress": 0.24680110139293504,
-      "roll": 0,
-      "mapRoll": 0.9592328770819517,
+      "position": 4.593106575963711,
+      "progress": 0.17942176870747975,
+      "radius": 5.382653061224392,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -636,161 +853,494 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 5.1522744970709615,
+      "starSpeed": 4.996553172363797,
+      "starBoost": 0.28546808374027116,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 482,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 4.610521541950105,
+      "progress": 0.18719630709426263,
+      "radius": 5.615889212827879,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 5.241999023026953,
+      "starSpeed": 5.308880495710119,
+      "starBoost": 0.30777717826500856,
+      "starEntities": 240,
+      "enemies": 199,
+      "projectiles": 477,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.669999999998254,
+      "position": 4.627936507936498,
+      "progress": 0.19497084548104554,
+      "radius": 5.849125364431366,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 5.337219716344074,
+      "starSpeed": 5.627628122925458,
+      "starBoost": 0.330544865923247,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 482,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 4.645351473922895,
+      "progress": 0.20274538386782998,
+      "radius": 6.082361516034899,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 5.4380417857289265,
+      "starSpeed": 5.952035605943193,
+      "starBoost": 0.35371682899594237,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 482,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 4.662766439909289,
+      "progress": 0.21051992225461263,
+      "radius": 6.315597667638379,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 5.544557076476879,
+      "starSpeed": 6.281328993768066,
+      "starBoost": 0.3772377852691476,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 476,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 4.6801814058956825,
+      "progress": 0.21829446064139552,
+      "radius": 6.548833819241866,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 5.6568438513534565,
+      "starSpeed": 6.614722678920232,
+      "starBoost": 0.4010516199228737,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 472,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.669999999998254,
+      "position": 4.69759637188208,
+      "progress": 0.22606899902817995,
+      "radius": 6.782069970845399,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 5.774966603879895,
+      "starSpeed": 6.951421271688056,
+      "starBoost": 0.4251015194062897,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 481,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.659999999999854,
+      "position": 4.715011337868473,
+      "progress": 0.23384353741496283,
+      "radius": 7.015306122448885,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 5.898975904468468,
+      "starSpeed": 7.290621497718702,
+      "starBoost": 0.4493301069799073,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 481,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.67000000000189,
+      "position": 4.726621315192736,
+      "progress": 0.2390265630061515,
+      "radius": 7.170796890184545,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 5.984937694649101,
+      "starSpeed": 7.517745339442847,
+      "starBoost": 0.4655532385316319,
+      "starEntities": 240,
+      "enemies": 199,
+      "projectiles": 483,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.664999999997235,
+      "position": 4.744036281179129,
+      "progress": 0.24680110139293437,
+      "radius": 7.404033041788031,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 6.118832103368415,
+      "starSpeed": 7.859314563725298,
+      "starBoost": 0.4899510402660927,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 476,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 4.761451247165526,
+      "progress": 0.2545756397797188,
+      "radius": 7.637269193391564,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 6.258679034788957,
+      "starSpeed": 8.201219426484439,
+      "starBoost": 0.51437281617746,
+      "starEntities": 240,
+      "enemies": 198,
+      "projectiles": 477,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 4.77886621315192,
+      "progress": 0.26235017816650147,
+      "radius": 7.870505344995044,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 6.404477231141607,
+      "starSpeed": 8.542644232575526,
+      "starBoost": 0.5387603023268234,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 483,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 4.7962811791383135,
+      "progress": 0.27012471655328457,
+      "radius": 8.103741496598538,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 6.556211236503284,
+      "starSpeed": 8.88277443214307,
+      "starBoost": 0.5630553165816479,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 484,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.669999999998254,
+      "position": 4.813696145124707,
+      "progress": 0.27789925494006723,
+      "radius": 8.336977648202017,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 6.7138514336706105,
+      "starSpeed": 9.220798563922415,
+      "starBoost": 0.5871998974230297,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 476,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 4.831111111111104,
+      "progress": 0.28567379332685167,
+      "radius": 8.57021379980555,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 6.877354114818833,
+      "starSpeed": 9.555910191173238,
+      "starBoost": 0.6111364422266599,
+      "starEntities": 240,
       "enemies": 200,
       "projectiles": 488,
       "shader": "ready"
     },
     {
-      "interval": 16.664999999997235,
-      "position": 4.761451247165525,
-      "progress": 0.2545756397797179,
-      "roll": 0,
-      "mapRoll": 1.0142871138000977,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 477,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.67000000000189,
-      "position": 4.778866213151918,
-      "progress": 0.2623501781665008,
-      "roll": 0,
-      "mapRoll": 1.0704598299611772,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 199,
-      "projectiles": 481,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 4.796281179138315,
-      "progress": 0.27012471655328524,
-      "roll": 0,
-      "mapRoll": 1.1277155944394723,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 199,
-      "projectiles": 484,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.664999999997235,
-      "position": 4.807891156462578,
-      "progress": 0.2753077421444739,
-      "roll": 0,
-      "mapRoll": 1.166470300749008,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 483,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.67000000000189,
-      "position": 4.825306122448971,
-      "progress": 0.28308228053125656,
-      "roll": 0,
-      "mapRoll": 1.2254524099210107,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 485,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 4.842721088435365,
-      "progress": 0.29085681891803944,
-      "roll": 0,
-      "mapRoll": 1.2854230844082752,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 481,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.659999999999854,
-      "position": 4.860136054421762,
-      "progress": 0.2986313573048239,
-      "roll": 0,
-      "mapRoll": 1.3463468930850835,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 479,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 4.877551020408156,
-      "progress": 0.30640589569160676,
-      "roll": 0,
-      "mapRoll": 1.4081884048256819,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 477,
-      "shader": "ready"
-    },
-    {
       "interval": 16.669999999998254,
-      "position": 4.894965986394549,
-      "progress": 0.31418043407838964,
-      "roll": 0,
-      "mapRoll": 1.4709121885043541,
+      "position": 4.842721088435367,
+      "progress": 0.2908568189180403,
+      "radius": 8.725704567541209,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -798,53 +1348,32 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 482,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 4.912380952380943,
-      "progress": 0.3219549724651725,
-      "roll": 0,
-      "mapRoll": 1.5344828129953705,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 477,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.669999999998254,
-      "position": 4.923990929705209,
-      "progress": 0.32713799805636273,
-      "roll": 0,
-      "mapRoll": 1.5773161995884857,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 6.9895849184857,
+      "starSpeed": 9.777304731941992,
+      "starBoost": 0.6269503379958565,
+      "starEntities": 240,
       "enemies": 200,
       "projectiles": 478,
       "shader": "ready"
     },
     {
       "interval": 16.659999999999854,
-      "position": 4.941405895691602,
-      "progress": 0.3349125364431456,
-      "roll": 0,
-      "mapRoll": 1.6422194895984568,
+      "position": 4.86013605442176,
+      "progress": 0.2986313573048232,
+      "radius": 8.958940719144696,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -852,845 +1381,32 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 199,
-      "projectiles": 478,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 4.958820861677996,
-      "progress": 0.3426870748299285,
-      "roll": 0,
-      "mapRoll": 1.7078751374188283,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 7.162723351470602,
+      "starSpeed": 10.105789839746995,
+      "starBoost": 0.6504135599819282,
+      "starEntities": 240,
       "enemies": 200,
-      "projectiles": 475,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.67000000000189,
-      "position": 4.976235827664389,
-      "progress": 0.35046161321671115,
-      "roll": 0,
-      "mapRoll": 1.77424771192387,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 483,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.664999999997235,
-      "position": 4.993650793650787,
-      "progress": 0.3582361516034956,
-      "roll": 0,
-      "mapRoll": 1.8413017819878699,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 480,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 5.01106575963718,
-      "progress": 0.36601068999027847,
-      "roll": 0,
-      "mapRoll": 1.90900191648507,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 482,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 5.028480725623574,
-      "progress": 0.37378522837706135,
-      "roll": 0,
-      "mapRoll": 1.977312684289755,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 199,
-      "projectiles": 481,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.669999999998254,
-      "position": 5.045895691609971,
-      "progress": 0.38155976676384584,
-      "roll": 0,
-      "mapRoll": 2.04619865427621,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 198,
-      "projectiles": 475,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 5.057505668934233,
-      "progress": 0.3867427923550345,
-      "roll": 0,
-      "mapRoll": 2.0924246941826024,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 477,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.67000000000189,
-      "position": 5.074920634920627,
-      "progress": 0.3945173307418174,
-      "roll": 0,
-      "mapRoll": 2.162190598637016,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 481,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.659999999999854,
-      "position": 5.09233560090702,
-      "progress": 0.40229186912860027,
-      "roll": 0,
-      "mapRoll": 2.2324372222712427,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 199,
-      "projectiles": 478,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.664999999997235,
-      "position": 5.109750566893418,
-      "progress": 0.4100664075153847,
-      "roll": 0,
-      "mapRoll": 2.3031291339595668,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 485,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.67000000000189,
-      "position": 5.127165532879811,
-      "progress": 0.41784094590216736,
-      "roll": 0,
-      "mapRoll": 2.3742309025762287,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 477,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 5.144580498866205,
-      "progress": 0.42561548428895024,
-      "roll": 0,
-      "mapRoll": 2.445707096995517,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 474,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.669999999998254,
-      "position": 5.161995464852598,
-      "progress": 0.4333900226757331,
-      "roll": 0,
-      "mapRoll": 2.517522286091703,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 481,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 5.179410430838995,
-      "progress": 0.44116456106251756,
-      "roll": 0,
-      "mapRoll": 2.5896410387390696,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 483,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 5.191020408163258,
-      "progress": 0.4463475866537062,
-      "roll": 0,
-      "mapRoll": 2.637871356735742,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 199,
-      "projectiles": 483,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.664999999997235,
-      "position": 5.208435374149651,
-      "progress": 0.4541221250404891,
-      "roll": 0,
-      "mapRoll": 2.7104173128000872,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 478,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 5.225850340136045,
-      "progress": 0.461896663427272,
-      "roll": 0,
-      "mapRoll": 2.783172349413655,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 480,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.67000000000189,
-      "position": 5.243265306122442,
-      "progress": 0.4696712018140564,
-      "roll": 0,
-      "mapRoll": 2.856101035450733,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 485,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.664999999997235,
-      "position": 5.260680272108836,
-      "progress": 0.4774457402008391,
-      "roll": 0,
-      "mapRoll": 2.9291679397855592,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 474,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 5.278095238095229,
-      "progress": 0.48522027858762196,
-      "roll": 0,
-      "mapRoll": 3.002337631292425,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 481,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 5.295510204081623,
-      "progress": 0.49299481697440484,
-      "roll": 0,
-      "mapRoll": 3.075574678845597,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 199,
-      "projectiles": 478,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 5.31292517006802,
-      "progress": 0.5007693553611893,
-      "roll": 0,
-      "mapRoll": 3.148843651319363,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 199,
-      "projectiles": 484,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.664999999997235,
-      "position": 5.324535147392282,
-      "progress": 0.5059523809523779,
-      "roll": 0,
-      "mapRoll": 3.1976898721833082,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 482,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 5.341950113378676,
-      "progress": 0.5137269193391608,
-      "roll": 0,
-      "mapRoll": 3.270933317023071,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 199,
-      "projectiles": 476,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.67000000000189,
-      "position": 5.35936507936507,
-      "progress": 0.5215014577259437,
-      "roll": 0,
-      "mapRoll": 3.3441142037814684,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 482,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.664999999997235,
-      "position": 5.376780045351467,
-      "progress": 0.5292759961127281,
-      "roll": 0,
-      "mapRoll": 3.417197101332786,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 486,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 5.39419501133786,
-      "progress": 0.537050534499511,
-      "roll": 0,
-      "mapRoll": 3.490146578551267,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 199,
-      "projectiles": 475,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 5.411609977324254,
-      "progress": 0.5448250728862937,
-      "roll": 0,
-      "mapRoll": 3.5629272043111926,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 479,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.669999999998254,
-      "position": 5.429024943310651,
-      "progress": 0.5525996112730781,
-      "roll": 0,
-      "mapRoll": 3.6355035474868553,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 485,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.659999999999854,
-      "position": 5.440634920634913,
-      "progress": 0.5577826368642668,
-      "roll": 0,
-      "mapRoll": 3.6837567890938083,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 479,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.67000000000189,
-      "position": 5.458049886621307,
-      "progress": 0.5655571752510496,
-      "roll": 0,
-      "mapRoll": 3.7559139254607015,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 480,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 5.4754648526077005,
-      "progress": 0.5733317136378325,
-      "roll": 0,
-      "mapRoll": 3.8277722962413687,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 199,
-      "projectiles": 478,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.664999999997235,
-      "position": 5.492879818594098,
-      "progress": 0.581106252024617,
-      "roll": 0,
-      "mapRoll": 3.8992964703100967,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 479,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 5.510294784580491,
-      "progress": 0.5888807904113998,
-      "roll": 0,
-      "mapRoll": 3.970451016541128,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 481,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 5.527709750566885,
-      "progress": 0.5966553287981827,
-      "roll": 0,
-      "mapRoll": 4.0412005038087475,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 199,
-      "projectiles": 477,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.669999999998254,
-      "position": 5.545124716553278,
-      "progress": 0.6044298671849656,
-      "roll": 0,
-      "mapRoll": 4.111509500987227,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 484,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 5.562539682539676,
-      "progress": 0.61220440557175,
-      "roll": 0,
-      "mapRoll": 4.18134257695085,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 482,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 5.574149659863938,
-      "progress": 0.6173874311629385,
-      "roll": 0,
-      "mapRoll": 4.227616063399448,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 199,
-      "projectiles": 478,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.669999999998254,
-      "position": 5.5915646258503315,
-      "progress": 0.6251619695497214,
-      "roll": 0,
-      "mapRoll": 4.296577201503322,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 484,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 5.608979591836725,
-      "progress": 0.6330849800237516,
-      "roll": 0,
-      "mapRoll": 4.366268225803575,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 477,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 5.626394557823122,
-      "progress": 0.6411474642767133,
-      "roll": 0,
-      "mapRoll": 4.436539210600415,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 484,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 5.643809523809516,
-      "progress": 0.6492099485296733,
-      "roll": 0,
-      "mapRoll": 4.5061184091026965,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 479,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.669999999998254,
-      "position": 5.661224489795909,
-      "progress": 0.6572724327826333,
-      "roll": 0,
-      "mapRoll": 4.574966305785767,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 481,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.659999999999854,
-      "position": 5.678639455782303,
-      "progress": 0.6653349170355932,
-      "roll": 0,
-      "mapRoll": 4.643043385124961,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 480,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.67000000000189,
-      "position": 5.6960544217687,
-      "progress": 0.673397401288555,
-      "roll": 0,
-      "mapRoll": 4.7103101315956275,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 484,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.664999999997235,
-      "position": 5.7076643990929625,
-      "progress": 0.6787723907905282,
-      "roll": 0,
-      "mapRoll": 4.754684930476419,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 199,
       "projectiles": 473,
       "shader": "ready"
     },
     {
       "interval": 16.665000000000873,
-      "position": 5.725079365079356,
-      "progress": 0.6868348750434882,
-      "roll": 0,
-      "mapRoll": 4.82051330988913,
+      "position": 4.877551020408154,
+      "progress": 0.3064058956916061,
+      "radius": 9.192176870748183,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -1698,89 +1414,32 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 7.34153972535864,
+      "starSpeed": 10.429251086428813,
+      "starBoost": 0.6735179347449152,
+      "starEntities": 240,
       "enemies": 200,
-      "projectiles": 486,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.67000000000189,
-      "position": 5.742494331065753,
-      "progress": 0.6948973592964499,
-      "roll": 0,
-      "mapRoll": 4.885425981700871,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 478,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.664999999997235,
-      "position": 5.759909297052147,
-      "progress": 0.7029598435494099,
-      "roll": 0,
-      "mapRoll": 4.949383430386947,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 478,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.659999999999854,
-      "position": 5.77732426303854,
-      "progress": 0.7110223278023698,
-      "roll": 0,
-      "mapRoll": 5.0123461404227045,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 476,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.67000000000189,
-      "position": 5.794739229024934,
-      "progress": 0.7190848120553298,
-      "roll": 0,
-      "mapRoll": 5.0742745962834785,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 483,
+      "projectiles": 481,
       "shader": "ready"
     },
     {
       "interval": 16.665000000000873,
-      "position": 5.812154195011331,
-      "progress": 0.7271472963082916,
-      "roll": 0,
-      "mapRoll": 5.135129282444616,
+      "position": 4.894965986394551,
+      "progress": 0.3141804340783905,
+      "radius": 9.425413022351716,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -1788,53 +1447,197 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 7.525939811532838,
+      "starSpeed": 10.746916778463582,
+      "starBoost": 0.6962083413188274,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 478,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.669999999998254,
+      "position": 4.9123809523809445,
+      "progress": 0.3219549724651734,
+      "radius": 9.658649173955203,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 7.715816060106082,
+      "starSpeed": 11.058029048997494,
+      "starBoost": 0.7184306463569639,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 478,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 4.929795918367338,
+      "progress": 0.32972951085195606,
+      "radius": 9.891885325558682,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 7.911047856507102,
+      "starSpeed": 11.361845665918283,
+      "starBoost": 0.7401318332798773,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 478,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 4.947210884353732,
+      "progress": 0.33750404923873895,
+      "radius": 10.125121477162168,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 8.111501809235,
+      "starSpeed": 11.657641802625713,
+      "starBoost": 0.7612601287589795,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 482,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.669999999998254,
+      "position": 4.964625850340129,
+      "progress": 0.3452785876255234,
+      "radius": 10.3583576287657,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 8.317032068096383,
+      "starSpeed": 11.94471176727751,
+      "starBoost": 0.7817651262341079,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 477,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 4.976235827664391,
+      "progress": 0.35046161321671204,
+      "radius": 10.513848396501361,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 8.456794892550402,
+      "starSpeed": 12.130904754835022,
+      "starBoost": 0.7950646253453587,
+      "starEntities": 240,
       "enemies": 200,
       "projectiles": 479,
       "shader": "ready"
     },
     {
-      "interval": 16.664999999997235,
-      "position": 5.829569160997725,
-      "progress": 0.7352097805612515,
-      "roll": 0,
-      "mapRoll": 5.194870683381426,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 472,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.67000000000189,
-      "position": 5.841179138321987,
-      "progress": 0.7405847700632248,
-      "roll": 0,
-      "mapRoll": 5.2340602783753365,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 481,
-      "shader": "ready"
-    },
-    {
       "interval": 16.665000000000873,
-      "position": 5.858594104308381,
-      "progress": 0.7486472543161847,
-      "roll": 0,
-      "mapRoll": 5.291858391661252,
+      "position": 4.993650793650785,
+      "progress": 0.3582361516034949,
+      "radius": 10.747084548104848,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -1842,125 +1645,32 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 480,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.664999999997235,
-      "position": 5.876009070294778,
-      "progress": 0.7567097385691466,
-      "roll": 0,
-      "mapRoll": 5.348437844990422,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 481,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 5.893424036281171,
-      "progress": 0.7647722228221066,
-      "roll": 0,
-      "mapRoll": 5.403759122838153,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 476,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.67000000000189,
-      "position": 5.910839002267565,
-      "progress": 0.7728347070750665,
-      "roll": 0,
-      "mapRoll": 5.457782709679795,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 476,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.664999999997235,
-      "position": 5.928253968253959,
-      "progress": 0.7808971913280265,
-      "roll": 0,
-      "mapRoll": 5.5104690899906785,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 483,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 5.945668934240356,
-      "progress": 0.7889596755809882,
-      "roll": 0,
-      "mapRoll": 5.561778748246152,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 199,
-      "projectiles": 482,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 5.963083900226749,
-      "progress": 0.7970221598339482,
-      "roll": 0,
-      "mapRoll": 5.611672168921526,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 8.670428826487068,
+      "starSpeed": 12.401920180204256,
+      "starBoost": 0.8144228700145897,
+      "starEntities": 240,
       "enemies": 200,
       "projectiles": 474,
       "shader": "ready"
     },
     {
       "interval": 16.665000000000873,
-      "position": 5.974693877551012,
-      "progress": 0.8023971493359214,
-      "roll": 0,
-      "mapRoll": 5.644128136876828,
+      "position": 5.011065759637178,
+      "progress": 0.3660106899902778,
+      "radius": 10.980320699708335,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -1968,17 +1678,32 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 199,
-      "projectiles": 483,
+      "starDistance": 8.888691960936358,
+      "starSpeed": 12.662433780916874,
+      "starBoost": 0.8330309843512053,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 480,
       "shader": "ready"
     },
     {
       "interval": 16.665000000000873,
-      "position": 5.992108843537405,
-      "progress": 0.8104596335888814,
-      "roll": 0,
-      "mapRoll": 5.691573349308351,
+      "position": 5.0284807256235755,
+      "progress": 0.37378522837706224,
+      "radius": 11.213556851311868,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -1986,17 +1711,32 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 9.11139595767783,
+      "starSpeed": 12.911824039988662,
+      "starBoost": 0.8508445742849045,
+      "starEntities": 240,
       "enemies": 200,
-      "projectiles": 479,
+      "projectiles": 481,
       "shader": "ready"
     },
     {
       "interval": 16.664999999997235,
-      "position": 6.009523809523802,
-      "progress": 0.8185221178418431,
-      "roll": 0,
-      "mapRoll": 5.737496949427354,
+      "position": 5.045895691609969,
+      "progress": 0.3815597667638452,
+      "radius": 11.446793002915355,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -2004,17 +1744,725 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 9.338341883760604,
+      "starSpeed": 13.149495977805033,
+      "starBoost": 0.8678211412717881,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 484,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.67000000000189,
+      "position": 5.063310657596363,
+      "progress": 0.38933430515062806,
+      "radius": 11.680029154518841,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 9.569320686105375,
+      "starSpeed": 13.374882571586305,
+      "starBoost": 0.883920183684736,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 477,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 5.08072562358276,
+      "progress": 0.3971088435374125,
+      "radius": 11.913265306122375,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 9.804113690249977,
+      "starSpeed": 13.587446108154873,
+      "starBoost": 0.8991032934396338,
+      "starEntities": 240,
+      "enemies": 199,
+      "projectiles": 481,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.664999999997235,
+      "position": 5.098140589569153,
+      "progress": 0.40488338192419515,
+      "radius": 12.146501457725854,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 10.042493122049047,
+      "starSpeed": 13.786679466777413,
+      "starBoost": 0.913334247626958,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 475,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 5.109750566893416,
+      "progress": 0.4100664075153838,
+      "radius": 12.301992225461515,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 10.203288831902453,
+      "starSpeed": 13.911859982813448,
+      "starBoost": 0.9222757130581034,
+      "starEntities": 240,
+      "enemies": 199,
+      "projectiles": 482,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.67000000000189,
+      "position": 5.127165532879809,
+      "progress": 0.4178409459021667,
+      "radius": 12.535228377065001,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 10.447116493739745,
+      "starSpeed": 14.087836335530977,
+      "starBoost": 0.9348454525379268,
+      "starEntities": 240,
+      "enemies": 199,
+      "projectiles": 478,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.664999999997235,
+      "position": 5.1445804988662065,
+      "progress": 0.42561548428895113,
+      "radius": 12.768464528668535,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 10.693882894881243,
+      "starSpeed": 14.249288710730395,
+      "starBoost": 0.9463777650521711,
+      "starEntities": 240,
+      "enemies": 199,
+      "projectiles": 479,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 5.1619954648526,
+      "progress": 0.433390022675734,
+      "radius": 13.00170068027202,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 10.943331695803137,
+      "starSpeed": 14.395831925476623,
+      "starBoost": 0.9568451375340444,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 478,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.67000000000189,
+      "position": 5.179410430838994,
+      "progress": 0.4411645610625169,
+      "radius": 13.234936831875507,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 11.195200157480865,
+      "starSpeed": 14.52711636617315,
+      "starBoost": 0.9662225975837964,
+      "starEntities": 240,
+      "enemies": 199,
+      "projectiles": 475,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.659999999999854,
+      "position": 5.196825396825387,
+      "progress": 0.44893909944929977,
+      "radius": 13.468172983478993,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 11.449219768215176,
+      "starSpeed": 14.642828822648077,
+      "starBoost": 0.9744877730462912,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 480,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.669999999998254,
+      "position": 5.214240362811784,
+      "progress": 0.4567136378360842,
+      "radius": 13.701409135082526,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 11.705116884230579,
+      "starSpeed": 14.742693235391311,
+      "starBoost": 0.9816209453850937,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 488,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.659999999999854,
+      "position": 5.231655328798178,
+      "progress": 0.4644881762228671,
+      "radius": 13.934645286686013,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 11.962613382517265,
+      "starSpeed": 14.82647135415994,
+      "starBoost": 0.9876050967257101,
+      "starEntities": 240,
+      "enemies": 199,
+      "projectiles": 481,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.67000000000189,
+      "position": 5.24326530612244,
+      "progress": 0.46967120181405553,
+      "radius": 14.090136054421667,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 12.135027168199322,
+      "starSpeed": 14.873286306510165,
+      "starBoost": 0.9909490218935832,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 476,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.669999999998254,
+      "position": 5.260680272108834,
+      "progress": 0.4774457402008384,
+      "radius": 14.323372206025152,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 12.394561193073285,
+      "starSpeed": 14.929828944628891,
+      "starBoost": 0.9949877817592065,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 481,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.659999999999854,
+      "position": 5.278095238095231,
+      "progress": 0.48522027858762284,
+      "radius": 14.556608357628685,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 12.654936114642059,
+      "starSpeed": 14.96983883215298,
+      "starBoost": 0.9978456308680701,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 482,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.67000000000189,
+      "position": 5.295510204081625,
+      "progress": 0.4929948169744057,
+      "radius": 14.789844509232172,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 12.91586312702862,
+      "starSpeed": 14.993220516006009,
+      "starBoost": 0.9995157511432864,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 485,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.664999999997235,
+      "position": 5.312925170068018,
+      "progress": 0.5007693553611886,
+      "radius": 15.023080660835658,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 13.177052107212504,
+      "starSpeed": 14.999918213635388,
+      "starBoost": 0.9999941581168134,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 476,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 5.330340136054415,
+      "progress": 0.508543893747973,
+      "radius": 15.256316812439191,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 13.438212307186944,
+      "starSpeed": 14.989915946094822,
+      "starBoost": 0.9992797104353445,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 475,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.67000000000189,
+      "position": 5.347755102040809,
+      "progress": 0.5163184321347559,
+      "radius": 15.489552964042678,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 13.699053047607016,
+      "starSpeed": 14.96323757616592,
+      "starBoost": 0.99737411258328,
+      "starEntities": 240,
+      "enemies": 199,
+      "projectiles": 484,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.659999999999854,
+      "position": 5.359365079365071,
+      "progress": 0.5215014577259444,
+      "radius": 15.645043731778332,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 13.87262617577979,
+      "starSpeed": 14.936217292502542,
+      "starBoost": 0.9954440923216101,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 485,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.664999999997235,
+      "position": 5.376780045351465,
+      "progress": 0.5292759961127272,
+      "radius": 15.878279883381817,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 14.132290912730967,
+      "starSpeed": 14.881906438591345,
+      "starBoost": 0.9915647456136675,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 477,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.67000000000189,
+      "position": 5.394195011337862,
+      "progress": 0.5370505344995117,
+      "radius": 16.11151603498535,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 14.390866648337347,
+      "starSpeed": 14.811177164590113,
+      "starBoost": 0.9865126546135795,
+      "starEntities": 240,
       "enemies": 200,
       "projectiles": 481,
       "shader": "ready"
     },
     {
       "interval": 16.665000000000873,
-      "position": 6.026938775510196,
-      "progress": 0.8265846020948031,
-      "roll": 0,
-      "mapRoll": 5.781859421709148,
+      "position": 5.411609977324256,
+      "progress": 0.5448250728862946,
+      "radius": 16.34475218658884,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -2022,35 +2470,32 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 14.648068869106755,
+      "starSpeed": 14.72419821195788,
+      "starBoost": 0.9802998722827058,
+      "starEntities": 240,
       "enemies": 200,
-      "projectiles": 479,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.67000000000189,
-      "position": 6.0443537414965895,
-      "progress": 0.8346470863477631,
-      "roll": 0,
-      "mapRoll": 5.824621250629079,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 477,
+      "projectiles": 485,
       "shader": "ready"
     },
     {
       "interval": 16.664999999997235,
-      "position": 6.061768707482987,
-      "progress": 0.8427095706007246,
-      "roll": 0,
-      "mapRoll": 5.8657429206624885,
+      "position": 5.429024943310649,
+      "progress": 0.5525996112730774,
+      "radius": 16.577988338192323,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -2058,17 +2503,32 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 14.903616338392599,
+      "starSpeed": 14.621177089616193,
+      "starBoost": 0.972941220686871,
+      "starEntities": 240,
       "enemies": 200,
-      "projectiles": 480,
+      "projectiles": 478,
       "shader": "ready"
     },
     {
       "interval": 16.665000000000873,
-      "position": 6.07918367346938,
-      "progress": 0.8507720548536848,
-      "roll": 0,
-      "mapRoll": 5.905184916284695,
+      "position": 5.446439909297043,
+      "progress": 0.5603741496598603,
+      "radius": 16.81122448979581,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -2076,17 +2536,32 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 15.157231767350366,
+      "starSpeed": 14.502359578887397,
+      "starBoost": 0.9644542556348141,
+      "starEntities": 240,
       "enemies": 200,
-      "projectiles": 480,
+      "projectiles": 481,
       "shader": "ready"
     },
     {
-      "interval": 16.665000000000873,
-      "position": 6.090793650793643,
-      "progress": 0.856147044355658,
-      "roll": 0,
-      "mapRoll": 5.930526913742827,
+      "interval": 16.67000000000189,
+      "position": 5.46385487528344,
+      "progress": 0.5681486880466448,
+      "radius": 17.044460641399343,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -2094,17 +2569,32 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 15.408642476476068,
+      "starSpeed": 14.368029147124968,
+      "starBoost": 0.9548592247946406,
+      "starEntities": 240,
       "enemies": 200,
-      "projectiles": 470,
+      "projectiles": 483,
       "shader": "ready"
     },
     {
-      "interval": 16.669999999998254,
-      "position": 6.108208616780036,
-      "progress": 0.864209528608618,
-      "roll": 0,
-      "mapRoll": 5.967081639736005,
+      "interval": 16.664999999997235,
+      "position": 5.4812698412698335,
+      "progress": 0.5759232264334276,
+      "radius": 17.27769679300283,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -2112,17 +2602,32 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 199,
+      "starDistance": 15.657581046147634,
+      "starSpeed": 14.218506271435007,
+      "starBoost": 0.9441790193882148,
+      "starEntities": 240,
+      "enemies": 200,
       "projectiles": 475,
       "shader": "ready"
     },
     {
       "interval": 16.665000000000873,
-      "position": 6.125623582766433,
-      "progress": 0.8722720128615797,
-      "roll": 0,
-      "mapRoll": 6.001851316585551,
+      "position": 5.492879818594096,
+      "progress": 0.5811062520246161,
+      "radius": 17.43318756073848,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -2130,53 +2635,32 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 199,
-      "projectiles": 486,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 6.143038548752827,
-      "progress": 0.8802842565597642,
-      "roll": 0,
-      "mapRoll": 6.034596865318177,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 472,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.665000000000873,
-      "position": 6.1604535147392205,
-      "progress": 0.8880587949465468,
-      "roll": 0,
-      "mapRoll": 6.06461171900875,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 15.822037273604924,
+      "starSpeed": 14.11055880037567,
+      "starBoost": 0.9364684857411194,
+      "starEntities": 240,
       "enemies": 200,
       "projectiles": 482,
       "shader": "ready"
     },
     {
-      "interval": 16.664999999997235,
-      "position": 6.177868480725614,
-      "progress": 0.8958333333333299,
-      "roll": 0,
-      "mapRoll": 6.092858061275245,
+      "interval": 16.665000000000873,
+      "position": 5.5102947845804895,
+      "progress": 0.588880790411399,
+      "radius": 17.66642371234197,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -2184,17 +2668,461 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 16.066277646839858,
+      "starSpeed": 13.936525417163475,
+      "starBoost": 0.9240375297973911,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 472,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 5.527709750566887,
+      "progress": 0.5966553287981834,
+      "radius": 17.8996598639455,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 16.30736328328866,
+      "starSpeed": 13.748329044517455,
+      "starBoost": 0.9105949317512467,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 485,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.664999999997235,
+      "position": 5.54512471655328,
+      "progress": 0.6044298671849663,
+      "radius": 18.132896015548987,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 16.545051396239074,
+      "starSpeed": 13.546418669521872,
+      "starBoost": 0.8961727621087051,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 485,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 5.562539682539674,
+      "progress": 0.6122044055717492,
+      "radius": 18.366132167152475,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 16.779107304577145,
+      "starSpeed": 13.33127599726623,
+      "starBoost": 0.8808054283761593,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 470,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.67000000000189,
+      "position": 5.579954648526067,
+      "progress": 0.619978943958532,
+      "radius": 18.59936831875596,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 17.009304992674483,
+      "starSpeed": 13.103414301623685,
+      "starBoost": 0.8645295929731204,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 479,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.664999999997235,
+      "position": 5.5973696145124645,
+      "progress": 0.6277534823453165,
+      "radius": 18.832604470359495,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 17.235427649602222,
+      "starSpeed": 12.86337720071437,
+      "starBoost": 0.8473840857653121,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 480,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.67000000000189,
+      "position": 5.614784580498858,
+      "progress": 0.6357724747747392,
+      "radius": 19.073174243242175,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 17.4572090992482,
+      "starSpeed": 12.603643446622991,
+      "starBoost": 0.828831674758785,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 482,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 5.6263945578231205,
+      "progress": 0.6411474642767124,
+      "radius": 19.23442392830137,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 17.602493263951384,
+      "starSpeed": 12.422965947817733,
+      "starBoost": 0.8159261391298381,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 474,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.659999999999854,
+      "position": 5.643809523809514,
+      "progress": 0.6492099485296724,
+      "radius": 19.476298455890173,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 17.816413099286507,
+      "starSpeed": 12.142557904475797,
+      "starBoost": 0.7958969931768427,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 485,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.669999999998254,
+      "position": 5.661224489795911,
+      "progress": 0.6572724327826341,
+      "radius": 19.718172983479025,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 18.025356025965092,
+      "starSpeed": 11.851521331056665,
+      "starBoost": 0.7751086665040475,
+      "starEntities": 240,
+      "enemies": 199,
+      "projectiles": 478,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 5.678639455782305,
+      "progress": 0.6653349170355941,
+      "radius": 19.960047511067824,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 18.22914341226254,
+      "starSpeed": 11.550602937937342,
+      "starBoost": 0.7536144955669529,
+      "starEntities": 240,
+      "enemies": 199,
+      "projectiles": 482,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 5.696054421768698,
+      "progress": 0.6733974012885541,
+      "radius": 20.201922038656623,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 18.427609853986066,
+      "starSpeed": 11.240574789206132,
+      "starBoost": 0.731469627800438,
+      "starEntities": 240,
+      "enemies": 199,
+      "projectiles": 477,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.669999999998254,
+      "position": 5.7134693877550955,
+      "progress": 0.6814598855415158,
+      "radius": 20.443796566245474,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 18.620603598850924,
+      "starSpeed": 10.92223232178372,
+      "starBoost": 0.7087308801274086,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 477,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 5.730884353741489,
+      "progress": 0.6895223697944758,
+      "radius": 20.685671093834273,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 18.80798693582995,
+      "starSpeed": 10.596392304576753,
+      "starBoost": 0.6854565931840537,
+      "starEntities": 240,
       "enemies": 200,
       "projectiles": 480,
       "shader": "ready"
     },
     {
       "interval": 16.665000000000873,
-      "position": 6.195283446712011,
-      "progress": 0.9036078717201144,
-      "roll": 0,
-      "mapRoll": 6.119300460991934,
+      "position": 5.748299319727883,
+      "progress": 0.6975848540474358,
+      "radius": 20.92754562142307,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -2202,35 +3130,32 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 200,
-      "projectiles": 477,
-      "shader": "ready"
-    },
-    {
-      "interval": 16.67000000000189,
-      "position": 6.212698412698405,
-      "progress": 0.911382410106897,
-      "roll": 0,
-      "mapRoll": 6.1439034870330795,
-      "cameraRotation": {
-        "x": -0.49470254778862,
-        "y": 0,
-        "z": 0,
-        "w": 0.8690623641014099
-      },
-      "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 18.98963654847797,
+      "starSpeed": 10.263890742899541,
+      "starBoost": 0.6617064816356815,
+      "starEntities": 240,
       "enemies": 200,
       "projectiles": 478,
       "shader": "ready"
     },
     {
       "interval": 16.664999999997235,
-      "position": 6.224308390022667,
-      "progress": 0.9165654356980855,
-      "roll": 0,
-      "mapRoll": 6.159266133277445,
+      "position": 5.759909297052145,
+      "progress": 0.702959843549409,
+      "radius": 21.088795306482268,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -2238,17 +3163,65 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 19.107496641450286,
+      "starSpeed": 10.038942821872768,
+      "starBoost": 0.645638772990912,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 476,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 5.777324263038542,
+      "progress": 0.7110223278023707,
+      "radius": 21.330669834071124,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 19.27935609336025,
+      "starSpeed": 9.697241907340992,
+      "starBoost": 0.6212315648100708,
+      "starEntities": 240,
       "enemies": 200,
       "projectiles": 479,
       "shader": "ready"
     },
     {
       "interval": 16.665000000000873,
-      "position": 6.241723356009061,
-      "progress": 0.9243399740848686,
-      "roll": 0,
-      "mapRoll": 6.180724800691075,
+      "position": 5.794739229024936,
+      "progress": 0.7190848120553307,
+      "radius": 21.572544361659922,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -2256,17 +3229,65 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 19.445225636834877,
+      "starSpeed": 9.3511863918414,
+      "starBoost": 0.5965133137029571,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 484,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.669999999998254,
+      "position": 5.812154195011329,
+      "progress": 0.7271472963082907,
+      "radius": 21.81441888924872,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 19.60503715320936,
+      "starSpeed": 9.001664147442254,
+      "starBoost": 0.5715474391030181,
+      "starEntities": 240,
       "enemies": 200,
       "projectiles": 478,
       "shader": "ready"
     },
     {
-      "interval": 16.67000000000189,
-      "position": 6.264943310657589,
-      "progress": 0.9347060252672472,
-      "roll": 0,
-      "mapRoll": 6.206322011846006,
+      "interval": 16.665000000000873,
+      "position": 5.829569160997723,
+      "progress": 0.7352097805612506,
+      "radius": 22.05629341683752,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -2274,17 +3295,98 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
-      "enemies": 199,
-      "projectiles": 483,
+      "starDistance": 19.75873806685405,
+      "starSpeed": 8.649571940772512,
+      "starBoost": 0.5463979957694651,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 482,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.67000000000189,
+      "position": 5.84698412698412,
+      "progress": 0.7432722648142124,
+      "radius": 22.29816794442637,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 19.906291480067388,
+      "starSpeed": 8.29581313219417,
+      "starBoost": 0.5211295094424407,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 477,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.664999999997235,
+      "position": 5.864399092970514,
+      "progress": 0.7513347490671725,
+      "radius": 22.540042472015173,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 20.047676267743984,
+      "starSpeed": 7.9412953580576,
+      "starBoost": 0.49580681128982856,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 482,
       "shader": "ready"
     },
     {
       "interval": 16.659999999999854,
-      "position": 6.2765532879818515,
-      "progress": 0.9398890508584357,
-      "roll": 0,
-      "mapRoll": 6.217805134360163,
+      "position": 5.881814058956907,
+      "progress": 0.7593972333201324,
+      "radius": 22.781916999603972,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -2292,17 +3394,32 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 20.1828871315753,
+      "starSpeed": 7.586928201985267,
+      "starBoost": 0.4704948715703762,
+      "starEntities": 240,
       "enemies": 200,
-      "projectiles": 472,
+      "projectiles": 480,
       "shader": "ready"
     },
     {
-      "interval": 16.669999999998254,
-      "position": 6.293968253968245,
-      "progress": 0.9476635892452183,
-      "roll": 0,
-      "mapRoll": 6.23335593836416,
+      "interval": 16.67000000000189,
+      "position": 5.89342403628117,
+      "progress": 0.7647722228221057,
+      "radius": 22.94316668466317,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -2310,17 +3427,230 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 20.269602304413404,
+      "starSpeed": 7.351216180569775,
+      "starBoost": 0.4536582986121268,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 479,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 5.910839002267567,
+      "progress": 0.7728347070750674,
+      "radius": 23.185041212252024,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 20.39455453341484,
+      "starSpeed": 6.999119245819755,
+      "starBoost": 0.42850851755855396,
+      "starEntities": 240,
       "enemies": 199,
+      "projectiles": 481,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.664999999997235,
+      "position": 5.92825396825396,
+      "progress": 0.7808971913280274,
+      "radius": 23.426915739840823,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 20.513396059824156,
+      "starSpeed": 6.6495902633941295,
+      "starBoost": 0.40354216167100926,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 478,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 5.945668934240354,
+      "progress": 0.7889596755809873,
+      "radius": 23.66879026742962,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 20.626179424410992,
+      "starSpeed": 6.3035260172094745,
+      "starBoost": 0.3788232869435339,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 480,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.67000000000189,
+      "position": 5.9630839002267475,
+      "progress": 0.7970221598339473,
+      "radius": 23.91066479501842,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 20.73297271132575,
+      "starSpeed": 5.961814401734392,
+      "starBoost": 0.3544153144095994,
+      "starEntities": 240,
+      "enemies": 199,
+      "projectiles": 479,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.664999999997235,
+      "position": 5.980498866213145,
+      "progress": 0.805084644086909,
+      "radius": 24.15253932260727,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 20.833859373416722,
+      "starSpeed": 5.625332143925078,
+      "starBoost": 0.33038086742321987,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 481,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 5.997913832199538,
+      "progress": 0.813147128339869,
+      "radius": 24.39441385019607,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 20.928938018115616,
+      "starSpeed": 5.294942553813786,
+      "starBoost": 0.306781610986699,
+      "starEntities": 240,
+      "enemies": 200,
       "projectiles": 484,
       "shader": "ready"
     },
     {
       "interval": 16.665000000000873,
-      "position": 6.311383219954639,
-      "progress": 0.9554381276320014,
-      "roll": 0,
-      "mapRoll": 6.246866592313489,
+      "position": 6.009523809523801,
+      "progress": 0.8185221178418423,
+      "radius": 24.555663535255267,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -2328,17 +3658,32 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 20.989152554057355,
+      "starSpeed": 5.078486958156516,
+      "starBoost": 0.2913204970111797,
+      "starEntities": 240,
       "enemies": 199,
-      "projectiles": 475,
+      "projectiles": 481,
       "shader": "ready"
     },
     {
       "interval": 16.665000000000873,
-      "position": 6.328798185941036,
-      "progress": 0.9632126660187859,
-      "roll": 0,
-      "mapRoll": 6.2583016650824215,
+      "position": 6.026938775510194,
+      "progress": 0.8265846020948022,
+      "radius": 24.797538062844065,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -2346,17 +3691,164 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 21.074810640146623,
+      "starSpeed": 4.76012683804468,
+      "starBoost": 0.26858048843176285,
+      "starEntities": 240,
       "enemies": 200,
-      "projectiles": 477,
+      "projectiles": 482,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.669999999998254,
+      "position": 6.044353741496591,
+      "progress": 0.834647086347764,
+      "radius": 25.039412590432917,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 21.15499570621223,
+      "starSpeed": 4.450079236464086,
+      "starBoost": 0.24643423117600613,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 474,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 6.061768707482985,
+      "progress": 0.8427095706007239,
+      "radius": 25.28128711802172,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 21.229859473617207,
+      "starSpeed": 4.14913964024564,
+      "starBoost": 0.22493854573183145,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 480,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 6.0791836734693785,
+      "progress": 0.8507720548536839,
+      "radius": 25.523161645610518,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 21.299567316541108,
+      "starSpeed": 3.8580801678782746,
+      "starBoost": 0.20414858341987677,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 485,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 6.096598639455776,
+      "progress": 0.8588345391066454,
+      "radius": 25.765036173199363,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 21.36429783768068,
+      "starSpeed": 3.5776475884904926,
+      "starBoost": 0.18411768489217803,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 474,
       "shader": "ready"
     },
     {
       "interval": 16.664999999997235,
-      "position": 6.346213151927429,
-      "progress": 0.9709872044055685,
-      "roll": 0,
-      "mapRoll": 6.267625725545225,
+      "position": 6.114013605442169,
+      "progress": 0.8668970233596056,
+      "radius": 26.00691070078817,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -2364,17 +3856,164 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 21.424242410010205,
+      "starSpeed": 3.308561405870486,
+      "starBoost": 0.1648972432764633,
+      "starEntities": 240,
       "enemies": 200,
-      "projectiles": 479,
+      "projectiles": 480,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.67000000000189,
+      "position": 6.131428571428563,
+      "progress": 0.8749595076125656,
+      "radius": 26.248785228376967,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 21.479604685777332,
+      "starSpeed": 3.0515120124402957,
+      "starBoost": 0.14653657231716397,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 481,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.659999999999854,
+      "position": 6.143038548752825,
+      "progress": 0.8802842565597633,
+      "radius": 26.4085276967929,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 21.514075357229764,
+      "starSpeed": 2.8886693678563455,
+      "starBoost": 0.1349049548468818,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 478,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.669999999998254,
+      "position": 6.160453514739222,
+      "progress": 0.8880587949465477,
+      "radius": 26.64176384839643,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 21.56238290901593,
+      "starSpeed": 2.6612295413077582,
+      "starBoost": 0.11865925295055417,
+      "starEntities": 240,
+      "enemies": 199,
+      "projectiles": 477,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.67000000000189,
+      "position": 6.177868480725616,
+      "progress": 0.8958333333333304,
+      "radius": 26.87499999999991,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 21.606839744577698,
+      "starSpeed": 2.4465266179614273,
+      "starBoost": 0.10332332985438766,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 483,
       "shader": "ready"
     },
     {
       "interval": 16.665000000000873,
-      "position": 6.357823129251692,
-      "progress": 0.9761702299967574,
-      "roll": 0,
-      "mapRoll": 6.272651484387034,
+      "position": 6.1952834467120095,
+      "progress": 0.9036078717201135,
+      "radius": 27.108236151603403,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -2382,17 +4021,98 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 21.647672181844726,
+      "starSpeed": 2.245072822565133,
+      "starBoost": 0.08893377304036663,
+      "starEntities": 240,
+      "enemies": 197,
+      "projectiles": 478,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.659999999999854,
+      "position": 6.212698412698403,
+      "progress": 0.9113824101068961,
+      "radius": 27.341472303206885,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 21.685115185608453,
+      "starSpeed": 2.057348770929484,
+      "starBoost": 0.07552491220924884,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 483,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.664999999997235,
+      "position": 6.2301133786848,
+      "progress": 0.9191569484936806,
+      "radius": 27.574708454810416,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 21.719411806957847,
+      "starSpeed": 1.8838023233048344,
+      "starBoost": 0.06312873737891675,
+      "starEntities": 240,
       "enemies": 200,
       "projectiles": 476,
       "shader": "ready"
     },
     {
       "interval": 16.67000000000189,
-      "position": 6.375238095238085,
-      "progress": 0.9839447683835401,
-      "roll": 0,
-      "mapRoll": 6.278378455171339,
+      "position": 6.247528344671194,
+      "progress": 0.9269314868804637,
+      "radius": 27.807944606413912,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -2400,17 +4120,32 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 21.750812603423395,
+      "starSpeed": 1.7248475159045749,
+      "starBoost": 0.05177482256461249,
+      "starEntities": 240,
       "enemies": 200,
       "projectiles": 478,
       "shader": "ready"
     },
     {
-      "interval": 16.664999999997235,
-      "position": 6.3926530612244825,
-      "progress": 0.9917193067703245,
-      "roll": 0,
-      "mapRoll": 6.281899930647576,
+      "interval": 16.665000000000873,
+      "position": 6.264943310657587,
+      "progress": 0.9347060252672463,
+      "radius": 28.04118075801739,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -2418,17 +4153,98 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 21.779575041212713,
+      "starSpeed": 1.5808635731233225,
+      "starBoost": 0.04149025522309446,
+      "starEntities": 240,
       "enemies": 200,
-      "projectiles": 479,
+      "projectiles": 480,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.664999999997235,
+      "position": 6.27655328798185,
+      "progress": 0.9398890508584348,
+      "radius": 28.196671525753043,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 21.79741425695173,
+      "starSpeed": 1.493362553579685,
+      "starBoost": 0.03524018239854894,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 477,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.67000000000189,
+      "position": 6.293968253968247,
+      "progress": 0.9476635892452192,
+      "radius": 28.429907677356574,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 21.822368388958736,
+      "starSpeed": 1.375075391203643,
+      "starBoost": 0.026791099371688783,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 480,
       "shader": "ready"
     },
     {
       "interval": 16.665000000000873,
-      "position": 6.410068027210876,
-      "progress": 0.9994938451571072,
-      "roll": 0,
-      "mapRoll": 6.283180479690011,
+      "position": 6.3113832199546405,
+      "progress": 0.9554381276320023,
+      "radius": 28.66314382896007,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
       "cameraRotation": {
         "x": -0.49470254778862,
         "y": 0,
@@ -2436,9 +4252,210 @@
         "w": 0.8690623641014099
       },
       "cameraSize": 17,
-      "zoom": 1,
+      "starDistance": 21.84539979633879,
+      "starSpeed": 1.2725935578105938,
+      "starBoost": 0.019470968415042422,
+      "starEntities": 240,
       "enemies": 200,
       "projectiles": 475,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.664999999997235,
+      "position": 6.328798185941034,
+      "progress": 0.963212666018785,
+      "radius": 28.896379980563548,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 21.866785912462248,
+      "starSpeed": 1.1861615481211587,
+      "starBoost": 0.013297253437225627,
+      "starEntities": 240,
+      "enemies": 197,
+      "projectiles": 477,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.665000000000873,
+      "position": 6.346213151927431,
+      "progress": 0.9709872044055694,
+      "radius": 29.129616132167083,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 21.886808095932,
+      "starSpeed": 1.115985566194766,
+      "starBoost": 0.008284683299626134,
+      "starEntities": 240,
+      "enemies": 199,
+      "projectiles": 479,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.67000000000189,
+      "position": 6.363628117913825,
+      "progress": 0.9787617427923521,
+      "radius": 29.36285228377056,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 21.905750959335762,
+      "starSpeed": 1.0622330334809733,
+      "starBoost": 0.004445216677212382,
+      "starEntities": 240,
+      "enemies": 199,
+      "projectiles": 481,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.659999999999854,
+      "position": 6.381043083900218,
+      "progress": 0.9865362811791352,
+      "radius": 29.596088435374057,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 21.923901690235297,
+      "starSpeed": 1.0250321893958176,
+      "starBoost": 0.0017880135282726927,
+      "starEntities": 240,
+      "enemies": 199,
+      "projectiles": 480,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.664999999997235,
+      "position": 6.398458049886612,
+      "progress": 0.9943108195659178,
+      "radius": 29.829324586977535,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 21.94154936601231,
+      "starSpeed": 1.004471785376322,
+      "starBoost": 0.0003194132411658684,
+      "starEntities": 240,
+      "enemies": 199,
+      "projectiles": 486,
+      "shader": "ready"
+    },
+    {
+      "interval": 16.67000000000189,
+      "position": 6.410068027210878,
+      "progress": 0.999493845157108,
+      "radius": 29.98481535471324,
+      "map": {
+        "position": {
+          "x": 0,
+          "y": -0.4000000059604645,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "cameraRotation": {
+        "x": -0.49470254778862,
+        "y": 0,
+        "z": 0,
+        "w": 0.8690623641014099
+      },
+      "cameraSize": 17,
+      "starDistance": 21.95317832656005,
+      "starSpeed": 1.0000353992620084,
+      "starBoost": 0.0000025285187148791515,
+      "starEntities": 240,
+      "enemies": 200,
+      "projectiles": 478,
       "shader": "ready"
     }
   ]

@@ -167,29 +167,37 @@ collision rules remain unchanged. If section analysis fails, detected beats
 are still playable. See the [LinkSeg evaluation](docs/section-analysis.md)
 for measured performance, predictions and remaining listening review.
 
-In **Standard** effects mode, entering a new detected section flips the visual
-floor and grid through one complete turn about the map's Z axis, then settles
-them flat beneath the fight. Expanding portal frames, a spiral grid and broad
-light waves accompany the floor. The camera keeps its normal orientation and
-zoom, while the player, enemies, projectiles and perimeter walls stay steady.
-The floor, perimeter and background smoothly change theme to match the section
+In **Standard** effects mode, entering a new detected section sends one
+shockwave from the center of the arena toward its edges. The floor and grid
+change to the new section's colors as the ring passes, leaving the new theme
+behind it. The map, camera and perimeter geometry keep their normal poses
+throughout the effect. Perimeter and background colors blend to match the section
 timeline: blue for intro, green for verse, gold for chorus, violet for bridge,
 cyan for instrumental, rose for outro and dark slate for silence.
+
+Behind the arena, stars travel steadily outward across three depth layers.
+Each section shockwave smoothly accelerates them from normal speed to **15×**
+speed and back, stretching them into hyperspeed streaks. Travel accumulates
+continuously, so returning to normal speed never jumps the stars backward.
+The starfield follows the music clock through pause and slowdown, while the
+camera keeps its normal view and player follow.
 
 Transitions start at the exact predicted boundary on the raw music clock,
 independent of visual calibration. They normally span four actual beat
 intervals, following tempo changes; slow tracks use fewer beats to keep the
-turn within 3.5 song seconds. Each turn finishes before the next section or
+wave within 3.5 song seconds. Each wave finishes before the next section or
 an unusable beat interval. Fragments shorter than 0.65 song seconds and
 boundaries inside detection gaps use a short color fade. Pause and slowdown
 freeze or stretch the effect with the music. The first section establishes its
 colors during count-in without an entrance effect.
 
-The floor flip is cosmetic: movement, dash directions, pointer aiming and
-collision rules keep their normal behavior. **Calm** replaces the full floor
-turn with a small sway; **Off**, reduced flashes and reduced motion retain only the
-section palette changes. No sections are invented for demo, dojo or manual-BPM
-tracks without analysis. Every predicted span boundary is honored, including
+The shockwave is cosmetic: movement, dash directions, pointer aiming and
+collision rules keep their normal behavior. **Calm** uses a subtler ring and
+weaker starfield boost. **Off**, reduced flashes and reduced motion
+keep the stars static and use a simple fade between section palettes.
+Tracks without section analysis, including demo, dojo and manual-BPM tracks,
+retain normal star drift without invented section boosts. Every predicted span
+boundary is honored, including
 adjacent spans with the same label; the model's estimates still need listening
 review. See [section-effects verification](docs/section-effects-verification.md).
 
@@ -202,6 +210,16 @@ completion or cancellation. One decoded local file is reused for analysis,
 preview, play and retry; replacing it releases the cached buffer. Analysis
 results are session-only. Analysis warning text is omitted from the interface.
 When bar starts are unavailable, timing falls back to groups of four beats.
+
+Both ONNX models persist in browser Cache Storage (`beatshooter-models-v1`),
+keyed by their pinned SHA-256 hashes. Subsequent tracks and page reloads read
+the saved weights without a model network request. Downloads and saved entries
+are checked for size and checksum; corrupt entries are fetched again, and updated
+weights replace the old version. Storage denial or quota errors fall back to
+loading the model normally. Clearing site data or browser eviction also requires
+another download. This cache stores model files only, not uploaded music.
+The ONNX runtime still initializes a fresh inference session for each analysis;
+its JS/WASM assets use normal browser HTTP caching.
 
 Files are limited to 100 MB, six hours, and a post-decode 256 MiB PCM budget
 (about 11 minutes at 48 kHz stereo). A local file must be reselected after
@@ -216,18 +234,18 @@ Focus loss, hidden tabs, suspended audio, and long stalls pause the session and
 require explicit resume. A load that finishes after focus loss also waits paused.
 
 The arena's floor patterns, bar ripples, perimeter lights, death shards and
-damage-number envelopes follow the same music clock. Section transitions rotate
-only the decorative floor and grid beneath combat; the play plane, collision
+damage-number envelopes follow the same music clock. Section transitions change
+floor colors behind an outward-moving ring; the map geometry, play plane, collision
 boundaries, camera orientation and aiming remain stable. Deaths and scores resolve immediately;
 larger death accents wait at most 100 ms for a nearby sixteenth-note subdivision.
 When no suitable subdivision exists, a small local dissolve confirms the kill.
 Long detection gaps settle the decoration without inventing extra beats.
 
 In **Settings → Visual effects**, choose **Standard** for the full effect set,
-including section floor flips, **Calm** for softer motion, or **Off** for a stationary
+including section shockwaves, **Calm** for softer motion, or **Off** for a stationary
 arena with essential feedback and section color changes. Graphics detail
 controls rendering cost independently. **Reduced flashes** and the device's
-**reduced-motion** preference disable travelling decoration and floor flips
+**reduced-motion** preference disable travelling decoration and section rings
 while keeping small local fades. Automatic local-track analysis also
 computes optional 20 Hz loudness/bass curves in its existing worker; these
 modulate detail without triggering beats. Demo, dojo and manual-BPM tracks use
@@ -302,7 +320,8 @@ See the release document for measured hardware, counts, and frame intervals.
 | `src/experience/` | Persistent XP drops, swept attraction/collection, run levels and musical gem presentation |
 | `src/session/` | Menu/loading/play/pause/upgrade/results, synchronized slowdown and selection, audio/entity/listener ownership |
 | `src/music-visuals/` | Floor shader, bounded musical effect queues, pooled shards/rings and comfort controls |
-| `src/section-effects/` | Detected-section timing, dark palettes, decorative floor/grid flips and reusable portal frames |
+| `src/section-effects/` | Detected-section timing, dark palettes and music-timed floor color transitions |
+| `src/starfield/` | Continuous music-clock travel, integrated section speed boosts and pooled background stars |
 | `src/presentation/` | Shared combat materials, steady damage tint and music-timed damage numbers |
 | `src/tracks/`, `public/tracks/` | Validated manifests, local decoding, original demo and generator |
 | `src/ui/`, `src/settings/` | Responsive DOM interface and validated versioned preferences |
