@@ -23,7 +23,7 @@ function present(world: World): void {
     const s = world.resource(Session), p = world.resource(Presentation), arena = world.resource(Arena);
     const player = world.resource(PlayerState), pose = world.storage(Transform), visuals = world.resource(MusicVisuals);
     const section = world.resource(SectionEffects);
-    const surfaceLift = (x: number, z: number) => shockwaveHeight(section.frame.progress, section.strength, x, z);
+    const surfaceLift = (x: number, z: number) => shockwaveHeight(section.frame.waveProgress, section.strength, x, z);
     if (p.layer) p.layer.hidden = !isArenaPhase(s.phase) || s.phase === "paused";
     if (p.generation !== s.generation) {
         p.projectiles.clear();

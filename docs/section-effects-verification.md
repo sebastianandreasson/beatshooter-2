@@ -4,12 +4,30 @@ Implemented against Shallot 0.10.0 using Bun 1.4.3.
 
 ## Presentation
 
-Every detected section boundary sends one shockwave from the map center toward
+Every authored or detected section boundary sends one shockwave from the map center toward
 its edges. The floor and grid switch to the new section's colors as the front
 passes, leaving that palette behind the ring. Perimeter and background colors
-blend to the same theme. Hues match the track timeline: blue intro, green verse,
+blend to the same theme. Preferred hues follow the track timeline: blue intro, green verse,
 gold chorus, violet bridge, cyan instrumental, rose outro and slate silence.
 Materials stay dark and retain the player/projectile colors.
+Adjacent palettes are chosen once per timeline. If a preferred hue repeats or
+is too close to the previous actual palette, the most contrasting existing
+dark palette is substituted. The next transition starts from that chosen
+palette. Repeated labels therefore always change color, without random changes
+on pause, seek or retry; section labels themselves remain unchanged.
+
+Eligible boundaries now have a one-beat anticipation phase, capped at 0.6 song
+seconds. A fixed, soft pool of light gathers at the center while the view zooms
+in by up to 5% (1% in Calm), peaking at the boundary. The section label and
+global palette remain unchanged during the buildup. The zoom and central light
+settle over the first following actual beat.
+
+The outward radius uses cubic smoothstep, `p²(3−2p)`, on the transition's musical
+progress: slow departure, faster middle, soft finish. The color front, vertex
+ridge, perimeter colors and projected actor labels use the same eased radius.
+Star travel retains its linear beat coordinate and exact integrated distance.
+Gaps, tiny fade-only sections and overlapping transitions suppress the precharge
+and its zoom rather than creating abrupt or invented pulses.
 
 The advancing front raises scene vertices in world Y with a smooth, compact
 profile: a three-unit half-width and a peak of 1.275 units in Standard or
@@ -25,13 +43,16 @@ to the new baseline. Thin streaks extend up to ten world units at the peak.
 Distance accumulates
 continuously through the boost and retains the extra travel afterward, so
 settling to normal speed does not move the stars backward. The starfield never
-changes the camera's orientation or zoom.
+changes the camera's orientation. The brief section zoom is sampled separately
+from the same raw music clock.
 
-The transition normally spans four actual beats, interpolating their timestamps
-instead of using average BPM. It starts at the exact detected section timestamp,
-including off-beat boundaries. Slow tempos use fewer beats to keep the wave
-within 3.5 song seconds. A following boundary or chart gap completes the current
-transition; fragments shorter than 0.65 song seconds and boundaries inside
+The transition now runs at 1.3× its previous speed, normally spanning
+4 / 1.3 actual beats, interpolating timestamps instead of using average BPM.
+It starts at the exact section timestamp, including off-beat boundaries.
+The existing slow-tempo, following-boundary and chart-gap caps determine an
+eligible span before it is accelerated. This preserves waves at fast tempos
+whose new duration falls below the old eligibility threshold.
+Base windows shorter than 0.65 song seconds and boundaries inside
 missing timing use a short palette fade. Adjacent spans with the same label
 still produce distinct waves, preserving the detector's raw boundaries.
 
@@ -45,9 +66,12 @@ without a boost. Menu/results restore the floor palette.
 Physical transforms, collision shapes and camera orientation stay steady during the effect. Normal
 player follow continues, and player/enemy/projectile motion stays under gameplay
 control. Physics, WASD, dash directions and pointer aiming retain their original
-behavior. Calm uses a subtler ring, lower ridge and weaker starfield boost; Off, reduced
+behavior. The orthographic lens changes before input sampling, so aim rays and
+projected health bars use the same lens as rendering. Its captured base size is
+restored on retry, menu, camera replacement and disposal; pause holds the
+absolute zoom without accumulating scale. Calm uses a subtler ring, lower ridge and weaker starfield boost; Off, reduced
 flashes and OS reduced motion keep the stars static and use a simple palette
-fade without a travelling front.
+fade without a travelling front, precharge or zoom.
 
 ## Ownership and rendering cost
 
@@ -82,6 +106,46 @@ binary search, independent of frame rate and previous samples. Short spans or
 missing beat intervals that only fade the floor palette do not trigger a boost.
 
 ## Verification
+
+### Anticipation, eased travel and zoom update
+
+- Full unit suite: 317 tests passed, 48,530 assertions across 44 files.
+- Typecheck: no errors in 357 files; production build passed with the existing
+  bundle-size advisory.
+- The three Standard/Off/reduced section browser scenarios passed again with
+  5% zoom and the 1.3× wave speed.
+
+Palette regressions cover runs of every repeated label, similar neighboring
+hues, quiet fades, seeking and replay. Every adjacent target differs visibly
+and the following wave starts from the previous actual target. The browser
+fixture includes consecutive Chorus sections: it verifies a different
+destination palette, unchanged labels, a changed background color, and that
+the new palette persists after the wave. Timing checks cover the accelerated
+normal, slow, fast, clipped and variable-tempo windows, including continuous
+integrated star travel.
+
+The new timeline checks cover pre-boundary label/palette stability, continuous
+impact at the boundary, one-beat recovery, changing tempo, slow-song caps,
+overlapping sections, missing beats and deterministic resampling. Radius
+samples demonstrate a slower start/end and faster middle with one monotonically
+outward front. Shader and routing checks keep the center charge bounded and
+non-annular, use eased progress for every surface, and suppress it for comfort.
+
+Camera tests verify captured base sizes, replacement/disposal restoration,
+pause/calibration holds and world↔viewport round trips. The browser check also
+pauses during anticipation, verifies the unchanged current section, aims
+through the zoomed lens, moves across the impact, and checks lifted health bars
+against their actual projected anchors. It verifies exact recovery, retry/menu
+cleanup and no zoom in Off/reduced motion.
+
+The demo's authored 8-second boundary was also captured during normal playback.
+The precharge retained the Intro palette, the outgoing sweep used Verse colors,
+and the lens returned exactly to size 17. Center light, eased sweep, HUD clarity
+and actor readability were visually reviewed in
+`output/playwright/section-impact-charge.png` and
+`output/playwright/section-impact-sweep.png`; no page errors occurred.
+
+### Earlier shockwave and starfield baseline
 
 - `bun test`: 285 tests passed, 45,806 assertions across 39 files.
 - `bun check`: no type errors in 345 files.

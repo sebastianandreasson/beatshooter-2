@@ -1,4 +1,4 @@
-/** Section predictions describe the recording; they never change its beat chart. */
+/** Authored sections and predictions describe the recording without changing its beat chart. */
 export const SECTION_LABELS = ["intro", "verse", "chorus", "bridge", "inst", "outro", "silence"] as const;
 export type SectionLabel = typeof SECTION_LABELS[number];
 
@@ -13,7 +13,8 @@ export interface SectionAnalysis {
     analyzerVersion: string;
     duration: number;
     elapsedMs: number;
-    backend: "webgpu" | "wasm";
+    /** Bundled music can supply exact composition boundaries without inference. */
+    backend: "webgpu" | "wasm" | "authored";
     sections: SongSection[];
 }
 
@@ -26,7 +27,7 @@ export function validateSections(value: unknown, duration: number): SectionAnaly
     if (data.version !== 1 || typeof data.analyzerVersion !== "string" || !data.analyzerVersion ||
         !Number.isFinite(data.duration) || Math.abs(data.duration! - duration) > 0.05 ||
         !Number.isFinite(data.elapsedMs) || data.elapsedMs! < 0 ||
-        (data.backend !== "webgpu" && data.backend !== "wasm") ||
+        (data.backend !== "webgpu" && data.backend !== "wasm" && data.backend !== "authored") ||
         !Array.isArray(data.sections) || !data.sections.length || data.sections.length > 1500) return;
     let previous = 0;
     const sections: SongSection[] = [];

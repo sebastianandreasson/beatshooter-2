@@ -1,0 +1,88 @@
+{
+  "recordedAt": "2026-10-20T14:51:38.335Z",
+  "file": "Magna Divide.mp3",
+  "environment": {
+    "browser": "156.0.8078.4",
+    "bun": "1.4.3",
+    "cpu": "Apple M1 Max",
+    "platform": "darwin",
+    "gpu": {
+      "vendor": "apple",
+      "architecture": "metal-3"
+    },
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    }
+  },
+  "realAnalysis": {
+    "beats": 452,
+    "sections": 17,
+    "boundary": 4.191201814058957
+  },
+  "transition": {
+    "start": 4.191201814058957,
+    "end": 6.4112018140589555,
+    "label": "verse",
+    "effect": "single-center-shockwave",
+    "cameraStable": true,
+    "mapStable": true
+  },
+  "denseFixture": {
+    "enemies": 200,
+    "projectiles": 490
+  },
+  "neon": {
+    "status": "ready",
+    "passes": 4,
+    "dimensions": {
+      "width": 1280,
+      "height": 800,
+      "extractWidth": 640,
+      "extractHeight": 400,
+      "bloomWidth": 320,
+      "bloomHeight": 200
+    },
+    "baselineBloom": 0.62,
+    "peakBloom": 0.7625162385135567,
+    "settledBloom": 0.6202008532015867,
+    "peakChromatic": 0.74999561858761,
+    "settledChromatic": 0
+  },
+  "trails": {
+    "capacity": 192,
+    "peakVisible": 192,
+    "bounded": true
+  },
+  "starfield": {
+    "entities": 960,
+    "peakSpeed": 124.9992989740176,
+    "settledSpeed": 5
+  },
+  "surface": {
+    "vertexCount": 11850,
+    "affectedMeshes": 1306,
+    "peakLift": 1.2750000953674316,
+    "settledLift": 0
+  },
+  "performance": {
+    "frames": 133,
+    "averageFps": 60.00221060775925,
+    "meanFrameMs": 16.666052631578943,
+    "p95Ms": 16.67000000000189,
+    "maxMs": 16.67000000000189,
+    "note": "Includes one live midpoint screenshot; not an isolated renderer microbenchmark."
+  },
+  "errors": [],
+  "consoleErrors": [],
+  "modelWarnings": [
+    "\u001b[0;93m2026-10-20 16:51:21.240349 [W:onnxruntime:Default, cpuid_info.cc:91 LogEarlyWarning] Unknown CPU vendor. cpuinfo_vendor value: 0\u001b[m",
+    "\u001b[0;93m2026-10-20 16:51:21.889244 [W:onnxruntime:, session_state.cc:1316 VerifyEachNodeIsAssignedToAnEp] Some nodes were not assigned to the preferred execution providers which may or may not have an negative impact on performance. e.g. ORT explicitly assigns shape related ops to CPU to improve perf.\u001b[m",
+    "\u001b[0;93m2026-10-20 16:51:21.889920 [W:onnxruntime:, session_state.cc:1318 VerifyEachNodeIsAssignedToAnEp] Rerunning with verbose output on a non-minimal build will show node assignments.\u001b[m",
+    "\u001b[0;93m2026-10-20 16:51:28.316509 [W:onnxruntime:, session_state.cc:1316 VerifyEachNodeIsAssignedToAnEp] Some nodes were not assigned to the preferred execution providers which may or may not have an negative impact on performance. e.g. ORT explicitly assigns shape related ops to CPU to improve perf.\u001b[m",
+    "\u001b[0;93m2026-10-20 16:51:28.316785 [W:onnxruntime:, session_state.cc:1318 VerifyEachNodeIsAssignedToAnEp] Rerunning with verbose output on a non-minimal build will show node assignments.\u001b[m"
+  ],
+  "screenshot": "output/playwright/neon-live-section-midpoint.png",
+  "frameSamples": "output/neon-live-frames.json",
+  "menuCleanup": "passed"
+}

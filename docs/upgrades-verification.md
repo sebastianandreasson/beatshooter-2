@@ -16,16 +16,47 @@ Level-ups display three enlarged cards on the right while the session stays in
 changes simulation speed, grants protection, clears movement, or cancels dash.
 The catalog and musical combat effects below are unchanged.
 
+The live panel is up to 560 px wide, with 30 px skill titles (27 px on narrow
+screens), larger effect details and descriptions, and scrolling on short
+viewports. Start-of-run cards use 34 px titles, with a stacked layout at smaller
+widths. Readability takes priority over keeping the panel outside the arena;
+the live panel reserves space for the bottom beat/dash indicator. Keyboard
+selection scrolls the chosen card into view before confirming it.
+
 Main-row and keypad keys 1–3, or a card click, apply the offered stat immediately.
+The displayed cards remain briefly: unchosen cards fade out, the selected card
+gets a gold highlight and one flash on the next authored beat, then fades over
+the following beat. During confirmation all three cards are disabled, and
+queued offers wait until it finishes. Live animation samples song time, freezes
+with pause, and fades quietly through detection gaps. Reduced flash, reduced
+motion and effects-off settings suppress the pulse and scaling. The pre-music
+choice uses a tempo-based menu envelope during count-in. Retry, quit and results
+discard old confirmation state.
 The live side panel does not steal focus, trap Tab, dim the arena, or make the
 HUD inert. The initial full-screen choice uses modal focus handling.
+That focus handling stays active through its retained confirmation, and a
+deliberately focused live card transfers focus to the next queued offer.
 Space remains dash when a card has focus. The current offer remains fixed as
 additional levels queue; a counter shows how many offers follow it. Each choice
 spends one level. Held keys, double clicks and stale offer IDs are guarded.
 Escape and focus loss use normal pause and retain all choices. Selection is
 unavailable during pause/results; retry resets the run.
 
-Verification for this update:
+Readability and confirmation verification:
+
+- Full unit suite: 329 tests passed. The seven new feedback tests cover exact
+  and future beat boundaries, variable tempo, held clocks, gaps, and menu timing.
+- Type checking and the production build passed.
+- Nine upgrade/dash browser checks passed. All five upgrade checks passed again
+  after the final focus and HUD-clearance adjustments.
+- Browser checks cover immediate stat application, retained disabled cards,
+  next-beat flash and fade, ignored extra selections, paused confirmation,
+  queued-offer reveal, retry cleanup, fullscreen focus handling, and readable
+  cards above the beat indicator at 1280×800, 390×844 and 1024×600.
+- Reviewed the live/start screenshots and
+  `output/playwright/upgrade-selection-feedback.png`.
+
+Earlier uninterrupted-play verification:
 
 - Shared project: `bun test` passed 284 tests / 29,238 assertions across 39 files;
   `bun check` and the production build passed.
@@ -47,6 +78,40 @@ earns another level through combat and pickups, then selects successive choices.
 No test API grants XP or alters the game state. Session tests separately cover
 several levels from one pickup, stale offer rejection, pause/focus-loss retention,
 and track completion taking precedence.
+
+## Utility upgrades and numeric colors
+
+| Upgrade | Per selection | Limit |
+| --- | --- | --- |
+| Pickup Radius | +25% of base XP attraction range | 300% total / 8 ranks |
+| Dash Distance | +0.6 distance, from a 3.6 baseline | 7.2 total / 6 ranks |
+
+Numeric effects use explicit catalog text parts: offense values are red,
+health values green, and utility values purple. Arrows, units and surrounding
+sentences remain neutral, including unchanged timing such as the regeneration
+interval. The 20-health restoration in Vitality's description is also green.
+Plain-text descriptions and accessible card labels retain the complete copy.
+
+`pickupRadiusMultiplier` and `dashDistance` are fractional effective player
+stats. Pickup Radius scales the XP magnet's base range without changing
+physical collection contact or mutating its tuning. A first rank reaches
+4.375 units instead of 3.5. Dash Distance preserves the existing duration
+and ±150 ms beat window; the accepted dash captures its distance and speed
+until that burst finishes. Caps remove fully upgraded utility cards from the
+offer pool, and retry restores both defaults.
+
+Verification for utility upgrades and numeric colors:
+
+- `bun test`: 347 tests / 50,804 assertions passed.
+- Five real-physics checks passed, including maximum-distance dashes into a
+  corner at the fastest supported tempo.
+- Type checking and production build passed.
+- All 13 affected browser checks passed: five upgrade, two damage, four dash
+  and two XP checks. These include both utility choices and retry resets,
+  a real 4.2-distance dash, numeric-only computed colors, and existing
+  selection feedback, queued offers, barrage and ricochet behavior.
+- Reviewed desktop/phone starting cards, the earned health card in
+  `output/playwright/upgrade-health-values.png`, and selection feedback.
 
 ## Original implementation record
 

@@ -63,6 +63,7 @@ describe("upgrade choices", () => {
     test("capped options disappear while at least three repeatable options remain", () => {
         const combat = createCombat(31, {}, {
             projectileCount: 7, barrageCount: 24, criticalChance: 1, bounces: 5,
+            pickupRadiusMultiplier: 3, dashDistance: 7.2,
         });
         for (let level = 2; level < 30; level++) {
             queueUpgradeLevels(combat.upgrades, level);
@@ -106,6 +107,8 @@ describe("upgrade choices", () => {
                 case "crit-chance": expect(after.criticalChance).toBeCloseTo(before.criticalChance + 0.05); break;
                 case "crit-damage": expect(after.criticalMultiplier).toBe(before.criticalMultiplier + 0.25); break;
                 case "bounce": expect(after.bounces).toBe(before.bounces + 1); break;
+                case "pickup-radius": expect(after.pickupRadiusMultiplier).toBeCloseTo(before.pickupRadiusMultiplier + 0.25); break;
+                case "dash-distance": expect(after.dashDistance).toBeCloseTo(before.dashDistance + 0.6); break;
             }
         }
     });
@@ -119,6 +122,57 @@ describe("upgrade choices", () => {
         chooseUpgrade(combat, "barrage");
         expect(combat.playerStats.effective.barrageCount).toBe(8);
         expect(combat.playerStats.modifiers["upgrade:barrage"]).toEqual({ add: { barrageCount: 8 } });
+    });
+
+    test("utility ranks replace their own modifier, stop offering at the cap, and reset with a new run", () => {
+        for (const [id, ranks, field, base, increment, cap] of [
+            ["pickup-radius", 8, "pickupRadiusMultiplier", 1, 0.25, 3],
+            ["dash-distance", 6, "dashDistance", 3.6, 0.6, 7.2],
+        ] as const) {
+            const combat = createCombat(91);
+            for (let rank = 1; rank <= ranks; rank++) {
+                offer(combat, id);
+                const choice = combat.upgrades.choices.find(choice => choice.id === id)!;
+                expect(choice.nextRank).toBe(rank);
+                expect(chooseUpgrade(combat, id)).toBe(true);
+                expect(combat.playerStats.effective[field]).toBeCloseTo(base + increment * rank);
+                expect(combat.playerStats.modifiers[`upgrade:${id}`]?.add?.[field]).toBeCloseTo(increment * rank);
+            }
+            expect(combat.playerStats.effective[field]).toBeCloseTo(cap);
+            for (let roll = 0; roll < 20; roll++) {
+                queueUpgradeLevels(combat.upgrades, combat.upgrades.earnedThrough + 1);
+                const choices = prepareUpgradeChoices(combat);
+                expect(choices.some(choice => choice.id === id)).toBe(false);
+                expect(chooseUpgrade(combat, choices[0]!.id)).toBe(true);
+            }
+            const reset = createCombat(91);
+            expect(reset.playerStats.effective[field]).toBe(base);
+            expect(reset.upgrades.ranks[id]).toBe(0);
+        }
+    });
+
+    test("card emphasis identifies numeric effects without coloring prose or unchanged timing", () => {
+        for (const id of UPGRADE_IDS) {
+            const combat = createCombat(2026);
+            offer(combat, id);
+            const choice = combat.upgrades.choices.find(choice => choice.id === id)!;
+            const expectedCategory = id === "health" || id === "regeneration" ? "health"
+                : id === "pickup-radius" || id === "dash-distance" ? "utility" : "damage";
+            const values = choice.detailParts.filter(part => typeof part !== "string");
+            expect(values).toHaveLength(2);
+            for (const part of values) {
+                expect(part.category).toBe(expectedCategory);
+                expect(part.value).toMatch(/^\d+(?:[.–]\d+)*(?:[%×])?$/);
+            }
+            const plain = (parts: typeof choice.detailParts) => parts.map(part => typeof part === "string" ? part : part.value).join("");
+            expect(plain(choice.detailParts)).toBe(choice.detail);
+            expect(plain(choice.descriptionParts)).toBe(choice.description);
+            if (id === "health") {
+                expect(choice.descriptionParts).toContainEqual({ value: "20", category: "health" });
+            } else {
+                expect(choice.descriptionParts.every(part => typeof part === "string")).toBe(true);
+            }
+        }
     });
 
     test("regeneration rank increases retain their musical deadline; a fresh run resets everything", () => {

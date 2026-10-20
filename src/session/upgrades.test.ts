@@ -70,8 +70,8 @@ describe("upgrades during uninterrupted play", () => {
             f.session.combat.upgrades.pending = 1;
             const choice = prepareUpgradeChoices(f.session.combat)[0]!;
             expect(f.session.combat.upgrades.offeredLevel).toBe(1);
-            selectUpgrade(f.world, choice.id, 1);
-            selectUpgrade(f.world, choice.id, 1);
+            expect(selectUpgrade(f.world, choice.id, 1)).toBe(true);
+            expect(selectUpgrade(f.world, choice.id, 1)).toBe(false);
             expect(f.session.combat.upgrades.ranks[choice.id]).toBe(1);
             expect(f.session.startBusy).toBe(true);
             await Promise.resolve();

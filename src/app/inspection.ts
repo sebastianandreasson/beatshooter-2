@@ -16,6 +16,7 @@ import { Shockwave } from "../shockwave";
 import { shockwaveHeight } from "../shockwave/surface";
 import { Neon } from "../neon";
 import { NeonTrails } from "../neon-trails";
+import { MusicStage } from "../music-stage";
 
 /** Read-only opt-in witnesses for browser tests; never enables an on-screen overlay. */
 export function installInspection(world: World): void {
@@ -33,6 +34,7 @@ export function installInspection(world: World): void {
             const stars = world.resource(Starfield);
             const wave = world.resource(Shockwave);
             const neon = world.resource(Neon), trails = world.resource(NeonTrails);
+            const stage = world.resource(MusicStage);
             const waveRadius = wave.progress * 30;
             const surfaceSamples = [waveRadius, waveRadius + 4, Math.max(0, waveRadius - 4), 0]
                 .map(x => ({ x, z: 0, height: shockwaveHeight(wave.progress, wave.strength, x, 0) }));
@@ -50,6 +52,14 @@ export function installInspection(world: World): void {
                 position: s.position, audioState: s.transport?.state,
                 playbackRate: s.transport?.playbackRate ?? 0,
                 simulationScale: world.time.scale,
+                musicStage: {
+                    frame: stage.frame ? structuredClone(stage.frame) : undefined,
+                    counts: { ...stage.counts }, hasFeatures: stage.hasFeatures, cpuMs: stage.cpuMs,
+                    features: { ...stage.features, spectrum: stage.features.spectrum.slice() },
+                    capacity: Object.values(stage.entities).reduce((count, entities) => count + entities.length, 0),
+                    samples: Object.fromEntries(Object.entries(stage.entities).map(([layer, entities]) =>
+                        [layer, entities.slice(0, 2).map(mesh)])),
+                },
                 neon: {
                     status: neon.status, error: neon.error, frame: { ...neon.frame },
                     passes: neon.passes, dimensions: { ...neon.dimensions },
@@ -67,9 +77,12 @@ export function installInspection(world: World): void {
                     active: sections.frame.active, sectionIndex: sections.frame.index, label: sections.frame.label,
                     startTime: sections.frame.startTime, endTime: sections.frame.endTime,
                     progress: sections.frame.progress,
+                    waveProgress: sections.frame.waveProgress,
+                    anticipating: sections.frame.anticipating, anticipation: sections.frame.anticipation,
+                    impact: sections.frame.impact,
                     shockwave: {
                         active: sections.strength > 0 && sections.frame.active,
-                        radius: sections.strength > 0 && sections.frame.active ? sections.frame.progress * 30 : 0,
+                        radius: sections.strength > 0 && sections.frame.active ? sections.frame.waveProgress * 30 : 0,
                         from: structuredClone(sections.frame.from), to: structuredClone(sections.frame.to),
                     },
                     surface: {
@@ -181,6 +194,7 @@ export function installInspection(world: World): void {
                 camera: arena.camera,
                 dash: {
                     state: dash.status(s.position), accepted: dash.accepted, lastUsedBeat: dash.lastUsedBeat,
+                    lastUsedBar: dash.lastUsedBar,
                     active: dash.active ? { ...dash.active, direction: { ...dash.active.direction },
                         origin: { ...dash.active.origin } } : undefined,
                 },
@@ -221,6 +235,7 @@ export function installInspection(world: World): void {
                     ...s.analyzedTrack.energy,
                     loudness: s.analyzedTrack.energy.loudness.slice(),
                     bass: s.analyzedTrack.energy.bass.slice(),
+                    features: s.analyzedTrack.energy.features ? structuredClone(s.analyzedTrack.energy.features) : undefined,
                 } : undefined,
             } : null;
         },

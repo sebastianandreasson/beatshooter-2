@@ -33,9 +33,16 @@ async function downbeat(page: Page, after: number) {
     }, after, { polling: "raf", timeout: 10_000 });
 }
 
+async function beatAt(page: Page, time: number) {
+    await page.waitForFunction(time => {
+        const s = (window as unknown as InspectedWindow).__beatshooter.snapshot();
+        return s.position >= time && s.position < time + .055;
+    }, time, { polling: "raf", timeout: 5000 });
+}
+
 test.setTimeout(60_000);
 
-test("Space requires a fresh on-downbeat press, moves in the held direction, and cannot repeat within a bar", async ({ page }) => {
+test("Space accepts a non-first beat, rejects offbeat and repeated presses, and resets each bar", async ({ page }) => {
     const errors: string[] = [];
     page.on("pageerror", error => errors.push(error.message));
     await practice(page);
@@ -46,20 +53,21 @@ test("Space requires a fresh on-downbeat press, moves in the held direction, and
     await page.keyboard.up("Space");
     await page.waitForFunction(() => {
         const position = (window as unknown as InspectedWindow).__beatshooter.snapshot().position;
-        return position > 0.4 && position < 0.8;
+        return position > 0.72 && position < 0.8;
     }, undefined, { polling: "raf" });
     await page.keyboard.down("Space");
     await page.waitForFunction(() => (window as unknown as InspectedWindow).__beatshooter.snapshot().position > 2.2);
     expect((await snapshot(page)).dash.accepted).toBe(0);
     await page.keyboard.up("Space");
-    await downbeat(page, 3);
+    await beatAt(page, 2.5);
+    await expect(page.locator(".bs-beat-dots i").nth(1)).toHaveClass(/bs-dash-ready/);
     const before = await snapshot(page);
     await page.keyboard.down("KeyD");
     await page.keyboard.press("Space");
     await page.keyboard.press("Space");
     const accepted = await snapshot(page);
     expect(accepted.dash.accepted).toBe(1);
-    expect(accepted.dash.lastUsedBeat).toBe(8);
+    expect(accepted.dash.lastUsedBeat).toBe(5);
     expect(accepted.dash.active?.direction).toEqual({ x: 1, z: 0 });
     await expect.poll(async () => (await snapshot(page)).player.position.x).toBeGreaterThan(before.player.position.x + 2.5);
     await page.keyboard.up("KeyD");
@@ -69,6 +77,14 @@ test("Space requires a fresh on-downbeat press, moves in the held direction, and
     expect(after.dash.accepted).toBe(1);
     expect(Math.hypot(after.player.velocity.x, after.player.velocity.z)).toBeLessThan(8.01);
     expect(after.player.bodyY).toBeCloseTo(0.55, 4);
+    await beatAt(page, 3.5);
+    await page.keyboard.press("Space");
+    expect((await snapshot(page)).dash.accepted).toBe(1);
+    await expect(page.locator(".bs-dash-status")).toContainText("Used · next bar");
+    await downbeat(page, 3.6);
+    await page.keyboard.press("Space");
+    expect((await snapshot(page)).dash.accepted).toBe(2);
+    expect((await snapshot(page)).dash.lastUsedBeat).toBe(8);
     expect(errors).toEqual([]);
 });
 

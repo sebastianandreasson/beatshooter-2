@@ -3,7 +3,7 @@ import { PlayerState, readMovementInput, SamplePlayer, sampleAim } from "../play
 import { ObserveMusic, Session } from "../session";
 import { STALL_THRESHOLD_SECONDS } from "../rhythm/transport";
 import { createDashTiming } from "./timing";
-import { DASH_DISTANCE, DashController, DashState } from "./state";
+import { DashController, DashState } from "./state";
 
 function synchronize(world: World) {
     const session = world.resource(Session), dash = world.resource(DashState);
@@ -29,7 +29,10 @@ export function tryDash(world: World): boolean {
     if (position < 0 || position >= session.track.duration ||
         position - session.position > STALL_THRESHOLD_SECONDS) return false;
     sampleAim(world);
-    return synchronize(world).controller.press(position, readMovementInput(player.keys), player.aim, player.position);
+    return synchronize(world).controller.press(
+        position, readMovementInput(player.keys), player.aim, player.position,
+        session.combat.playerStats.effective.dashDistance,
+    );
 }
 
 export const SampleDash: System = {
@@ -47,8 +50,8 @@ export const SampleDash: System = {
         const progress = active ? Math.max(0, Math.min(1,
             (session.position - active.startedAt) / (active.endsAt - active.startedAt))) : 0;
         player.dashTarget = active ? {
-            x: active.origin.x + active.direction.x * DASH_DISTANCE * progress,
-            z: active.origin.z + active.direction.z * DASH_DISTANCE * progress,
+            x: active.origin.x + active.direction.x * active.distance * progress,
+            z: active.origin.z + active.direction.z * active.distance * progress,
         } : undefined;
     },
 };

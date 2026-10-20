@@ -82,7 +82,9 @@ export const PresentMusicalVisuals: System = {
             motionAllowed: visible && v.motionAllowed,
             highQuality: s.preferences.settings.graphics === "high",
             section: visible && section.frame.index >= 0 ? {
-                progress: section.frame.progress, strength: section.strength,
+                progress: section.frame.waveProgress, strength: section.strength,
+                charge: section.motionAllowed
+                    ? section.frame.impact * (s.preferences.settings.effectsIntensity === "calm" ? 0.3 : 1) : 0,
                 from: waveActive ? {
                     floor: [...section.frame.from.floor],
                     line: [...section.frame.from.line],

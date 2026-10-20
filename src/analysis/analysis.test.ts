@@ -1,5 +1,8 @@
 import { afterEach, expect, test } from "bun:test";
 import { analyzeAudio, prepareAnalysisAudio } from "./index";
+import { analyzeVisualAudio } from "./visual-audio";
+import { TrackLoader } from "../tracks";
+import type { EnergyCurve } from "./types";
 import type { AnalysisRequest, AnalysisResponse } from "./types";
 
 const originals = new Map<string, PropertyDescriptor | undefined>();
@@ -70,7 +73,7 @@ class FakeWorker {
         this.transfers = transfers;
     }
     terminate() { this.terminated++; }
-    receive(data: AnalysisResponse) { this.onmessage?.({ data } as MessageEvent<AnalysisResponse>); }
+    receive(data: unknown) { this.onmessage?.({ data } as MessageEvent<AnalysisResponse>); }
 }
 function fakeWorkers() {
     replaceGlobal("Worker", FakeWorker);
@@ -151,4 +154,47 @@ test("worker failure rejects with a recoverable message and frees the worker", a
     worker.receive({ type: "error", message: "Try manual BPM and offset." });
     await expect(pending).rejects.toThrow("manual BPM");
     expect(worker.terminated).toBe(1);
+});
+
+test("manual imports retain DSP curves for retry without sending a model request", async () => {
+    fakeRenderer();
+    fakeWorkers();
+    const buffer = audio(), file = new File(["audio"], "visuals.wav");
+    const loader = new TrackLoader({ async decodeAudioData() { return buffer; } });
+    const energy: EnergyCurve = {
+        version: 1, sampleRate: 20, duration: 1, loudness: Array(20).fill(0.5), bass: Array(20).fill(0.2),
+    };
+    try {
+        const pending = loader.loadLocal(file, 120);
+        await new Promise(resolve => setTimeout(resolve, 0));
+        const worker = FakeWorker.instance;
+        expect(worker.request).toBeInstanceOf(Float32Array);
+        expect(worker.request?.modelUrl).toBeUndefined();
+        worker.receive({ energy });
+        const first = await pending;
+        expect(first.energy).toEqual(energy);
+        expect(worker.terminated).toBe(1);
+        first.dispose();
+        const retry = await loader.loadLocal(file, 120);
+        expect(retry.energy).toBe(first.energy);
+        expect(FakeWorker.instance).toBe(worker);
+    } finally { loader.dispose(); }
+});
+
+test("cancelled or failed DSP workers cannot strand track loading", async () => {
+    fakeRenderer();
+    fakeWorkers();
+    const controller = new AbortController();
+    const pending = analyzeVisualAudio(audio(), controller.signal);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    const cancelled = FakeWorker.instance;
+    controller.abort();
+    expect(await pending).toBeUndefined();
+    expect(cancelled.terminated).toBe(1);
+    const failure = analyzeVisualAudio(audio(), new AbortController().signal);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    const failed = FakeWorker.instance;
+    failed.onerror?.({ preventDefault() {} } as ErrorEvent);
+    expect(await failure).toBeUndefined();
+    expect(failed.terminated).toBe(1);
 });

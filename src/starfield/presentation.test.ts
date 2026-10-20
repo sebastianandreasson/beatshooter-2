@@ -64,7 +64,8 @@ test("a fixed nonphysical star pool flows normally, boosts with sections and fre
         const normal = poses();
         render(1.5);
         expect(poses()).not.toEqual(normal);
-        render(3);
+        const peakTime = 2 + 1 / 1.3;
+        render(peakTime);
         expect(state.speed).toBeCloseTo(125);
         expect(state.speed / 5).toBe(25);
         expect(state.boost).toBeCloseTo(1);
@@ -78,7 +79,7 @@ test("a fixed nonphysical star pool flows normally, boosts with sections and fre
         expect(state.distance).toBe(heldDistance);
         session.preferences.settings.timingOffsetMs = 250;
         render();
-        expect(world.resource(MusicVisuals).frame.position).toBe(3.25);
+        expect(world.resource(MusicVisuals).frame.position).toBeCloseTo(peakTime + 0.25);
         expect(poses()).toEqual(held);
         expect(state.distance).toBe(heldDistance);
         expect(state.stars).toEqual(pool);
@@ -97,12 +98,13 @@ test("Calm limits acceleration, low graphics halves visible work, and comfort mo
         const { world, state, session, render, poses } = f;
         render(0);
         const seedLayout = poses();
-        render(3);
+        const peakTime = 2 + 1 / 1.3, baselineDistance = peakTime * 5;
+        render(peakTime);
         const fullDistance = state.distance;
         session.preferences.settings.effectsIntensity = "calm";
         render();
         expect(state.speed).toBeCloseTo(26.6);
-        expect(state.distance).toBeCloseTo(15 + (fullDistance - 15) * 0.18);
+        expect(state.distance).toBeCloseTo(baselineDistance + (fullDistance - baselineDistance) * 0.18);
         session.preferences.settings.graphics = "low";
         render();
         expect(state.visibleStars).toBeLessThanOrEqual(LOW_DETAIL_STAR_COUNT);

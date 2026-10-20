@@ -132,13 +132,13 @@ test("the shared uniform follows absolute section progress and suppresses gaps, 
     const f = await fixture();
     try {
         const { world, state } = f, section = world.resource(SectionEffects);
-        section.frame = { ...NO_SECTION_FRAME, active: true, musical: true, progress: 0.35 };
+        section.frame = { ...NO_SECTION_FRAME, active: true, musical: true, progress: 0.4, waveProgress: 0.352 };
         section.motionAllowed = true; section.strength = 0.85;
         SampleShockwave.update!(world);
-        expect(state.progress).toBe(0.35);
+        expect(state.progress).toBe(0.352);
         expect(state.strength).toBe(0.85);
         for (let frame = 0; frame < 20; frame++) SampleShockwave.update!(world);
-        expect(state.progress).toBe(0.35);
+        expect(state.progress).toBe(0.352);
         section.strength = 0.22;
         SampleShockwave.update!(world);
         expect(state.strength).toBe(0.22);
@@ -150,7 +150,7 @@ test("the shared uniform follows absolute section progress and suppresses gaps, 
         expect(state.strength).toBe(0);
         section.frame = NO_SECTION_FRAME;
         SampleShockwave.update!(world);
-        expect(state.progress).toBe(NO_SECTION_FRAME.progress);
+        expect(state.progress).toBe(NO_SECTION_FRAME.waveProgress);
         expect(state.strength).toBe(0);
     } finally { f.app.dispose(); }
 });

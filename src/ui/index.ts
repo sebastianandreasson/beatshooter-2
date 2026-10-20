@@ -1,7 +1,9 @@
 import type { LocalTrackMetadata, Settings } from "../settings";
 import { DEMO_TRACK } from "../tracks";
-import type { UpgradeChoice } from "../upgrades";
+import type { UpgradeChoice, UpgradeTextPart } from "../upgrades";
 import type { SectionAnalysis } from "../analysis/sections";
+import type { Beat } from "../rhythm/timeline";
+import { UpgradeFeedback, sampleMenuUpgradeFeedback } from "./upgrade-feedback";
 import { mountTrackPlayer } from "./track-player";
 import "./style.css";
 import "./track-player.css";
@@ -23,7 +25,7 @@ export interface UIActions {
     resetDojo(): void;
     updateSettings(patch: Partial<Settings>): void;
     resetSettings(): void;
-    chooseUpgrade(id: string, offeredLevel: number): void;
+    chooseUpgrade(id: string, offeredLevel: number): boolean;
 }
 
 export interface UIView {
@@ -49,6 +51,8 @@ export interface UIView {
         busy?: boolean;
     };
     position?: number;
+    generation?: number;
+    beats?: readonly Beat[];
     structure?: SectionAnalysis;
     previewPosition?: number;
     beat?: number;
@@ -57,6 +61,7 @@ export interface UIView {
     beatsPerBar?: number;
     downbeat?: boolean;
     dashState?: "ready" | "used" | "waiting" | "dashing";
+    dashBeatInBar?: number;
     result?: "complete" | "defeat";
     bestScore?: number;
     error?: string;
@@ -104,6 +109,8 @@ const icons = {
     barrage: '<circle cx="12" cy="12" r="3"/><path d="M12 1v4m0 14v4M1 12h4m14 0h4M4 4l3 3m10 10 3 3M4 20l3-3M17 7l3-3"/>',
     critical: '<path d="m12 2 2.5 6.5L21 11l-6.5 2.5L12 20l-2.5-6.5L3 11l6.5-2.5L12 2ZM20 18v4m-2-2h4"/>',
     bounce: '<path d="M3 20 11 4l8 16m-5-3 5 3 2-5M4 3h15"/>',
+    pickup: '<path d="M7 4v8a5 5 0 0 0 10 0V4M7 8h3V4H7m10 4h-3V4h3M3 12H1m22 0h-2M4 18l-2 2m18-2 2 2"/>',
+    dash: '<path d="m10 5 8 7-8 7M3 8h5M1 12h7M3 16h5"/>',
 };
 
 function icon(name: keyof typeof icons): string {
@@ -117,6 +124,17 @@ function clock(seconds: number): string {
 
 function count(value: number | undefined): string {
     return Math.max(0, Math.floor(value ?? 0)).toLocaleString("en-US");
+}
+
+function renderUpgradeText(element: HTMLElement, parts: readonly UpgradeTextPart[]): void {
+    element.replaceChildren(...parts.map(part => {
+        if (typeof part === "string") return document.createTextNode(part);
+        const value = document.createElement("span");
+        value.className = "bs-upgrade-value";
+        value.dataset.statCategory = part.category;
+        value.textContent = part.value;
+        return value;
+    }));
 }
 
 const template = `
@@ -163,7 +181,8 @@ const template = `
                 <div><span class="bs-key-group"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><span>Move</span></div>
                 <div><span class="bs-mouse-icon" aria-hidden="true"></span><span>Aim</span></div>
                 <div><span class="bs-beat-control" aria-hidden="true">∿</span><span>Auto-fire</span></div>
-                <div><kbd>SPACE</kbd><span>Dash on first beat</span></div>
+                <div><kbd>SPACE</kbd><span>Dash on beat · once per bar</span></div>
+                <div><span class="bs-key-group"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></span><span>Select upgrade</span></div>
                 <div><kbd>ESC</kbd><span>Pause</span></div>
             </section>
         </main>
@@ -184,7 +203,7 @@ const template = `
                 <div class="bs-beat-dots" role="img" aria-label="Beat in bar"><i></i><i></i><i></i><i></i></div>
                 <div class="bs-beat-meta">
                     <p><span data-value="bpm">120</span> BPM <span class="bs-hud-divider">/</span> BAR <span data-value="bar">01</span></p>
-                    <div class="bs-dash-status" data-dash-state="waiting" title="Press Space within 100 ms of the accented first beat. One dash per bar."><kbd>SPACE</kbd><span data-value="dash-status">Dash on first beat</span></div>
+                    <div class="bs-dash-status" data-dash-state="waiting" title="Press Space within 150 ms of any beat. One dash per bar; resets at the next bar."><kbd>SPACE</kbd><span data-value="dash-status">Dash on beat</span></div>
                 </div>
             </div>
             <div class="bs-run-progress"></div>
@@ -267,6 +286,18 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
     let previousAnalysisState: NonNullable<UIView["analysis"]>["state"] = "idle";
     let upgradeKey = "";
     let upgradeActive = false;
+    let selection: {
+        id: string;
+        offer: NonNullable<UIView["upgrade"]>;
+        generation?: number;
+        starting: boolean;
+        feedback: UpgradeFeedback;
+        menuAge: number;
+        menuBeatDuration: number;
+        lastFrame: number;
+        focusedIndex: number;
+    } | undefined;
+    let selectionFrame = 0;
     const refs = new Map<string, HTMLElement>();
     for (const element of root.querySelectorAll<HTMLElement>("[data-value]")) {
         refs.set(element.dataset.value!, element);
@@ -286,17 +317,72 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
         damage: "damage", health: "health", regeneration: "regeneration",
         projectiles: "projectiles", barrage: "barrage",
         "crit-chance": "critical", "crit-damage": "critical", bounce: "bounce",
+        "pickup-radius": "pickup", "dash-distance": "dash",
+    };
+    const clearSelection = () => {
+        selection = undefined;
+        cancelAnimationFrame(selectionFrame);
+        selectionFrame = 0;
+        upgradeKey = "";
+        upgradePanel.dataset.selectionState = "offered";
+    };
+    const animateSelection = (now: number) => {
+        selectionFrame = 0;
+        if (!selection || !view) return;
+        // Only the pre-music choice uses a menu clock. Live confirmations are
+        // sampled from accepted song time, including during pause and resume.
+        if (selection.starting && view.phase !== "paused" && !document.hidden) {
+            selection.menuAge += Math.max(0, now - selection.lastFrame) / 1000;
+        }
+        selection.lastFrame = now;
+        renderUpgrade(view);
+        if (selection) selectionFrame = requestAnimationFrame(animateSelection);
     };
     const selectUpgrade = (id: string, level: number) => {
-        if (modal || (view?.phase !== "playing" && view?.phase !== "starting") || view.upgrade?.busy || view.upgrade?.level !== level
+        if (selection || modal || (view?.phase !== "playing" && view?.phase !== "starting") || view.upgrade?.busy || view.upgrade?.level !== level
             || !view.upgrade.choices.some(choice => choice.id === id)) return;
-        actions.chooseUpgrade(id, level);
+        selection = {
+            id, offer: { ...view.upgrade, choices: [...view.upgrade.choices] },
+            generation: view.generation, starting: view.phase === "starting",
+            feedback: new UpgradeFeedback(view.beats ?? [], view.position ?? 0),
+            menuAge: 0, menuBeatDuration: 60 / Math.max(20, view.bpm ?? 120),
+            lastFrame: performance.now(),
+            focusedIndex: [...upgradeCards.children].indexOf(document.activeElement as Element),
+        };
+        // A number-key choice can sit below the fold on short viewports.
+        [...upgradeCards.querySelectorAll<HTMLButtonElement>("button")]
+            .find(button => button.dataset.upgradeId === id)
+            ?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "instant" });
+        // Retain the displayed offer before the synchronous session render
+        // applies the stat and prepares any queued offer.
+        if (!actions.chooseUpgrade(id, level)) clearSelection();
+        renderUpgrade(view);
+        if (selection?.starting && !selectionFrame) selectionFrame = requestAnimationFrame(animateSelection);
     };
     const renderUpgrade = (next: UIView) => {
-        const starting = next.phase === "starting";
-        const active = (starting || (next.phase === "playing" && !!next.upgrade?.choices.length)) && !modal;
+        if (selection && (selection.generation !== next.generation ||
+            !["starting", "playing", "paused"].includes(next.phase))) clearSelection();
+        let feedback = selection
+            ? selection.starting
+                ? sampleMenuUpgradeFeedback(selection.menuAge, selection.menuBeatDuration)
+                : selection.feedback.sample(next.position ?? 0)
+            : undefined;
+        let restoreFocus = -1;
+        if (selection && (next.phase === "paused" || modal)) selection.focusedIndex = -1;
+        if (feedback?.done) {
+            // Disabled buttons lose focus. Restore an intentional card focus
+            // into a queued offer, unless the player moved focus elsewhere.
+            if (document.activeElement === document.body || upgradePanel.contains(document.activeElement)) {
+                restoreFocus = selection?.focusedIndex ?? -1;
+            }
+            clearSelection();
+            feedback = undefined;
+        }
+        const starting = next.phase === "starting" || (!!selection?.starting && next.phase === "playing");
+        const active = (starting || (next.phase === "playing" && (!!selection || !!next.upgrade?.choices.length))) && !modal;
         upgradePanel.hidden = !active;
         upgradePanel.classList.toggle("bs-start-upgrade", starting);
+        upgradePanel.dataset.selectionState = selection ? "confirming" : "offered";
         upgradePanel.setAttribute("role", starting ? "dialog" : "complementary");
         if (starting) upgradePanel.setAttribute("aria-modal", "true");
         else upgradePanel.removeAttribute("aria-modal");
@@ -304,19 +390,21 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
         if (!active) {
             if (upgradeActive) {
                 if (upgradePanel.contains(document.activeElement)) (document.activeElement as HTMLElement).blur();
-                upgradeKey = "";
-                upgradeCards.replaceChildren();
+                if (!selection) {
+                    upgradeKey = "";
+                    upgradeCards.replaceChildren();
+                }
             }
             upgradeActive = false;
             return;
         }
-        const choiceState = next.upgrade!;
+        const choiceState = selection?.offer ?? next.upgrade!;
         text("upgrade-title", starting ? "Start of run upgrade" : "Upgrade");
         upgradePanel.querySelector<HTMLElement>(".bs-upgrade-intro")!.hidden = !starting;
         upgradePanel.querySelector<HTMLElement>(".bs-start-quit")!.hidden = !starting;
         message("start-error", starting ? next.error ?? "" : "");
         const startButton = upgradePanel.querySelector<HTMLButtonElement>('[data-action="start-ready"]')!;
-        startButton.hidden = !starting || choiceState.pending > 0;
+        startButton.hidden = !starting || !!selection || choiceState.pending > 0;
         startButton.disabled = !!choiceState.busy;
         startButton.textContent = choiceState.busy ? "Starting…" : "Start run";
         // Extra earned levels only update the queue count; never rebuild or reroll
@@ -324,7 +412,7 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
         const key = `${choiceState.level}:${choiceState.choices.map(choice => `${choice.id}:${choice.nextRank}`).join(",")}`;
         if (key !== upgradeKey) {
             upgradeKey = key;
-            const focusedIndex = [...upgradeCards.children].indexOf(document.activeElement as Element);
+            const focusedIndex = Math.max(restoreFocus, [...upgradeCards.children].indexOf(document.activeElement as Element));
             upgradeCards.replaceChildren(...choiceState.choices.slice(0, 3).map((choice, index) => {
                 const button = document.createElement("button");
                 button.type = "button";
@@ -336,8 +424,8 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
                 button.innerHTML = `<kbd>${index + 1}</kbd><span class="bs-upgrade-copy"><span class="bs-upgrade-card-top"><strong class="bs-upgrade-name"></strong><span class="bs-upgrade-rank"></span></span><span class="bs-upgrade-detail"></span><span class="bs-upgrade-description"></span></span><span class="bs-upgrade-icon" aria-hidden="true">${icon(upgradeArt[choice.id] ?? "target")}</span>`;
                 button.querySelector<HTMLElement>(".bs-upgrade-rank")!.textContent = `R${choice.nextRank}`;
                 button.querySelector<HTMLElement>(".bs-upgrade-name")!.textContent = choice.title;
-                button.querySelector<HTMLElement>(".bs-upgrade-description")!.textContent = choice.description;
-                button.querySelector<HTMLElement>(".bs-upgrade-detail")!.textContent = choice.detail;
+                renderUpgradeText(button.querySelector<HTMLElement>(".bs-upgrade-description")!, choice.descriptionParts);
+                renderUpgradeText(button.querySelector<HTMLElement>(".bs-upgrade-detail")!, choice.detailParts);
                 button.setAttribute("aria-label", `${choice.title}. ${choice.detail}. ${choice.description} Rank ${choice.nextRank}. Press ${index + 1} to choose.`);
                 return button;
             }));
@@ -346,10 +434,24 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
             if (focusedIndex >= 0) upgradeCards.querySelectorAll<HTMLButtonElement>("button")[focusedIndex]?.focus({ preventScroll: true });
         }
         text("upgrade-level", count(choiceState.level));
-        for (const button of upgradeCards.querySelectorAll<HTMLButtonElement>("button")) button.disabled = !!choiceState.busy;
-        const remaining = Math.max(0, choiceState.pending - 1);
-        message("upgrade-pending", remaining ? `${count(remaining)} queued` : "");
-        if (starting && !upgradeActive) upgradeCards.querySelector<HTMLButtonElement>("button")?.focus({ preventScroll: true });
+        for (const button of upgradeCards.querySelectorAll<HTMLButtonElement>("button")) {
+            button.disabled = !!selection || !!choiceState.busy;
+            if (selection && feedback) {
+                const chosen = button.dataset.upgradeId === selection.id;
+                button.dataset.selection = chosen ? "selected" : "dismissed";
+                button.style.setProperty("--upgrade-opacity", String(chosen ? feedback.selectedOpacity : feedback.dismissedOpacity));
+                button.style.setProperty("--upgrade-flash", String(chosen ? feedback.flash : 0));
+                button.style.setProperty("--upgrade-scale", String(chosen ? feedback.scale : 1));
+                if (chosen) {
+                    const choice = choiceState.choices.find(choice => choice.id === selection!.id)!;
+                    button.querySelector<HTMLElement>(".bs-upgrade-rank")!.textContent = `✓ R${choice.nextRank}`;
+                    button.setAttribute("aria-label", `${choice.title} selected. Rank ${choice.nextRank}.`);
+                }
+            }
+        }
+        const remaining = Math.max(0, (next.upgrade?.pending ?? 0) - (selection ? 0 : 1));
+        message("upgrade-pending", selection ? "Upgrade applied" : remaining ? `${count(remaining)} queued` : "");
+        if (starting && !upgradeActive && !selection) upgradeCards.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus({ preventScroll: true });
         upgradeActive = true;
     };
     const setPreview = (value: boolean) => {
@@ -549,12 +651,13 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
         actions.updateSettings({ [key]: value });
     }, { signal: events.signal });
     window.addEventListener("keydown", (event) => {
-        if (upgradeActive && view?.phase === "starting") {
+        if (upgradeActive && upgradePanel.classList.contains("bs-start-upgrade")) {
             if (event.code === "Escape") { event.preventDefault(); event.stopImmediatePropagation(); return; }
             if (event.code === "Tab") {
                 const controls = [...upgradePanel.querySelectorAll<HTMLElement>("button:not(:disabled)")].filter(el => el.checkVisibility());
                 const first = controls[0], last = controls.at(-1);
-                if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+                if (!upgradePanel.contains(document.activeElement)) { event.preventDefault(); (event.shiftKey ? last : first)?.focus(); }
+                else if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
                 else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
                 return;
             }
@@ -667,6 +770,7 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
             for (const [index, dot] of [...dots.children].entries()) {
                 dot.classList.toggle("bs-active", index === beatInBar);
                 dot.classList.toggle("bs-downbeat", index === beatInBar && next.downbeat === true);
+                dot.classList.toggle("bs-dash-ready", next.dashState === "ready" && index === next.dashBeatInBar);
             }
             const dashState = next.dashState ?? "waiting";
             const dash = root.querySelector<HTMLElement>(".bs-dash-status")!;
@@ -674,7 +778,7 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
             root.querySelector<HTMLElement>(".bs-hud-beat")!.dataset.dashState = dashState;
             text("dash-status", dashState === "ready" ? "Dash ready"
                 : dashState === "used" ? "Used · next bar"
-                : dashState === "dashing" ? "Dashing" : "Dash on first beat");
+                : dashState === "dashing" ? "Dashing" : "Dash on beat");
             trackPlayer.render(next.position ?? 0, next.duration ?? 0, next.structure, next.mode === "dojo");
             const reset = root.querySelector<HTMLElement>('[data-action="reset-dojo"]')!;
             reset.hidden = next.mode !== "dojo";
@@ -703,6 +807,7 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
         },
         dispose() {
             events.abort();
+            clearSelection();
             // The session owner disposes audio; calling back into its World here
             // would be unsafe during World.onDispose.
             previewing = false;

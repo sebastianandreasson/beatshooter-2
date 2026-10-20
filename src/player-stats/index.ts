@@ -10,7 +10,14 @@ export interface PlayerStatsValues {
     projectileCount: number;
     barrageCount: number;
     bounces: number;
+    /** Scales the range that starts attracting XP; collection contact is unchanged. */
+    pickupRadiusMultiplier: number;
+    /** World-space distance captured when a dash is accepted. */
+    dashDistance: number;
 }
+
+export const MAX_PICKUP_RADIUS_MULTIPLIER = 3;
+export const MAX_DASH_DISTANCE = 7.2;
 
 export const DEFAULT_PLAYER_STATS: Readonly<PlayerStatsValues> = Object.freeze({
     damageMin: 13,
@@ -22,6 +29,8 @@ export const DEFAULT_PLAYER_STATS: Readonly<PlayerStatsValues> = Object.freeze({
     projectileCount: 1,
     barrageCount: 0,
     bounces: 0,
+    pickupRadiusMultiplier: 1,
+    dashDistance: 3.6,
 });
 
 export interface PlayerStatModifier {
@@ -49,6 +58,7 @@ type MutableState = { -readonly [Key in keyof PlayerStatsState]: PlayerStatsStat
 const keys = [
     "damageMin", "damageMax", "criticalChance", "criticalMultiplier",
     "maxHealth", "healthRegen", "projectileCount", "barrageCount", "bounces",
+    "pickupRadiusMultiplier", "dashDistance",
 ] as const;
 
 export function createPlayerStats(overrides: Partial<PlayerStatsValues> = {}): PlayerStatsState {
@@ -213,13 +223,16 @@ function resolveStats(
             if (value < 0 || value > Number.MAX_SAFE_INTEGER) {
                 throw new RangeError(`${key} must resolve to a nonnegative safe number.`);
             }
-            result[key] = key === "criticalMultiplier" ? value : Math.round(value);
+            result[key] = key === "criticalMultiplier" || key === "pickupRadiusMultiplier" || key === "dashDistance"
+                ? value : Math.round(value);
         }
     }
     result.maxHealth = Math.max(1, result.maxHealth);
     result.projectileCount = Math.min(7, Math.max(1, result.projectileCount));
     result.barrageCount = Math.min(24, result.barrageCount);
     result.bounces = Math.min(5, result.bounces);
+    result.pickupRadiusMultiplier = Math.min(MAX_PICKUP_RADIUS_MULTIPLIER, result.pickupRadiusMultiplier);
+    result.dashDistance = Math.min(MAX_DASH_DISTANCE, result.dashDistance);
     if (base.damageMin > base.damageMax || result.damageMin > result.damageMax) {
         throw new RangeError("Minimum damage must not exceed maximum damage.");
     }

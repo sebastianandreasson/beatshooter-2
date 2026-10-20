@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { createPracticeTrack, DEMO_TRACK, localTrackId, TrackLoader, validateManifest } from "./index";
 import { calculateEnergy } from "../analysis/energy";
 import type { SectionAnalysis } from "../analysis/sections";
+import { SectionTransitionTimeline } from "../section-effects/state";
 
 describe("track manifests", () => {
     test("bundled audio manifest matches its WAV header and declared beat data", async () => {
@@ -16,6 +17,56 @@ describe("track manifests", () => {
         expect(DEMO_TRACK.license).toBe("CC0-1.0");
     });
 
+    test("bundled sections follow audible arrangement changes and authored downbeats", async () => {
+        const structure = DEMO_TRACK.structure!;
+        expect(structure.backend).toBe("authored");
+        expect(structure.sections.map(section => [section.start, section.end, section.label])).toEqual([
+            [0, 8, "intro"], [8, 24, "verse"], [24, 40, "chorus"],
+            [40, 48, "bridge"], [48, 64, "chorus"], [64, 72, "outro"],
+        ]);
+        const timeline = new SectionTransitionTimeline(structure, DEMO_TRACK.beats);
+        for (const section of structure.sections.slice(1)) {
+            expect(DEMO_TRACK.beats.some(beat => beat.downbeat && beat.time === section.start)).toBe(true);
+            const transition = timeline.sample(section.start + .5);
+            expect(transition.label).toBe(section.label);
+            expect(transition.active).toBe(true);
+            expect(transition.musical).toBe(true);
+        }
+        const bytes = await Bun.file(new URL("../../public/tracks/neon-circuit.wav", import.meta.url)).arrayBuffer();
+        const data = new DataView(bytes);
+        const rms = (start: number, end: number) => {
+            let sum = 0;
+            for (let i = start * 22050; i < end * 22050; i++) {
+                const sample = data.getInt16(44 + i * 2, true) / 32768;
+                sum += sample * sample;
+            }
+            return Math.sqrt(sum / ((end - start) * 22050));
+        };
+        // A chorus should audibly lift above the sparse opening and bridge.
+        expect(rms(24, 40)).toBeGreaterThan(rms(0, 8) * 1.3);
+        expect(rms(48, 64)).toBeGreaterThan(rms(40, 48) * 1.3);
+    });
+
+    test("bundled loading supplies independent section data to the same consumers as imports", async () => {
+        const loader = new TrackLoader({
+            async decodeAudioData() { return { duration: DEMO_TRACK.duration } as AudioBuffer; },
+        });
+        const manifest = { ...DEMO_TRACK, audioUrl: "data:audio/wav;base64,AA==" };
+        try {
+            const first = await loader.load(manifest);
+            expect(first.structure).toEqual(DEMO_TRACK.structure);
+            expect(first.structure).not.toBe(first.manifest.structure);
+            first.structure!.sections[0]!.label = "silence";
+            const retry = await loader.load(manifest);
+            expect(retry.structure?.sections[0]?.label).toBe("intro");
+            expect(DEMO_TRACK.structure?.sections[0]?.label).toBe("intro");
+            const unsectioned = await loader.load({ ...manifest, structure: undefined });
+            expect(unsectioned.structure).toBeUndefined();
+        } finally {
+            loader.dispose();
+        }
+    });
+
     test("missing metadata and invalid timelines fail with useful errors", () => {
         expect(() => validateManifest({})).toThrow("version");
         expect(() => validateManifest({ ...DEMO_TRACK, title: "" })).toThrow("title");
@@ -24,6 +75,11 @@ describe("track manifests", () => {
         expect(() => validateManifest({ ...DEMO_TRACK, beats: [] })).toThrow("ordered");
         expect(() => validateManifest({ ...DEMO_TRACK, beats: null })).toThrow("ordered");
         expect(() => validateManifest({ ...DEMO_TRACK, id: "Unsafe / name" })).toThrow("safe identifier");
+        expect(() => validateManifest({ ...DEMO_TRACK, structure: { ...DEMO_TRACK.structure, duration: 75 } }))
+            .toThrow("sections");
+        expect(() => validateManifest({ ...DEMO_TRACK, structure: {
+            ...DEMO_TRACK.structure, sections: [{ start: 1, end: 72, label: "intro" }],
+        } })).toThrow("sections");
     });
 
     test("practice supplies a long finite metronome at the selected tempo", () => {

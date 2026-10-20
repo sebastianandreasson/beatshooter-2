@@ -28,11 +28,14 @@ Off, reduced motion and reduced flashes control the decoration; Low graphics
 reduces bloom resolution/passes and visible trails. See
 [neon visual verification](docs/neon-visuals-verification.md).
 
-Follow-up section effects: validated LinkSeg spans now drive cosmetic changes
+Follow-up section effects: authored sections and validated LinkSeg spans drive cosmetic changes
 across the arena floor. Standard effects send a single shockwave from the map
 center outward. Floor and grid colors switch behind its advancing front;
 perimeter and background colors blend to the new section's dark palette.
-The seven label colors match the track timeline. The front raises nearby
+The seven label colors provide preferred themes. A deterministic per-section
+choice substitutes a contrasting dark palette whenever the preferred hue
+repeats or is too similar to the previous actual palette; adjacent sections
+always differ, even when their labels repeat. The front raises nearby
 vertices into a smooth travelling ridge across the floor, walls, actors,
 shots and particles. Health bars and damage numbers follow the displaced
 visuals. Physical transforms and camera orientation stay stable, with normal
@@ -48,13 +51,24 @@ During each eligible shockwave, speed smoothly rises to 25× that new baseline
 hyperspeed streaks. Analytically integrated distance retains all
 travel from completed boosts, preventing a backward jump when speed settles.
 Pause and slowdown affect star travel with the song; seeking and retries sample
-the same deterministic path. Camera orientation and zoom remain unchanged.
+the same deterministic path. Camera orientation remains unchanged.
 
-Each transition starts at the exact predicted section boundary on the raw
-music clock, independently of visual calibration, and normally spans four
-actual beat intervals. Slow tracks halve that span until it fits within
-3.5 song seconds. Transitions finish at the next section, last available beat,
-or first unusable interval when needed. Fragments under 0.65 song seconds and
+Eligible transitions anticipate the boundary with a one-beat center-light
+buildup (capped at 0.6 song seconds) and a gentle 5% camera zoom, peaking exactly
+at the section start. The zoom settles over the first following beat. A cubic
+ease-in-out curve drives the outgoing radius, shared by the palette wipe,
+vertex ridge, perimeter timing and projected health/damage anchors. The linear
+musical coordinate remains available for continuous integrated star travel.
+Camera size is set absolutely before pointer input; pause holds it, and
+retry/menu/comfort changes restore the captured base without drift.
+Calm lowers zoom to 1%; Off/reduced motion/reduced flashes disable the buildup
+and zoom. Gaps and overlapping waves do not invent anticipatory pulses.
+
+Each outgoing wave starts at the exact predicted section boundary on the raw
+music clock, independently of visual calibration. Its eligible musical span
+now runs at 1.3× speed: the normal four-beat window becomes about 3.08 beats.
+Slow-song, section-end and missing-beat limits are applied before acceleration,
+so previously eligible fast tracks retain their waves. Base windows under 0.65 song seconds and
 boundaries inside detection gaps use a bounded color fade without a travelling ring.
 Pause freezes the presentation with the song;
 retry/seek sample the current section directly without queuing old transitions.
@@ -66,7 +80,7 @@ color wipe reuse the floor material. Subdivided arena geometry is allocated
 once, and a shared vertex shader displaces scene meshes without changing
 collision shapes or uploading mesh vertices every frame. Stars reuse their fixed pool
 without allocating entities or materials at section boundaries. Tracks without
-section analysis, including the current demo/dojo/manual-BPM paths, retain
+section data, such as the dojo, retain
 normal star drift and their existing floor palette; no section boundaries are
 synthesized. Adjacent detected spans remain distinct even when their labels
 match. Model predictions remain
@@ -74,8 +88,10 @@ estimates, and listening/comfort review remains open; see the
 [LinkSeg evaluation](docs/section-analysis.md) and
 [section-effects verification](docs/section-effects-verification.md).
 
-Follow-up gameplay: **Space dash** uses a ±100 ms window around authored accented
-bar starts, once per downbeat, in the movement direction (aim when stationary).
+Follow-up gameplay: **Space dash** uses a ±150 ms window around any authored or
+detected beat, once per bar, in the movement direction (aim when stationary).
+The chart's next bar resets the charge; early first-beat presses consume that
+next bar, and repeated or off-beat input never queues a dash.
 It uses the audio clock for input and movement targets, keeps solver collisions,
 and clears on restart/track replacement. The larger beat/dash indicator is now
 at the bottom center. See [dash verification](docs/dash-verification.md).
@@ -129,6 +145,11 @@ The initial catalog adds +3 to both damage bounds, +20 maximum/current health,
 +2 regeneration per five song seconds, +1 normal projectile (cap 7), a six-shot
 main-beat barrage followed by +2 shots per rank (cap 24), +5 percentage points
 of critical chance (cap 100%), +0.25× critical damage, and +1 ricochet (cap 5).
+Utility upgrades add 25% of the base XP attraction radius per rank (cap 300%)
+and 0.6 dash distance per rank (3.6 baseline, cap 7.2). They use the same named
+stat modifiers and reset with the run. Each dash snapshots its distance while
+keeping the existing beat window, duration and collision behavior. Card copy
+colors only effect values: red offense, green health, purple utility.
 Upgrades use named per-run stat modifiers and clear on restart. Normal volleys
 spread symmetrically around the aim, growing by 12° per added projectile up
 to a 60° arc. Barrages fire outward only on actual accented bar starts.

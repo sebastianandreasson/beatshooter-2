@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { generateTimeline, type Beat } from "../rhythm/timeline";
+import { MAX_DASH_DISTANCE } from "../player-stats";
 import { DASH_DISTANCE, DashController } from "./state";
 import { createDashTiming } from "./timing";
 
@@ -7,8 +8,8 @@ const movement = { x: 1, z: 0 };
 const aim = { x: 0, z: -1 };
 const controller = (bpm = 120) => new DashController(createDashTiming(generateTimeline(30, bpm)));
 
-describe("downbeat dash controller", () => {
-    test("reset immediately clears a running dash and re-arms earlier downbeats", () => {
+describe("one-per-bar dash controller", () => {
+    test("reset immediately clears a running dash and re-arms earlier bars", () => {
         const dash = controller();
         const timing = dash.timing;
         expect(dash.press(2, movement, aim)).toBe(true);
@@ -21,6 +22,7 @@ describe("downbeat dash controller", () => {
         expect(dash.active).toBeUndefined();
         expect(dash.accepted).toBe(0);
         expect(dash.lastUsedBeat).toBe(-1);
+        expect(dash.lastUsedBar).toBe(-1);
         expect(dash.timing).toBe(timing);
         expect(dash.status(0)).toBe("ready");
         expect(dash.press(0, movement, aim)).toBe(true);
@@ -28,10 +30,10 @@ describe("downbeat dash controller", () => {
         expect(dash.accepted).toBe(1);
     });
 
-    test("an early accepted press consumes the entire downbeat window, including after the burst ends", () => {
+    test("an early accepted press consumes the new bar, including after crossing its first beat", () => {
         const dash = controller();
-        expect(dash.status(1.9)).toBe("ready");
-        expect(dash.press(1.9, movement, aim)).toBe(true);
+        expect(dash.status(1.85)).toBe("ready");
+        expect(dash.press(1.85, movement, aim)).toBe(true);
         const first = structuredClone(dash.active);
         expect(dash.status(1.95)).toBe("dashing");
         expect(dash.press(1.95, movement, aim)).toBe(false);
@@ -42,11 +44,14 @@ describe("downbeat dash controller", () => {
         expect(dash.press(2.09, movement, aim)).toBe(false);
         expect(dash.accepted).toBe(1);
         expect(dash.lastUsedBeat).toBe(4);
+        expect(dash.lastUsedBar).toBe(1);
+        expect(dash.press(2.5, movement, aim)).toBe(false);
+        expect(dash.status(2.75)).toBe("used");
     });
 
-    test("offbeat presses never buffer a dash or spend the next downbeat", () => {
+    test("offbeat presses never buffer a dash or spend the next beat", () => {
         const dash = controller();
-        for (const position of [0.5, 1, 1.5, 1.899]) {
+        for (const position of [0.25, 0.75, 1.25, 1.849]) {
             expect(dash.press(position, movement, aim)).toBe(false);
             expect(dash.active).toBeUndefined();
         }
@@ -62,7 +67,7 @@ describe("downbeat dash controller", () => {
         const dash = controller();
         expect(dash.press(0, movement, aim)).toBe(true);
         dash.update(0.3);
-        expect(dash.status(1)).toBe("waiting");
+        expect(dash.status(1)).toBe("used");
         expect(dash.press(1, movement, aim)).toBe(false);
         expect(dash.status(1.9)).toBe("ready");
         expect(dash.press(1.9, movement, aim)).toBe(true);
@@ -71,6 +76,47 @@ describe("downbeat dash controller", () => {
         expect(dash.press(4, movement, aim)).toBe(true);
         expect(dash.active?.beatIndex).toBe(8);
         expect(dash.accepted).toBe(3);
+    });
+
+    test("any beat can spend the bar's single dash, including its last beat", () => {
+        for (const beat of [0, 1, 2, 3]) {
+            const dash = controller();
+            const position = beat * .5;
+            expect(dash.status(position)).toBe("ready");
+            expect(dash.press(position, movement, aim)).toBe(true);
+            expect(dash.lastUsedBeat).toBe(beat);
+            expect(dash.lastUsedBar).toBe(0);
+            expect(dash.press(position + .05, movement, aim)).toBe(false);
+            for (let later = beat + 1; later < 4; later++) {
+                expect(dash.press(later * .5, movement, aim)).toBe(false);
+            }
+            expect(dash.status(1.8)).toBe("used");
+            expect(dash.press(2, movement, aim)).toBe(true);
+            expect(dash.lastUsedBar).toBe(1);
+            expect(dash.press(2.5, movement, aim)).toBe(false);
+            expect(dash.accepted).toBe(2);
+        }
+    });
+
+    test("changing tempo, pickups and inferred mixed-meter bars reset without a fixed timer", () => {
+        const times = [.2, .7, 1.1, 1.55, 2.1, 2.7, 3.35, 4, 4.7];
+        const starts = [0, 1, 4, 8];
+        const beats: Beat[] = times.map((time, index) => {
+            const bar = starts.findLastIndex(start => start <= index);
+            return { time, index, bar, beatInBar: index === 0 ? 2 : index - starts[bar]!, downbeat: false };
+        });
+        const dash = new DashController(createDashTiming(beats));
+        expect(dash.press(.2, movement, aim)).toBe(true);
+        // First full bar is 3 beats; use its second beat.
+        expect(dash.press(1.1, movement, aim)).toBe(true);
+        expect(dash.press(1.55, movement, aim)).toBe(false);
+        expect(dash.status(1.8)).toBe("used");
+        // Next bar has 4 beats; skip its first three and use the last one.
+        expect(dash.status(2.1)).toBe("ready");
+        expect(dash.press(4, movement, aim)).toBe(true);
+        expect(dash.press(4.05, movement, aim)).toBe(false);
+        expect(dash.press(4.7, movement, aim)).toBe(true);
+        expect(dash.accepted).toBe(4);
     });
 
     test("movement determines a normalized direction, with aim and neutral fallbacks", () => {
@@ -128,6 +174,36 @@ describe("downbeat dash controller", () => {
         expect(dash.active!.speed).toBeCloseTo(24, 12);
     });
 
+    test("fractional upgraded distance keeps the same musical duration and caps speed at ninety", () => {
+        for (const [bpm, duration] of [[20, 0.18], [120, 0.125], [300, 0.08]] as const) {
+            for (const distance of [4.2, MAX_DASH_DISTANCE, 100]) {
+                const dash = controller(bpm);
+                expect(dash.press(0, movement, aim, undefined, distance)).toBe(true);
+                const active = dash.active!;
+                expect(active.endsAt - active.startedAt).toBeCloseTo(duration, 12);
+                expect(active.distance).toBe(Math.min(distance, MAX_DASH_DISTANCE));
+                expect(active.speed * duration).toBeCloseTo(active.distance, 12);
+                expect(active.speed).toBeLessThanOrEqual(90);
+            }
+        }
+    });
+
+    test("disabled or invalid distance does not spend a bar, and reset discards the distance snapshot", () => {
+        const dash = controller();
+        for (const distance of [0, -1, NaN, Infinity, -Infinity]) {
+            expect(dash.press(0, movement, aim, undefined, distance)).toBe(false);
+            expect(dash.accepted).toBe(0);
+            expect(dash.lastUsedBar).toBe(-1);
+        }
+        expect(dash.press(0, movement, aim, undefined, 7.2)).toBe(true);
+        expect(dash.active!.distance).toBe(7.2);
+        dash.reset();
+        expect(dash.active).toBeUndefined();
+        expect(dash.press(0, movement, aim)).toBe(true);
+        expect(dash.active!.distance).toBe(DASH_DISTANCE);
+        expect(dash.active!.speed).toBeCloseTo(DASH_DISTANCE / 0.125, 12);
+    });
+
     test("a held song position freezes the active dash through any number of paused renders", () => {
         const dash = controller();
         expect(dash.press(2, movement, aim)).toBe(true);
@@ -145,7 +221,7 @@ describe("downbeat dash controller", () => {
         expect(dash.active).toBeUndefined();
     });
 
-    test("count-in, nonfinite positions and a chart without accents cannot spend a dash", () => {
+    test("count-in and nonfinite positions reject input, while unaccented detected beats remain usable", () => {
         const dash = controller();
         for (const position of [-2, -0.01, NaN, Infinity, -Infinity]) {
             expect(dash.press(position, movement, aim)).toBe(false);
@@ -155,7 +231,8 @@ describe("downbeat dash controller", () => {
         const inferred = new DashController(createDashTiming(
             generateTimeline(10, 120).map(beat => ({ ...beat, downbeat: false })),
         ));
-        expect(inferred.press(2, movement, aim)).toBe(false);
-        expect(inferred.status(2)).toBe("waiting");
+        expect(inferred.press(2.5, movement, aim)).toBe(true);
+        expect(inferred.press(3, movement, aim)).toBe(false);
+        expect(inferred.status(4)).toBe("ready");
     });
 });

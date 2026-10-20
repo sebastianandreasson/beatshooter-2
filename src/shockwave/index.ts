@@ -107,7 +107,7 @@ export const SampleShockwave: System = {
     name: "Beatshooter/SampleShockwave", group: "setup", after: [SampleSectionEffects],
     update(world) {
         const section = world.resource(SectionEffects), state = world.resource(Shockwave);
-        state.progress = section.frame.progress;
+        state.progress = section.frame.waveProgress;
         state.strength = section.frame.active && section.frame.musical && section.motionAllowed ? section.strength : 0;
         state.buffer?.write({
             progress: state.progress, strength: state.strength, padding: d.vec2f(0), outlineRows: state.outlineRows,

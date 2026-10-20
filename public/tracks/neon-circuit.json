@@ -11,6 +11,45 @@
   "beatsPerBar": 4,
   "source": "Original deterministic synthesizer composed for Beatshooter 2; source: src/tracks/generate-demo.py",
   "license": "CC0-1.0",
+  "structure": {
+    "version": 1,
+    "analyzerVersion": "neon-circuit-arrangement-v1",
+    "duration": 72,
+    "elapsedMs": 0,
+    "backend": "authored",
+    "sections": [
+      {
+        "start": 0.0,
+        "end": 8.0,
+        "label": "intro"
+      },
+      {
+        "start": 8.0,
+        "end": 24.0,
+        "label": "verse"
+      },
+      {
+        "start": 24.0,
+        "end": 40.0,
+        "label": "chorus"
+      },
+      {
+        "start": 40.0,
+        "end": 48.0,
+        "label": "bridge"
+      },
+      {
+        "start": 48.0,
+        "end": 64.0,
+        "label": "chorus"
+      },
+      {
+        "start": 64.0,
+        "end": 72.0,
+        "label": "outro"
+      }
+    ]
+  },
   "beats": [
     {
       "time": 0.0,

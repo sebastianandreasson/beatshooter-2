@@ -1,15 +1,18 @@
 import type { Beat } from "../rhythm/timeline";
 
-export const DASH_WINDOW_SECONDS = 0.1;
+export const DASH_WINDOW_SECONDS = 0.15;
 
 export interface DashCandidate {
     beatIndex: number;
+    bar: number;
+    beatInBar: number;
     time: number;
     beatDuration: number;
 }
 
 export interface DashTiming {
     candidate(position: number): DashCandidate | undefined;
+    barAt(position: number): number | undefined;
 }
 
 const EPSILON = 1e-9;
@@ -17,7 +20,7 @@ const MIN_INTERVAL = 0.12;
 const MAX_INTERVAL = 3;
 
 function nearbyDuration(beats: readonly Beat[], index: number): number {
-    // Prefer the tempo leaving this downbeat, then the incoming tempo. A gap
+    // Prefer the tempo leaving this beat, then the incoming tempo. A gap
     // does not turn into a multi-second dash: search only four local intervals
     // on either side before using the neutral duration.
     for (let distance = 0; distance < 4; distance++) {
@@ -34,37 +37,48 @@ function nearbyDuration(beats: readonly Beat[], index: number): number {
 }
 
 /**
- * Cache a validated chart's authored accents. Inferred bar boundaries never
- * grant a dash; callers own session phase and once-per-downbeat consumption.
- * Without a track duration, the last authored downbeat keeps its usual window.
+ * Cache the chart's actual beats and bar identities, including detected timing.
+ * Callers own session phase and one-use-per-bar consumption. The last authored
+ * beat keeps its usual bounded window; no beats are extrapolated into gaps.
  */
 export function createDashTiming(beats: readonly Beat[]): DashTiming {
-    const downbeats: DashCandidate[] = [];
+    const candidates: DashCandidate[] = [];
     for (let index = 0; index < beats.length; index++) {
         const beat = beats[index]!;
-        if (beat.downbeat) downbeats.push({
+        candidates.push({
             beatIndex: beat.index,
+            bar: beat.bar,
+            beatInBar: beat.beatInBar,
             time: beat.time,
             beatDuration: nearbyDuration(beats, index),
         });
     }
+    const firstAtOrAfter = (position: number): number => {
+        let low = 0, high = candidates.length;
+        while (low < high) {
+            const middle = (low + high) >>> 1;
+            if (candidates[middle]!.time < position) low = middle + 1;
+            else high = middle;
+        }
+        return low;
+    };
     return {
         candidate(position) {
-            if (!Number.isFinite(position) || position < 0 || downbeats.length === 0) return;
-            let low = 0, high = downbeats.length;
-            while (low < high) {
-                const middle = (low + high) >>> 1;
-                if (downbeats[middle]!.time < position) low = middle + 1;
-                else high = middle;
-            }
-            const previous = downbeats[low - 1], next = downbeats[low];
-            // A tie belongs to the earlier accent, independent of render rate.
+            if (!Number.isFinite(position) || position < 0 || candidates.length === 0) return;
+            const index = firstAtOrAfter(position);
+            const previous = candidates[index - 1], next = candidates[index];
+            // A tie belongs to the earlier beat, independent of render rate.
             const nearest = previous && (!next ||
                 position - previous.time <= next.time - position + EPSILON) ? previous : next;
             if (nearest && Math.abs(position - nearest.time) <= DASH_WINDOW_SECONDS + EPSILON) {
                 // The caller cannot mutate our cached metadata through a result.
                 return { ...nearest };
             }
+        },
+        barAt(position) {
+            if (!Number.isFinite(position) || position < 0) return;
+            const index = firstAtOrAfter(position);
+            return (candidates[index]?.time === position ? candidates[index] : candidates[index - 1])?.bar;
         },
     };
 }

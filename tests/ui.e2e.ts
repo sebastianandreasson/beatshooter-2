@@ -67,6 +67,9 @@ for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 
         await expect(page.getByRole("heading", { name: "Neon Circuit", exact: true })).toBeVisible();
         await expect(page.locator('[data-value="demo-duration"]')).toHaveText("1:12");
         await expect(page.getByRole("region", { name: "How to play" })).toContainText("Move");
+        await expect(page.getByRole("region", { name: "How to play" })).toContainText("Select upgrade");
+        await expect(page.locator(".bs-controls > div").filter({ hasText: "Select upgrade" }).locator("kbd"))
+            .toHaveText(["1", "2", "3"]);
         for (const name of ["Enter the arena", "Practice", "Import local audio"]) {
             const button = page.getByRole("button", { name, exact: true });
             await button.scrollIntoViewIfNeeded();

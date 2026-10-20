@@ -3,6 +3,7 @@ import { generateTimeline, type Beat, validateTempo, validateTimeline } from "..
 import { createAnalyzedChart } from "../analysis/chart";
 import type { BeatAnalysis, EnergyCurve } from "../analysis/types";
 import { validateEnergyCurve } from "../analysis/energy";
+import { analyzeVisualAudio } from "../analysis/visual-audio";
 import { validateSections, type SectionAnalysis } from "../analysis/sections";
 
 export interface TrackManifest {
@@ -16,6 +17,7 @@ export interface TrackManifest {
     firstBeatOffset: number;
     beatsPerBar: number;
     beats: readonly Beat[];
+    structure?: SectionAnalysis;
     artwork?: string;
     source: string;
     license: string;
@@ -54,7 +56,11 @@ export function validateManifest(value: unknown): TrackManifest {
     if (data.artwork !== undefined && typeof data.artwork !== "string") {
         throw new Error("Track artwork must be a URL string.");
     }
-    return data as unknown as TrackManifest;
+    const structure = validateSections(data.structure, data.duration);
+    if (data.structure !== undefined && !structure) {
+        throw new Error("Track sections must cover the full audio duration without gaps or overlaps.");
+    }
+    return { ...data, ...(structure ? { structure } : {}) } as unknown as TrackManifest;
 }
 
 export const DEMO_TRACK: TrackManifest = validateManifest(demoManifest);
@@ -124,13 +130,14 @@ export class TrackLoader {
     private owned = new Set<LoadedTrack>();
     private disposed = false;
     private prepared?: PreparedLocalAudio;
+    private visualEnergy = new WeakMap<AudioBuffer, EnergyCurve>();
 
     constructor(context: Decoder) {
         this.context = context;
     }
 
     async load(manifest: TrackManifest): Promise<LoadedTrack> {
-        validateManifest(manifest);
+        manifest = validateManifest(manifest);
         const abort = this.beginLoad();
         try {
             const response = await fetch(manifest.audioUrl, { signal: abort.signal });
@@ -144,7 +151,11 @@ export class TrackLoader {
             if (Math.abs(buffer.duration - manifest.duration) > 0.15) {
                 throw new Error("The audio duration does not match its beat manifest. Choose another track.");
             }
-            return this.own(manifest, buffer);
+            const energy = await this.measureEnergy(buffer, abort);
+            this.checkCurrent(abort);
+            const loaded = this.own(manifest, buffer, undefined, energy);
+            loaded.structure = validateSections(manifest.structure, buffer.duration);
+            return loaded;
         } catch (error) {
             if (abort.signal.aborted) throw abortError();
             throw error;
@@ -199,8 +210,11 @@ export class TrackLoader {
                 source: `User-selected file: ${file.name}`,
                 license: "User-provided; never uploaded or redistributed",
             });
-            const loaded = this.own(manifest, buffer, objectUrl,
-                validateEnergyCurve(analysis?.energy, buffer.duration));
+            const analyzedEnergy = validateEnergyCurve(analysis?.energy, buffer.duration);
+            const energy = analyzedEnergy?.features ? analyzedEnergy
+                : await this.measureEnergy(buffer, abort) ?? analyzedEnergy;
+            this.checkCurrent(abort);
+            const loaded = this.own(manifest, buffer, objectUrl, energy);
             loaded.structure = validateSections(analysis?.structure, buffer.duration);
             objectUrl = undefined;
             return loaded;
@@ -265,6 +279,14 @@ export class TrackLoader {
         } catch {
             throw new Error("This audio file could not be decoded. Try a WAV, MP3, Ogg, or M4A file supported by your browser.");
         }
+    }
+
+    private async measureEnergy(buffer: AudioBuffer, abort: AbortController): Promise<EnergyCurve | undefined> {
+        const cached = this.visualEnergy.get(buffer);
+        if (cached) return cached;
+        const energy = await analyzeVisualAudio(buffer, abort.signal);
+        if (energy && !abort.signal.aborted) this.visualEnergy.set(buffer, energy);
+        return energy;
     }
 
     private own(manifest: TrackManifest, buffer: AudioBuffer, objectUrl?: string, energy?: EnergyCurve): LoadedTrack {

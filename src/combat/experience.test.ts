@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { createEnemy, type EnemyKind } from "../enemies";
-import { DEFAULT_EXPERIENCE_TUNING, dropExperience } from "../experience/state";
+import { createExperience, DEFAULT_EXPERIENCE_TUNING, dropExperience } from "../experience/state";
+import { removePlayerStatModifier, setPlayerStatModifier } from "../player-stats";
 import { advanceCombat, createCombat, fireProjectile, type CombatState } from "./index";
 
 const origin = { x: 0, z: 0 }, right = { x: 1, z: 0 };
@@ -83,4 +84,65 @@ test("defeat prevents further collection and a new session resets levels and all
     expect(next.experience.totalXp).toBe(0);
     expect(next.experience.requiredXp).toBe(DEFAULT_EXPERIENCE_TUNING.initialRequirement);
     expect(next.experience.drops).toHaveLength(0);
+});
+
+test("combat uses current pickup modifiers without compounding the base magnet range", () => {
+    const state = createCombat();
+    const drop = dropExperience(state.experience, { x: 4.375, z: 0 });
+    advanceCombat(state, 1 / 60, origin);
+    expect(drop.attracted).toBe(false);
+    setPlayerStatModifier(state.playerStats, "upgrade:pickup-radius", { add: { pickupRadiusMultiplier: 0.25 } });
+    advanceCombat(state, 1 / 60, origin);
+    expect(drop.attracted).toBe(true);
+    expect(state.experience.totalXp).toBe(0);
+
+    // Replacing the same ranked modifier must derive the new total from base.
+    setPlayerStatModifier(state.playerStats, "upgrade:pickup-radius", { add: { pickupRadiusMultiplier: 0.5 } });
+    const nextBoundary = dropExperience(state.experience, { x: -5.25, z: 0 });
+    const outside = dropExperience(state.experience, { x: 0, z: 5.251 });
+    advanceCombat(state, 1 / 60, origin);
+    expect(state.playerStats.effective.pickupRadiusMultiplier).toBe(1.5);
+    expect(nextBoundary.attracted).toBe(true);
+    expect(outside.attracted).toBe(false);
+    expect(state.experience.tuning).toEqual(DEFAULT_EXPERIENCE_TUNING);
+
+    removePlayerStatModifier(state.playerStats, "upgrade:pickup-radius");
+    const afterRemoval = dropExperience(state.experience, { x: 0, z: -4 });
+    const movingX = drop.x;
+    advanceCombat(state, 1 / 60, origin);
+    expect(state.playerStats.effective.pickupRadiusMultiplier).toBe(1);
+    expect(afterRemoval.attracted).toBe(false);
+    expect(drop.x).toBeLessThan(movingX);
+});
+
+test("combat preserves swept pickup attraction through an upgraded dash and resets it on a new run", () => {
+    const state = createCombat();
+    setPlayerStatModifier(state.playerStats, "upgrade:pickup-radius", { add: { pickupRadiusMultiplier: 0.25 } });
+    const drop = dropExperience(state.experience, { x: 0, z: 4 });
+    const end = { x: 8, z: 0 }, start = { x: -8, z: 0 };
+    advanceCombat(state, 1 / 60, end, undefined, start);
+    expect(drop.attracted).toBe(true);
+    expect(drop.z).toBeLessThan(4);
+    expect(state.experience.totalXp).toBe(0);
+
+    const fresh = createCombat();
+    const freshDrop = dropExperience(fresh.experience, { x: 0, z: 4 });
+    advanceCombat(fresh, 1 / 60, end, undefined, start);
+    expect(fresh.playerStats.effective.pickupRadiusMultiplier).toBe(1);
+    expect(freshDrop.attracted).toBe(false);
+    expect(fresh.experience.totalXp).toBe(0);
+});
+
+test("combat scales a custom XP magnet rather than replacing its tuning", () => {
+    const state = createCombat();
+    state.experience = createExperience({ magnetRadius: 2, pickupRadius: 0.4 });
+    setPlayerStatModifier(state.playerStats, "upgrade:pickup-radius", { add: { pickupRadiusMultiplier: 0.25 } });
+    const boundary = dropExperience(state.experience, { x: 2.5, z: 0 });
+    const outside = dropExperience(state.experience, { x: -2.501, z: 0 });
+    advanceCombat(state, 1 / 60, origin);
+    expect(boundary.attracted).toBe(true);
+    expect(outside.attracted).toBe(false);
+    expect(state.experience.tuning.magnetRadius).toBe(2);
+    expect(state.experience.tuning.pickupRadius).toBe(0.4);
+    expect(state.experience.totalXp).toBe(0);
 });

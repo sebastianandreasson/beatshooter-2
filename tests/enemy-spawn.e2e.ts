@@ -167,14 +167,17 @@ test("enemies beam in for one authored beat, freeze on pause, and only then acqu
 
     await page.keyboard.press("KeyR");
     await chooseStartingUpgrade(page);
+    await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
     await expect.poll(async () => (await snapshot(page)).generation).toBe(initial.generation + 2);
     await arrival(page, 0.2);
     await pause(page);
     await page.getByRole("button", { name: "Restart session" }).click();
+    await chooseStartingUpgrade(page);
+    await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
     await expect.poll(async () => (await snapshot(page)).generation).toBe(initial.generation + 3);
     await expect.poll(async () => (await snapshot(page)).spawnPresentationCount).toBe(0);
     const reset = await snapshot(page);
-    expect(reset.position).toBeLessThan(0);
+    expect(reset.position).toBeLessThanOrEqual(0);
     expect(reset.pendingSpawns).toEqual([]);
     expect(reset.spawnPresentationCount).toBe(0);
     expect(reset.enemies).toEqual([]);

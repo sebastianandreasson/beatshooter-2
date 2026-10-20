@@ -30,9 +30,9 @@ Bun 1.4.3+ before running these commands.
 | WASD / arrow keys | Move; diagonals are normalized |
 | Pointer | Aim at the reticle |
 | Musical beat | Fire automatically |
-| Space near the accented first beat | Dash in the movement direction, or aim direction when stationary |
+| Space on any beat, once per bar | Dash in the movement direction, or aim direction when stationary |
 | Escape | Pause / resume, keeping pending upgrades |
-| 1 / 2 / 3, or click a card | Choose a level-up upgrade |
+| 1 / 2 / 3, or click a card | Select a starting or level-up upgrade |
 | R in dojo | Reset the run and metronome |
 | F3 | Toggle development diagnostics; off by default |
 
@@ -44,6 +44,13 @@ Enemy waves grow by musical bars, with a normal-play cap of 100 enemies.
 Contact and projectile damage share a 0.9-second invulnerability window. Zero health ends a run;
 reaching the end of the audio completes it. Retry and menu navigation work
 without reloading.
+
+Neon Circuit has six authored sections: intro (0–8s), verse (8–24s), chorus
+(24–40s), bridge (40–48s), chorus (48–64s), and outro (64–72s). The sound changes
+with each section, and its bundled section map drives the same colored progress
+bar and arena transitions as analyzed imports. No analysis is needed to play
+the demo. Regenerating `src/tracks/generate-demo.py` updates both the music and
+the matching section boundaries.
 
 Player shots start at **13–17 damage**, with a **12% chance of a 2× critical hit**.
 Every enemy has a compact health bar. Hits, including killing blows, show their
@@ -89,6 +96,7 @@ The normal enemy/bullet budgets also apply to these attacks. See
 
 Every enemy drops a **blue XP gem worth 10 experience**. Gems stay on the floor
 until collected; move within 3.5 arena units to pull them toward your ship.
+Pickup Radius upgrades extend that attraction range.
 Once attracted, they keep following you until picked up, including after a dash.
 The blue bar at the top shows your level and progress toward the next one.
 You start at level 1; level 2 needs 36 XP, then each next requirement grows by
@@ -113,6 +121,13 @@ its effect immediately.
 | **Critical Chance** | +5 percentage points, initially 12% → 17%, up to 100% |
 | **Critical Damage** | +0.25× critical multiplier, initially 2× → 2.25× |
 | **Ricochet** | +1 bounce per projectile, up to 5 |
+| **Pickup Radius** | +25% of the base XP attraction radius, up to 300% total (8 ranks) |
+| **Dash Distance** | +0.6 distance per dash, initially 3.6 → 4.2, up to 7.2 (6 ranks) |
+
+Card values are color-coded: offense in red, health in green, and utility in
+purple. Titles and surrounding prose stay neutral. Pickup Radius increases
+the range where gems start moving toward you; they still award XP on arrival.
+Dash Distance extends the burst without changing its beat window or duration.
 
 Split Shot widens the normal shot into a symmetric fan around the aim: 12°
 more total spread per added projectile, capped at 60°. Barrage fires a full
@@ -127,8 +142,14 @@ the first authored beat at or after its due time, then starts the next
 five-second interval. Slowdown stretches that interval in real time, pause
 stops it, and missing beats never release a backlog of heals.
 
-Choices stay fixed until selected. Further levels queue behind the current
-offer, with a visible count; each selection shows the next queued offer.
+The live upgrade panel uses larger cards and prominent skill titles, allowing
+more arena overlap on narrow screens to keep the text readable. Choices stay
+fixed until selected. Selecting applies the stat immediately: the other cards
+fade out, while the chosen card highlights, flashes on the next beat, and fades
+away over the following beat. Further levels queue behind that confirmation;
+the next offer appears after it finishes. Reduced-motion/flash settings retain
+the highlight and fade without the pulse. The starting choice uses the track's
+tempo for its brief confirmation during the count-in.
 Holding a number key or double-clicking cannot spend multiple choices.
 Escape and focus loss still pause normally and retain the queue; resume to
 continue choosing. Waiting grants no damage protection. Finishing or losing a
@@ -138,14 +159,17 @@ or replace the first earned level-up.
 See [XP verification](docs/experience-verification.md) for the gem system and
 [upgrade verification](docs/upgrades-verification.md) for the selection flow.
 
-The larger beat indicator sits at the bottom center. Its first diamond gains
-an outline and **Dash ready** appears during a ±100 ms window around an
-accented bar start. Press **Space** once in that window to dash; holding the
-key or pressing off-beat never queues a later dash. Each downbeat allows one
-dash. The burst follows local beat timing, stays on the play plane and respects
+The larger beat indicator sits at the bottom center. The eligible beat's diamond
+gains an outline and **Dash ready** appears during a ±150 ms window around any
+beat. Press **Space** in that window to dash. Each bar allows one dash, usable
+on any of its beats; the next bar resets it. Holding the key, pressing it twice
+on one beat, or pressing off-beat never queues another dash. An early press near
+the next bar's first beat spends that next bar's dash. The burst follows local beat timing, stays on the play plane and respects
 walls/enemy collisions. It does not grant extra damage immunity.
-Automatic tracks use their actual detected downbeats, including changing meter;
-unaccented inferred bar boundaries do not grant dashes. Visual calibration
+Each dash captures its distance when activated, so choosing an upgrade during
+the burst affects the next dash.
+Automatic tracks use their actual detected beats and chart bar markers, including
+changing meter and inferred bars when downbeats are unavailable. Visual calibration
 remains cosmetic: dash input is judged against the current audio clock.
 
 Local files never upload. Selecting a file automatically runs Beat This! locally
@@ -158,23 +182,26 @@ The preview section selector offers 12 seconds from the start, middle or end,
 or the full track. Higher clicks mark bar starts.
 
 Analysis also runs **LinkSeg** locally to estimate intro, verse, chorus, bridge,
-instrumental, outro and silence sections. The bottom music player spans the
-screen and colors each predicted section, with a playhead, current/next labels
-and a legend. The import preview shows the same section map. Section predictions
+instrumental, outro and silence sections. The compact bottom progress bar colors
+each section and shows the playhead. The import preview adds current/next labels
+and a legend to the same section map. Section predictions
 also drive the arena transitions below; enemy schedules, beat timing and
 collision rules remain unchanged. If section analysis fails, detected beats
 are still playable. See the [LinkSeg evaluation](docs/section-analysis.md)
 for measured performance, predictions and remaining listening review.
 
-In **Standard** effects mode, entering a new detected section sends one
+In **Standard** effects mode, entering a new authored or detected section sends one
 shockwave from the center of the arena toward its edges. The floor and grid
 change to the new section's colors as the ring passes, leaving the new theme
 behind it. The front lifts nearby vertices into a smooth ridge, then lets them
 settle as it passes. Floor, walls, actors, shots and particles share this
 deformation; health bars and damage numbers follow their raised anchors.
-The camera and physics stay steady. Perimeter and background colors blend to match the section
+Camera orientation and physics stay steady. Perimeter and background colors blend to match the section
 timeline: blue for intro, green for verse, gold for chorus, violet for bridge,
 cyan for instrumental, rose for outro and dark slate for silence.
+These are preferred themes: when the next theme repeats or is too similar,
+the arena chooses a contrasting palette. Every consecutive section gets a
+distinct color, including repeated labels; replaying uses the same choices.
 
 Behind the arena, **960 small, bright stars** travel steadily outward across
 three depth layers (480 with Low graphics). Their baseline is **5× faster**
@@ -183,12 +210,21 @@ to **25× that faster baseline** and back, stretching them into long hyperspeed
 streaks. Travel accumulates
 continuously, so returning to normal speed never jumps the stars backward.
 The starfield follows the music clock through pause and slowdown, while the
-camera keeps its normal view and player follow.
+camera keeps its normal orientation and player follow.
 
-Transitions start at the exact predicted boundary on the raw music clock,
-independent of visual calibration. They normally span four actual beat
-intervals, following tempo changes; slow tracks use fewer beats to keep the
-wave within 3.5 song seconds. Each wave finishes before the next section or
+One beat before an eligible boundary, a soft light gathers at the map center
+and the view gently zooms in, reaching **5% zoom** at the section start.
+The buildup is capped at 0.6 song seconds and skips gaps or overlapping waves.
+The outgoing wave starts at the authored or predicted boundary on the raw music clock,
+independent of visual calibration. Its radius follows an **ease-in-out curve**:
+a slow launch, a fast sweep through the arena, then a soft arrival at the edges.
+The color wipe and vertex ridge follow that same eased front. The zoom returns
+to normal over the first actual beat; aiming and health-bar projection follow
+the changing lens. The HUD remains steady.
+
+Waves travel **30% faster**: the previous four-beat window now takes about
+3.08 actual beat intervals, following tempo changes. Existing slow-song and
+gap limits apply before this acceleration. Each wave finishes before the next section or
 an unusable beat interval. Fragments shorter than 0.65 song seconds and
 boundaries inside detection gaps use a short color fade. Pause and slowdown
 freeze or stretch the effect with the music. The first section establishes its
@@ -196,9 +232,9 @@ colors during count-in without an entrance effect.
 
 The shockwave is cosmetic: movement, dash directions, pointer aiming and
 collision rules keep their normal behavior. **Calm** uses a subtler ring, lower ridge and
-weaker starfield boost. **Off**, reduced flashes and reduced motion
-keep the stars static and use a simple fade between section palettes.
-Tracks without section analysis, including demo, dojo and manual-BPM tracks,
+weaker starfield boost, softer buildup and **1% zoom**. **Off**, reduced flashes and reduced motion
+disable the buildup/zoom, keep the stars static and use a simple fade between section palettes.
+Tracks without section data, such as the dojo,
 retain normal star drift without invented section boosts. Every predicted span
 boundary is honored, including
 adjacent spans with the same label; the model's estimates still need listening
@@ -264,10 +300,22 @@ including section shockwaves, **Calm** for softer motion, or **Off** for a stati
 arena with essential feedback and section color changes. Graphics detail
 controls rendering cost independently. **Reduced flashes** and the device's
 **reduced-motion** preference disable travelling decoration and section rings
-while keeping small local fades. Automatic local-track analysis also
-computes optional 20 Hz loudness/bass curves in its existing worker; these
-modulate detail without triggering beats. Demo, dojo and manual-BPM tracks use
-a neutral energy response.
+while keeping small local fades and a stationary spectrum border.
+
+The music stage adds spectrum bars outside the walls, corner laser fans,
+flowing aurora ribbons and particles, expanding geometric echoes, and morphing
+wireframes behind the arena. Intro, verse, chorus, bridge and outro arrangements
+crossfade between different combinations. Actual audio energy controls their
+strength, so a section label alone never forces a large accent.
+
+Analysis measures loudness/bass, 16 FFT bands, mids/highs, transients, and sustained
+energy rises/falls at 20 Hz. Uploaded tracks share their analysis worker; the demo
+and manual-BPM tracks use a small DSP-only worker with no model download. The
+decoded local file retains its visual curves for retries. Dojo and unavailable
+metadata use a neutral beat-driven fallback. These curves never change beat
+timestamps or gameplay. The stage reuses 336 nonphysical meshes, reduces work
+at Low detail, and follows the song clock through pause, seek and retry. See
+the [music stage verification](docs/music-stage-verification.md) for details.
 
 The earlier floor and particle implementation passed production browser checks
 and the dense 60 FPS stress fixture on the recorded M1 Max. All four local test
@@ -338,7 +386,8 @@ See the release document for measured hardware, counts, and frame intervals.
 | `src/experience/` | Persistent XP drops, swept attraction/collection, run levels and musical gem presentation |
 | `src/session/` | Menu/loading/play/pause/results, live upgrade selection, audio/entity/listener ownership |
 | `src/music-visuals/` | Floor shader, bounded musical effect queues, pooled shards/rings and comfort controls |
-| `src/section-effects/` | Detected-section timing, dark palettes and music-timed floor color transitions |
+| `src/music-stage/` | Spectrum perimeter, laser fans, auroras, geometric echoes and section arrangements |
+| `src/section-effects/` | Section anticipation, eased waves, subtle camera zoom and dark palette transitions |
 | `src/shockwave/` | Shared vertex displacement, corrected normals and subdivided arena surfaces |
 | `src/starfield/` | Continuous music-clock travel, integrated section speed boosts and pooled background stars |
 | `src/neon/`, `src/neon-trails/` | Selective HDR bloom, geometric emission, section color separation and pooled musical projectile trails |

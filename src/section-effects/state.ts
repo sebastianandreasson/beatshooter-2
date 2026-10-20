@@ -57,7 +57,15 @@ export interface SectionTransitionFrame {
     active: boolean;
     startTime: number;
     endTime: number;
+    /** Linear musical progress, retained for integrated star travel. */
     progress: number;
+    /** Eased outward travel shared by color, geometry and projected labels. */
+    waveProgress: number;
+    /** A look-ahead charge never changes the current section or its palette. */
+    anticipating: boolean;
+    anticipation: number;
+    /** Continuous charge/zoom envelope: peak at the boundary, settle one beat later. */
+    impact: number;
     /** Smooth zero-ended intensity for the section's outward light wave. */
     envelope: number;
     from: SectionPalette;
@@ -73,13 +81,21 @@ interface Transition {
     startCoordinate: number;
     beatSpan: number;
     musical: boolean;
+    anticipationStartTime: number;
+    anticipationCoordinate: number;
+    anticipationSpan: number;
 }
 
 const EPSILON = 1e-9;
 const TRANSITION_BEATS = 4;
+/** Compress an eligible wave's musical span, including section/gap-limited spans. */
+const WAVE_SPEED = 1.3;
 const MIN_TRANSITION_SECONDS = 0.65;
 const MAX_TRANSITION_SECONDS = 3.5;
 const QUIET_FADE_SECONDS = 0.6;
+const ANTICIPATION_BEATS = 1;
+const MAX_ANTICIPATION_SECONDS = 0.6;
+const MIN_ANTICIPATION_SECONDS = 0.12;
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
 const smooth = (value: number) => value * value * (3 - 2 * value);
 const mixRGB = (from: RGB, to: RGB, amount: number): RGB => [
@@ -99,6 +115,27 @@ function mixPalette(from: SectionPalette, to: SectionPalette, amount: number): S
     };
 }
 
+/** Compare hue independently of brightness so two similar blue/green themes also separate. */
+function paletteSeparation(a: SectionPalette, b: SectionPalette): number {
+    const aPeak = Math.max(...a.accent), bPeak = Math.max(...b.accent);
+    return Math.hypot(...a.accent.map((channel, index) => channel / aPeak - b.accent[index]! / bPeak));
+}
+
+function chooseSectionPalettes(sections: readonly SongSection[]): SectionPalette[] {
+    const choices = Object.values(SECTION_PALETTES);
+    const palettes: SectionPalette[] = [];
+    for (const section of sections) {
+        const preferred = SECTION_PALETTES[section.label], previous = palettes.at(-1);
+        // Prefer the section's usual theme. Repeated or very similar hues get
+        // the most contrasting existing dark palette, without a random reroll.
+        palettes.push(previous && paletteSeparation(preferred, previous) < 0.45
+            ? choices.reduce((best, candidate) =>
+                paletteSeparation(candidate, previous) > paletteSeparation(best, previous) ? candidate : best)
+            : preferred);
+    }
+    return palettes;
+}
+
 /**
  * A pure position sampler, not a boundary event queue. Pausing, slowing down,
  * seeking and retrying therefore cannot accumulate or replay old transitions.
@@ -106,11 +143,13 @@ function mixPalette(from: SectionPalette, to: SectionPalette, amount: number): S
  */
 export class SectionTransitionTimeline {
     private readonly sections: readonly SongSection[];
+    private readonly palettes: readonly SectionPalette[];
     private readonly music: MusicalTimeline;
     private readonly transitions: readonly Transition[];
 
     constructor(structure: SectionAnalysis | undefined, beats: readonly Beat[]) {
         this.sections = (structure && validateSections(structure, structure.duration))?.sections ?? [];
+        this.palettes = chooseSectionPalettes(this.sections);
         this.music = new MusicalTimeline(this.sections.length ? beats : []);
         this.transitions = this.sections.map((section, index) => {
             const startTime = section.start;
@@ -121,6 +160,9 @@ export class SectionTransitionTimeline {
                 startCoordinate: birth.beatCoordinate,
                 beatSpan: 0,
                 musical: false,
+                anticipationStartTime: startTime,
+                anticipationCoordinate: birth.beatCoordinate,
+                anticipationSpan: 0,
             };
             if (index === 0 || !birth.active) return fallback;
 
@@ -152,15 +194,48 @@ export class SectionTransitionTimeline {
             const beatSpan = this.music.sample(endTime).beatCoordinate - birth.beatCoordinate;
             // Tiny fragments use a gentle palette fade instead of a rushed wave.
             if (endTime - startTime < MIN_TRANSITION_SECONDS - EPSILON || beatSpan < 0.5 - EPSILON) return fallback;
-            return { startTime, endTime, startCoordinate: birth.beatCoordinate, beatSpan, musical: true };
+            // Check eligibility before acceleration so fast tempos do not lose
+            // their wave simply because the new travel time is shorter.
+            endTime = endAfterBeats(beatSpan / WAVE_SPEED);
+            return {
+                ...fallback, endTime, startCoordinate: birth.beatCoordinate,
+                beatSpan: this.music.sample(endTime).beatCoordinate - birth.beatCoordinate, musical: true,
+            };
         });
+        for (let index = 1; index < this.transitions.length; index++) {
+            const transition = this.transitions[index]!;
+            if (!transition.musical) continue;
+            const coordinate = Math.max(0, transition.startCoordinate - ANTICIPATION_BEATS);
+            const beatIndex = Math.floor(coordinate);
+            const before = beats[beatIndex], after = beats[beatIndex + 1];
+            if (!before || !after) continue;
+            const proposed = before.time + (after.time - before.time) * (coordinate - beatIndex);
+            // A charge must not overlap the preceding wave/fade or bridge missing beats.
+            const start = Math.max(0, proposed, transition.startTime - MAX_ANTICIPATION_SECONDS,
+                this.transitions[index - 1]!.endTime);
+            if (transition.startTime - start < MIN_ANTICIPATION_SECONDS) continue;
+            const birth = this.music.sample(start);
+            if (!birth.active) continue;
+            let valid = true;
+            for (let i = birth.beatIndex; i < beats.length && beats[i]!.time < transition.startTime; i++) {
+                if (!this.music.sample(Math.max(start, beats[i]!.time)).active) {
+                    valid = false;
+                    break;
+                }
+            }
+            if (!valid) continue;
+            transition.anticipationStartTime = start;
+            transition.anticipationCoordinate = birth.beatCoordinate;
+            transition.anticipationSpan = transition.startCoordinate - birth.beatCoordinate;
+        }
     }
 
     sample(position: number): SectionTransitionFrame {
         if (!this.sections.length) {
             return {
                 index: -1, label: undefined, active: false, startTime: 0, endTime: 0,
-                progress: 1, envelope: 0, musical: false,
+                progress: 1, waveProgress: 1, anticipating: false, anticipation: 0, impact: 0,
+                envelope: 0, musical: false,
                 from: DEFAULT_SECTION_PALETTE, to: DEFAULT_SECTION_PALETTE, palette: DEFAULT_SECTION_PALETTE,
             };
         }
@@ -175,8 +250,8 @@ export class SectionTransitionTimeline {
         const index = Math.max(0, low - 1);
         const section = this.sections[index]!;
         const transition = this.transitions[index]!;
-        const from = SECTION_PALETTES[this.sections[Math.max(0, index - 1)]!.label];
-        const to = SECTION_PALETTES[section.label];
+        const from = this.palettes[Math.max(0, index - 1)]!;
+        const to = this.palettes[index]!;
         const { startTime, endTime, musical } = transition;
         const active = index > 0 && time >= startTime && time < endTime;
         const progress = !active ? 1 : musical
@@ -184,8 +259,19 @@ export class SectionTransitionTimeline {
             : clamp01((time - startTime) / (endTime - startTime));
         const eased = smooth(progress);
         const envelope = active && musical ? Math.sin(Math.PI * progress) ** 2 : 0;
+        const next = this.transitions[index + 1];
+        const anticipating = !active && !!next?.anticipationSpan
+            && time >= next.anticipationStartTime && time < next.startTime;
+        const anticipation = anticipating
+            ? smooth(clamp01((this.music.sample(time).beatCoordinate - next!.anticipationCoordinate) / next!.anticipationSpan))
+            : 0;
+        const impact = anticipating ? anticipation : active && musical && transition.anticipationSpan > 0
+            ? 1 - smooth(clamp01((this.music.sample(time).beatCoordinate - transition.startCoordinate)
+                / Math.min(1, transition.beatSpan)))
+            : 0;
         return {
             index, label: section.label, active, startTime, endTime, progress, musical,
+            waveProgress: eased, anticipating, anticipation, impact,
             envelope, from, to, palette: mixPalette(from, to, eased),
         };
     }

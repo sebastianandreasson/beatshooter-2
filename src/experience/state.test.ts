@@ -34,6 +34,83 @@ describe("experience drops", () => {
         expect(state.totalXp).toBe(0);
     });
 
+    test("a 25 percent pickup upgrade attracts out to 4.375 without collecting early", () => {
+        const state = createExperience();
+        const atBoundary = dropExperience(state, { x: 4.375, z: 0 });
+        const outside = dropExperience(state, { x: -4.376, z: 0 });
+        advanceExperience(state, 1 / 60, origin);
+        expect(atBoundary.attracted).toBe(false);
+        expect(outside.attracted).toBe(false);
+        expect(advanceExperience(state, 1 / 60, origin, origin, 1.25).collected).toBe(0);
+        expect(atBoundary.attracted).toBe(true);
+        expect(atBoundary.x).toBeLessThan(4.375);
+        expect(atBoundary.x).toBeGreaterThan(state.tuning.pickupRadius);
+        expect(outside.attracted).toBe(false);
+        expect(outside.x).toBe(-4.376);
+        expect(state.totalXp).toBe(0);
+        expect(state.tuning).toEqual(DEFAULT_EXPERIENCE_TUNING);
+    });
+
+    test("upgraded attraction catches a swept path outside base range", () => {
+        const start = { x: -8, z: 0 }, end = { x: 8, z: 0 };
+        const base = createExperience(), upgraded = createExperience();
+        const baseDrop = dropExperience(base, { x: 0, z: 4 });
+        const upgradedDrop = dropExperience(upgraded, { x: 0, z: 4 });
+        advanceExperience(base, 1 / 60, end, start);
+        expect(advanceExperience(upgraded, 1 / 60, end, start, 1.25).collected).toBe(0);
+        expect(baseDrop.attracted).toBe(false);
+        expect(upgradedDrop.attracted).toBe(true);
+        expect(upgradedDrop.x).toBeGreaterThan(0);
+        expect(upgradedDrop.z).toBeLessThan(4);
+        expect(Math.hypot(upgradedDrop.x, upgradedDrop.z - 4)).toBeLessThan(14 / 60);
+        // Once a gem starts moving, losing the upgrade does not strand it.
+        const previousX = upgradedDrop.x;
+        advanceExperience(upgraded, 1 / 60, end, end, 1);
+        expect(upgradedDrop.x).toBeGreaterThan(previousX);
+    });
+
+    test("pickup upgrades scale custom magnet tuning while leaving collection contact unchanged", () => {
+        const state = createExperience({
+            magnetRadius: 2, pickupRadius: 0.4, attractionSpeed: 0.01, attractionAcceleration: 0,
+        });
+        const tuning = { ...state.tuning };
+        const atBoundary = dropExperience(state, { x: 2.5, z: 0 });
+        const outside = dropExperience(state, { x: -2.501, z: 0 });
+        const nearContact = dropExperience(state, { x: 0, z: 0.45 });
+        expect(advanceExperience(state, 1 / 60, origin, origin, 1.25).collected).toBe(0);
+        expect(atBoundary.attracted).toBe(true);
+        expect(outside.attracted).toBe(false);
+        expect(nearContact.attracted).toBe(true);
+        expect(nearContact.z).toBeGreaterThan(tuning.pickupRadius);
+        for (let step = 0; step < 10; step++) advanceExperience(state, 1 / 60, origin, origin, 1.25);
+        expect(outside.attracted).toBe(false);
+        expect(state.tuning).toEqual(tuning);
+        expect(state.totalXp).toBe(0);
+    });
+
+    test("zero attraction multiplier still collects direct and swept physical contact", () => {
+        const state = createExperience();
+        dropExperience(state, { x: state.tuning.pickupRadius, z: 0 });
+        const outside = dropExperience(state, { x: 0, z: state.tuning.pickupRadius + 0.01 });
+        expect(advanceExperience(state, 1 / 60, origin, origin, 0).collected).toBe(1);
+        expect(outside.attracted).toBe(false);
+        dropExperience(state, origin);
+        expect(advanceExperience(state, 1 / 60, { x: 8, z: 0 }, { x: -8, z: 0 }, 0).collected).toBe(1);
+        expect(outside.attracted).toBe(false);
+        expect(state.totalXp).toBe(20);
+    });
+
+    test("invalid pickup multipliers reject before changing gems or progression", () => {
+        const state = createExperience();
+        dropExperience(state, { x: 0.5, z: 0 });
+        dropExperience(state, { x: 2, z: 0 });
+        const snapshot = structuredClone(state);
+        for (const multiplier of [-0.01, 3.001, NaN, Infinity, -Infinity]) {
+            expect(() => advanceExperience(state, 1 / 60, origin, origin, multiplier)).toThrow(RangeError);
+            expect(state).toEqual(snapshot);
+        }
+    });
+
     test("a nearby fast pass latches attraction even when both endpoints are out of range", () => {
         const state = createExperience();
         const drop = dropExperience(state, { x: 0, z: 3 });

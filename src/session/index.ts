@@ -331,15 +331,16 @@ async function startPlayback(world: World): Promise<void> {
 }
 
 /** Apply immediately; the offer's level prevents a stale card spending a queued choice. */
-export function selectUpgrade(world: World, id: string, offeredLevel: number): void {
+export function selectUpgrade(world: World, id: string, offeredLevel: number): boolean {
     const s = world.resource(Session);
     if ((s.phase !== "playing" && s.phase !== "starting") || s.startBusy || s.completePending
-        || offeredLevel !== s.combat.upgrades.offeredLevel) return;
+        || offeredLevel !== s.combat.upgrades.offeredLevel) return false;
     const choice = s.combat.upgrades.choices.find(item => item.id === id);
-    if (!choice || !chooseUpgrade(s.combat, choice.id, s.phase === "starting" ? 0 : s.transport?.position ?? s.position)) return;
-    if (s.phase === "starting") { void startPlayback(world); return; }
+    if (!choice || !chooseUpgrade(s.combat, choice.id, s.phase === "starting" ? 0 : s.transport?.position ?? s.position)) return false;
+    if (s.phase === "starting") { void startPlayback(world); return true; }
     prepareUpgradeChoices(s.combat);
     renderUI(world);
+    return true;
 }
 
 export function quitSession(world: World): void {
@@ -455,6 +456,7 @@ export function renderUI(world: World): void {
         level: s.combat.experience.level, xp: s.combat.experience.xp,
         requiredXp: s.combat.experience.requiredXp, totalXp: s.combat.experience.totalXp,
         maxHealth: s.combat.playerStats.effective.maxHealth, position: s.position,
+        generation: s.generation, beats: s.track.beats,
         structure: s.loaded?.structure,
         previewPosition: s.preview ? s.transport?.position : 0,
         upgrade: s.phase === "starting" || (s.phase === "playing" && s.combat.upgrades.choices.length > 0) ? {
@@ -466,6 +468,7 @@ export function renderUI(world: World): void {
         beat: currentBeat?.index ?? -1, beatInBar: currentBeat?.beatInBar ?? -1,
         beatsPerBar, downbeat: currentBeat?.downbeat ?? false, analysis: s.analysis,
         dashState: world.resource(DashState).controller.status(s.position),
+        dashBeatInBar: world.resource(DashState).controller.timing.candidate(s.position)?.beatInBar,
         bar: Math.max(0, s.combat.lastBarIndex), result: s.result,
         bestScore: s.preferences.bestScores[s.track.id] ?? 0,
         error: s.error, pauseReason: s.pauseReason,

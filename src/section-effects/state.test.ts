@@ -41,21 +41,22 @@ describe("section transition sampling", () => {
         }
     });
 
-    test("starts at the exact detected boundary and completes the wave over four actual beats", () => {
+    test("starts at the exact detected boundary and runs the eligible four-beat wave at 1.3× speed", () => {
         const timeline = new SectionTransitionTimeline(sections([0, 2.25, 10]), generateTimeline(10, 120));
+        const end = 2.25 + 2 / 1.3;
         expect(timeline.sample(2.249).active).toBe(false);
         expect(timeline.sample(2.25)).toMatchObject({
             index: 1, label: "chorus", active: true, musical: true,
-            startTime: 2.25, endTime: 4.25, progress: 0, envelope: 0,
+            startTime: 2.25, endTime: end, progress: 0, envelope: 0,
             palette: SECTION_PALETTES.intro,
         });
-        const middle = timeline.sample(3.25);
+        const middle = timeline.sample(2.25 + 1 / 1.3);
         expect(middle.progress).toBeCloseTo(0.5);
         expect(middle.envelope).toBeCloseTo(1);
-        const ending = timeline.sample(4.25 - 1e-6);
+        const ending = timeline.sample(end - 1e-6);
         expect(ending.progress).toBeCloseTo(1);
         expect(ending.envelope).toBeCloseTo(0);
-        expect(timeline.sample(4.25)).toMatchObject({
+        expect(timeline.sample(end)).toMatchObject({
             active: false, progress: 1, envelope: 0, palette: SECTION_PALETTES.chorus,
         });
     });
@@ -63,33 +64,109 @@ describe("section transition sampling", () => {
     test("musical progression follows variable intervals instead of an average BPM or elapsed seconds", () => {
         const beats = chart([0, 0.4, 1, 1.8, 2.3, 2.8, 3.3, 3.8, 4.3, 4.8]);
         const timeline = new SectionTransitionTimeline(sections([0, 0.7, 5]), beats);
-        // Birth is beat 1.5; the wave ends at beat 5.5, or 3.05 seconds.
-        expect(timeline.sample(0.7).endTime).toBeCloseTo(3.05);
-        expect(timeline.sample(1.4).progress).toBeCloseTo(0.25);
-        expect(timeline.sample(2.05).progress).toBeCloseTo(0.5);
-        expect(timeline.sample(2.55).progress).toBeCloseTo(0.75);
-        expect(timeline.sample(3.05).active).toBe(false);
+        // Birth is beat 1.5; the 4 / 1.3 beat span ends at beat 4.576923.
+        expect(timeline.sample(0.7).endTime).toBeCloseTo(2.588461538);
+        expect(timeline.sample(1.215384615).progress).toBeCloseTo(0.25);
+        expect(timeline.sample(1.819230769).progress).toBeCloseTo(0.5);
+        expect(timeline.sample(2.203846154).progress).toBeCloseTo(0.75);
+        expect(timeline.sample(2.59).active).toBe(false);
     });
 
-    test("short sections complete at the next boundary, including repeated equal labels", () => {
+    test("one musical beat anticipates the boundary without announcing or repainting the next section early", () => {
+        const timeline = new SectionTransitionTimeline(sections([0, 2.25, 10]), generateTimeline(10, 120));
+        expect(timeline.sample(1.749)).toMatchObject({ anticipating: false, anticipation: 0, impact: 0 });
+        expect(timeline.sample(1.75)).toMatchObject({ anticipating: true, anticipation: 0, impact: 0 });
+        const charged = timeline.sample(2);
+        expect(charged).toMatchObject({
+            index: 0, label: "intro", active: false, anticipating: true,
+            anticipation: 0.5, impact: 0.5, palette: SECTION_PALETTES.intro,
+        });
+        const before = timeline.sample(2.25 - 1e-6), boundary = timeline.sample(2.25);
+        expect(before.impact).toBeCloseTo(boundary.impact, 8);
+        expect(boundary).toMatchObject({
+            index: 1, active: true, anticipating: false, anticipation: 0, impact: 1, waveProgress: 0,
+        });
+        expect(timeline.sample(2.5).impact).toBeCloseTo(0.5);
+        expect(timeline.sample(2.75).impact).toBe(0);
+        for (let frame = 0; frame < 144; frame++) expect(timeline.sample(2)).toEqual(charged);
+        timeline.sample(8);
+        timeline.sample(-1);
+        expect(timeline.sample(2)).toEqual(charged);
+    });
+
+    test("outward travel eases in and out while star progress retains its exact musical coordinates", () => {
+        const timeline = new SectionTransitionTimeline(sections([0, 2, 10]), generateTimeline(10, 120));
+        for (const [fraction, travel] of [[0.25, 0.15625], [0.5, 0.5], [0.75, 0.84375]]) {
+            const frame = timeline.sample(2 + 2 / 1.3 * fraction!);
+            expect(frame.progress).toBeCloseTo(fraction!);
+            expect(frame.waveProgress).toBeCloseTo(travel!);
+        }
+        const radii = Array.from({ length: 101 }, (_, index) => timeline.sample(2 + index / (50 * 1.3)).waveProgress * 30);
+        for (let index = 1; index < radii.length; index++) expect(radii[index]!).toBeGreaterThan(radii[index - 1]!);
+        const firstStep = radii[1]! - radii[0]!;
+        const middleStep = radii[50]! - radii[49]!;
+        const lastStep = radii[100]! - radii[99]!;
+        expect(middleStep).toBeGreaterThan(firstStep * 40);
+        expect(lastStep).toBeCloseTo(firstStep, 8);
+        expect(radii[0]).toBe(0);
+        expect(radii.at(-1)).toBe(30);
+    });
+
+    test("anticipation uses irregular beat coordinates and caps a slow-song buildup", () => {
+        const timeline = new SectionTransitionTimeline(sections([0, 0.7, 5]),
+            chart([0, 0.4, 1, 1.8, 2.3, 2.8, 3.3, 3.8, 4.3, 4.8]));
+        // The offbeat boundary is beat 1.5; charge starts at beat 0.5 (0.2 s).
+        expect(timeline.sample(0.199).anticipating).toBe(false);
+        expect(timeline.sample(0.2).anticipation).toBeCloseTo(0);
+        expect(timeline.sample(0.4).anticipation).toBeCloseTo(0.5);
+        expect(timeline.sample(0.7).impact).toBe(1);
+        // Beat 2.5 falls at 1.4 s; recovery follows that real beat coordinate.
+        expect(timeline.sample(1).impact).toBeCloseTo(0.5);
+        expect(timeline.sample(1.4).impact).toBe(0);
+        const slow = new SectionTransitionTimeline(sections([0, 3.75, 30]), generateTimeline(30, 20));
+        expect(slow.sample(3.149).anticipating).toBe(false);
+        expect(slow.sample(3.45).anticipation).toBeCloseTo(0.5);
+        expect(slow.sample(3.75).impact).toBe(1);
+    });
+
+    test("gaps, tiny fragments and overlapping waves cannot invent or abruptly restart a charge", () => {
+        const noBeats = new SectionTransitionTimeline(sections([0, 2, 10]), []);
+        const tiny = new SectionTransitionTimeline(sections([0, 2, 2.1, 10]), generateTimeline(10, 120));
+        const overlapping = new SectionTransitionTimeline(sections([0, 2, 2.5, 10]), generateTimeline(10, 120));
+        for (const timeline of [noBeats, tiny]) {
+            expect(timeline.sample(1.9)).toMatchObject({ anticipation: 0, impact: 0 });
+            expect(timeline.sample(2)).toMatchObject({ anticipation: 0, impact: 0 });
+        }
+        expect(overlapping.sample(2.4)).toMatchObject({ anticipating: false, anticipation: 0, impact: 0 });
+        expect(overlapping.sample(2.5)).toMatchObject({ active: true, musical: true, impact: 0 });
+        const gap = new SectionTransitionTimeline(sections([0, 21.5, 25]),
+            chart([0, 0.5, 1, 1.5, 21.5, 22, 22.5, 23, 23.5, 24]));
+        expect(gap.sample(21.4)).toMatchObject({ anticipating: false, impact: 0 });
+        expect(gap.sample(21.5)).toMatchObject({ active: true, musical: true, impact: 0 });
+    });
+
+    test("short sections accelerate their clipped wave and repeated labels receive a fresh color", () => {
         const timeline = new SectionTransitionTimeline(
             sections([0, 2, 3, 8], ["intro", "chorus", "chorus"]), generateTimeline(8, 120),
         );
-        expect(timeline.sample(2).endTime).toBe(3);
-        expect(timeline.sample(2.5).progress).toBeCloseTo(0.5);
-        expect(timeline.sample(3 - 1e-6).progress).toBeCloseTo(1);
+        expect(timeline.sample(2).endTime).toBeCloseTo(2 + 1 / 1.3);
+        expect(timeline.sample(2 + 0.5 / 1.3).progress).toBeCloseTo(0.5);
+        expect(timeline.sample(2 + 1 / 1.3 - 1e-6).progress).toBeCloseTo(1);
         expect(timeline.sample(3)).toMatchObject({
             index: 2, label: "chorus", active: true, progress: 0,
-            envelope: 0, endTime: 5, from: SECTION_PALETTES.chorus, to: SECTION_PALETTES.chorus,
+            envelope: 0, from: SECTION_PALETTES.chorus,
         });
-        expect(timeline.sample(4).progress).toBeCloseTo(0.5);
+        expect(timeline.sample(3).to).not.toEqual(timeline.sample(3).from);
+        expect(timeline.sample(3).endTime).toBeCloseTo(3 + 2 / 1.3);
+        expect(timeline.sample(3 + 1 / 1.3).progress).toBeCloseTo(0.5);
     });
 
     test("quiet gaps fade colors only and cannot stretch or restart a wave", () => {
         const beats = chart([0, 0.5, 1, 1.5, 21.5, 22, 22.5, 23, 23.5, 24]);
         const timeline = new SectionTransitionTimeline(sections([0, 0.5, 10, 25]), beats);
         // Finish the first wave at the start of the gap, while real intervals remain.
-        expect(timeline.sample(0.5)).toMatchObject({ musical: true, endTime: 1.5 });
+        expect(timeline.sample(0.5).musical).toBe(true);
+        expect(timeline.sample(0.5).endTime).toBeCloseTo(0.5 + 1 / 1.3);
         expect(timeline.sample(1.5)).toMatchObject({ active: false, envelope: 0 });
         expect(timeline.sample(10)).toMatchObject({
             index: 2, musical: false, active: true, endTime: 10.6, progress: 0, envelope: 0,
@@ -106,7 +183,8 @@ describe("section transition sampling", () => {
     test("song tails and tiny sections never produce extrapolated or abrupt waves", () => {
         const beats = generateTimeline(5, 120);
         const tail = new SectionTransitionTimeline(sections([0, 3.5, 5]), beats);
-        expect(tail.sample(3.5)).toMatchObject({ musical: true, endTime: 4.5 });
+        expect(tail.sample(3.5).musical).toBe(true);
+        expect(tail.sample(3.5).endTime).toBeCloseTo(3.5 + 1 / 1.3);
         expect(tail.sample(4.5)).toMatchObject({ active: false, envelope: 0 });
         const beyond = new SectionTransitionTimeline(sections([0, 4.6, 5]), beats);
         expect(beyond.sample(4.6)).toMatchObject({ musical: false, endTime: 5, active: true });
@@ -118,17 +196,19 @@ describe("section transition sampling", () => {
         expect(fragment.sample(2.2)).toMatchObject({ musical: false, envelope: 0 });
     });
 
-    test("slow tracks halve the beat count to bound the wave while fast tracks keep a full bar", () => {
+    test("slow-track caps accelerate too and fast tracks keep their wave despite the shorter duration", () => {
         const slow = new SectionTransitionTimeline(sections([0, 3.75, 30]), generateTimeline(30, 20));
-        expect(slow.sample(3.75)).toMatchObject({ musical: true, endTime: 6.75 });
-        expect(slow.sample(5.25).progress).toBeCloseTo(0.5);
-        expect(slow.sample(6.75)).toMatchObject({ active: false, progress: 1, envelope: 0 });
+        expect(slow.sample(3.75).musical).toBe(true);
+        expect(slow.sample(3.75).endTime).toBeCloseTo(3.75 + 3 / 1.3);
+        expect(slow.sample(3.75 + 1.5 / 1.3).progress).toBeCloseTo(0.5);
+        expect(slow.sample(3.75 + 3 / 1.3)).toMatchObject({ active: false, progress: 1, envelope: 0 });
         const medium = new SectionTransitionTimeline(sections([0, 2.5, 30]), generateTimeline(30, 60));
-        expect(medium.sample(2.5)).toMatchObject({ musical: true, endTime: 4.5 });
+        expect(medium.sample(2.5).musical).toBe(true);
+        expect(medium.sample(2.5).endTime).toBeCloseTo(2.5 + 2 / 1.3);
         const fast = new SectionTransitionTimeline(sections([0, 2, 30]), generateTimeline(30, 300));
         expect(fast.sample(2)).toMatchObject({ musical: true });
-        expect(fast.sample(2).endTime).toBeCloseTo(2.8);
-        expect(fast.sample(2.4).progress).toBeCloseTo(0.5);
+        expect(fast.sample(2).endTime).toBeCloseTo(2 + 0.8 / 1.3);
+        expect(fast.sample(2 + 0.4 / 1.3).progress).toBeCloseTo(0.5);
     });
 
     test("all label palettes stay dark and interpolation is continuous without flashes", () => {
@@ -155,6 +235,33 @@ describe("section transition sampling", () => {
         }
     });
 
+    test("every adjacent section gets a visibly different deterministic palette, including repeated labels and quiet fades", () => {
+        const sequences: SectionLabel[][] = [
+            ...SECTION_LABELS.map(label => Array<SectionLabel>(5).fill(label)),
+            ["verse", "inst", "chorus", "chorus", "inst", "intro", "bridge", "bridge", "silence"],
+        ];
+        for (const labels of sequences) {
+            const structure = sections(Array.from({ length: labels.length + 1 }, (_, i) => i * 3), labels);
+            const beats = generateTimeline(structure.duration, 120);
+            const timeline = new SectionTransitionTimeline(structure, beats);
+            const replay = new SectionTransitionTimeline(structure, beats);
+            const quiet = new SectionTransitionTimeline(structure, []);
+            for (let i = 1; i < labels.length; i++) {
+                const frame = timeline.sample(i * 3);
+                expect(frame.label).toBe(labels[i]);
+                expect(frame.from).toEqual(timeline.sample((i - 1) * 3).to);
+                expect(frame.to).not.toEqual(frame.from);
+                expect(Math.max(...frame.to.accent.map((channel, n) => Math.abs(channel - frame.from.accent[n]!))))
+                    .toBeGreaterThan(0.1);
+                expect(timeline.sample(frame.endTime + 0.01).palette).toEqual(frame.to);
+                expect(quiet.sample(i * 3).to).toEqual(frame.to);
+                expect(quiet.sample(i * 3 + 0.6).palette).toEqual(frame.to);
+                timeline.sample(structure.duration);
+                expect(timeline.sample(i * 3)).toEqual(replay.sample(i * 3));
+            }
+        }
+    });
+
     test("pause, slowdown, frame rate, seek and retry all sample the same owned timeline", () => {
         const structure = sections([0, 2, 8]);
         const beats = generateTimeline(8, 120);
@@ -168,8 +275,8 @@ describe("section transition sampling", () => {
         timeline.sample(100);
         timeline.sample(-1);
         expect(timeline.sample(2.73)).toEqual(expected);
-        expect(timeline.sample(2.4).progress).toBeCloseTo(0.2);
-        expect(timeline.sample(2.6).progress).toBeCloseTo(0.3);
+        expect(timeline.sample(2.4).progress).toBeCloseTo(0.26);
+        expect(timeline.sample(2.6).progress).toBeCloseTo(0.39);
         structure.sections[1]!.start = 3;
         structure.sections[1]!.label = "bridge";
         beats[5] = { ...beats[5]!, time: 7 };

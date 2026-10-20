@@ -177,7 +177,6 @@ test("live OS reduced-motion changes suppress travelling effects and survive ret
     await expect.poll(async () => (await snapshot(page)).visuals.motionAllowed).toBe(false);
     await page.keyboard.press("KeyR");
     await chooseStartingUpgrade(page);
-    await chooseStartingUpgrade(page);
     await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
     await expect.poll(async () => (await snapshot(page)).generation).toBe(reduced.generation + 1);
     await expect.poll(async () => (await snapshot(page)).visuals.activeShards).toBe(0);

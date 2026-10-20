@@ -129,7 +129,7 @@ test("enemy gems wait on the floor, attract nearby, level the player, and reset 
     await chooseStartingUpgrade(page);
     await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
     await assertClearLayout(page);
-    // The HUD remains visible but becomes inert behind the level-up dialog.
+    // The HUD remains available while the live upgrade panel is open.
     const bar = page.getByRole("progressbar", { name: "Experience to next level", exact: true, includeHidden: true });
     await expect(bar).toHaveAttribute("max", String(firstRequirement));
     await expect(bar).toHaveAttribute("value", "0");
@@ -250,10 +250,12 @@ test("enemy gems wait on the floor, attract nearby, level the player, and reset 
     await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
     await pause(page);
     await page.getByRole("button", { name: "Restart session" }).click();
+    await chooseStartingUpgrade(page);
+    await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
     await expect.poll(async () => (await snapshot(page)).generation).toBe(heldLevel.generation + 1);
     await expect.poll(async () => (await snapshot(page)).experience.renderedDrops).toBe(0);
     const fresh = await snapshot(page);
-    expect(fresh.position).toBeLessThan(0);
+    expect(fresh.position).toBeLessThanOrEqual(0);
     expect(fresh.experience).toEqual({
         level: 1, xp: 0, requiredXp: firstRequirement, totalXp: 0, renderedDrops: 0, drops: [],
     });

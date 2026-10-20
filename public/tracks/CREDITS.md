@@ -26,6 +26,13 @@ python3 src/tracks/generate-demo.py
 Audio: mono 22,050 Hz, 16-bit PCM WAV. The first beat is at 0 seconds; each
 subsequent beat is 0.5 seconds later. Every fourth beat begins a bar.
 
+The arrangement and manifest share six authored sections: intro (0–8s), verse
+(8–24s), chorus (24–40s), bridge (40–48s), chorus (48–64s), and outro (64–72s).
+The chorus adds denser percussion, a brighter bass/arpeggio and lead melody;
+the bridge strips back to half-time percussion and chords. The outro drops
+the lead and then the arpeggio. Exact composition boundaries drive the same
+section timeline and effects as analyzed imports, without running a model.
+
 The practice/calibration metronome uses original Web Audio sine waves and
 requires no audio asset. User-imported music stays on the user's device and is
 neither uploaded nor included in this distribution.

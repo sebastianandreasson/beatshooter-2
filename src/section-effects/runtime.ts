@@ -1,4 +1,4 @@
-import type { Resource } from "@dylanebert/shallot";
+import type { EntityRef, Resource } from "@dylanebert/shallot";
 import type { SectionAnalysis } from "../analysis/sections";
 import type { TrackManifest } from "../tracks";
 import { SectionTransitionTimeline, type SectionTransitionFrame } from "./state";
@@ -14,9 +14,13 @@ export const SectionEffects: Resource<{
     frame: SectionTransitionFrame;
     strength: number;
     motionAllowed: boolean;
+    zoomScale: number;
+    baseCameraSize: number;
+    zoomCamera?: EntityRef;
 }> = {
     create: () => ({
         generation: -1, timeline: new SectionTransitionTimeline(undefined, []),
         frame: NO_SECTION_FRAME, strength: 0, motionAllowed: false,
+        zoomScale: 1, baseCameraSize: 17,
     }),
 };

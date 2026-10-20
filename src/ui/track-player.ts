@@ -88,7 +88,7 @@ export function mountTrackPlayer(element: HTMLElement, accessibleName = "Track p
             setText(note, sections.length ? "SONG SECTIONS" : practice ? "PRACTICE" : "");
             const following = section ? sections[sections.indexOf(section) + 1] : undefined;
             setText(next, following ? `Next: ${SECTION_STYLE[following.label].name} · ${clock(following.start)}` : "");
-            const description = `${clock(time)} of ${practice ? "open practice" : clock(length)}${section ? `, estimated ${label}` : ""}`;
+            const description = `${clock(time)} of ${practice ? "open practice" : clock(length)}${section ? `, ${structure?.backend === "authored" ? "" : "estimated "}${label}` : ""}`;
             if (progress.getAttribute("aria-valuetext") !== description) progress.setAttribute("aria-valuetext", description);
         },
     };

@@ -25,6 +25,8 @@ export interface MusicFloorInput {
     section?: {
         progress: number;
         strength: number;
+        /** Bounded center charge before the boundary and through its first beat. */
+        charge?: number;
         floor: [number, number, number];
         line: [number, number, number];
         accent: [number, number, number];
@@ -68,6 +70,13 @@ export const sectionShockwave = tgpu.fn([d.f32, d.f32, d.f32, d.f32], d.vec2f)((
     return d.vec2f(paint, front * envelope * strength);
 });
 
+/** A fixed soft pool of light, never another ring or moving front. */
+export const sectionCharge = tgpu.fn([d.f32, d.f32], d.f32)((charge, distance) => {
+    "use gpu";
+    const core = 1 - std.smoothstep(0, 4.8, std.max(0, distance));
+    return std.clamp(charge, 0, 1) * core * core;
+});
+
 const gridLine = tgpu.fn([d.vec2f, d.f32, d.f32], d.f32)((point, width, footprint) => {
     "use gpu";
     const cell = std.abs(std.sub(std.fract(std.add(std.div(point, 3), 0.5)), 0.5));
@@ -84,7 +93,7 @@ const shadeFloor = tgpu.fn([FloorParameters, d.vec2f], d.vec4f)((p, point) => {
     const footprint = std.max(std.max(std.fwidth(point.x), std.fwidth(point.y)), 0.012);
     const distance = std.length(point);
     const wave = sectionShockwave(p.section.x, p.section.y * p.pulse.w, distance, footprint);
-    const ordinaryRings = d.f32(p.section.y > 0 ? 0 : 1);
+    const ordinaryRings = d.f32(p.section.y > 0 || p.section.w > 0 ? 0 : 1);
     // Optional refraction bends only the grid at the passing front, never geometry.
     const radial = std.div(point, std.max(distance, 0.001));
     const gridPoint = std.add(point, std.mul(radial, wave.y * 0.55 * p.response.z));
@@ -141,8 +150,13 @@ const shadeFloor = tgpu.fn([FloorParameters, d.vec2f], d.vec4f)((p, point) => {
     color = std.add(color, std.mul(palette, secondaryGrid * 0.12 * active * quiet * p.response.z));
 
     // One broad, colored shockwave. It begins near the center immediately, with
-    // a quieter player zone and no white flash, secondary front, or camera motion.
+    // a quieter player zone and no white flash or secondary front.
     color = std.add(color, std.mul(targetAccent, wave.y * (0.5 + quiet * 0.5) * 0.95));
+    // The held center gathers light before launch, then releases over one beat.
+    // Keeping the old accent at progress zero avoids a color jump at the boundary.
+    const chargePalette = std.mix(d.vec3f(p.fromAccent.x, p.fromAccent.y, p.fromAccent.z),
+        targetAccent, std.smoothstep(0, 0.12, p.section.x));
+    color = std.add(color, std.mul(chargePalette, sectionCharge(p.section.w * p.pulse.w, distance) * 0.45));
     return d.vec4f(std.min(std.mul(color, inside), d.vec3f(0.23)), 1);
 });
 
@@ -308,6 +322,7 @@ export function updateMusicFloor(world: World, input: MusicFloorInput): void {
         };
         section.progress = unit(input.section.progress);
         section.strength = current.motionAllowed ? unit(input.section.strength) : 0;
+        section.charge = current.motionAllowed ? unit(input.section.charge ?? 0) : 0;
         if (input.section.from) {
             section.from ??= { floor: [0, 0, 0], line: [0, 0, 0], accent: [0, 0, 0] };
             for (let lane = 0; lane < 3; lane++) {
@@ -344,6 +359,7 @@ export function updateMusicFloor(world: World, input: MusicFloorInput): void {
     parameters.section[0] = current.section?.progress ?? 0;
     parameters.section[1] = current.section?.strength ?? 0;
     parameters.section[2] = current.section ? 1 : 0;
+    parameters.section[3] = current.section?.charge ?? 0;
     const { floorColor, lineColor, accentColor, fromFloor, fromLine, fromAccent } = parameters;
     for (let lane = 0; lane < 3; lane++) {
         floorColor[lane] = current.section?.floor[lane] ?? FLOOR_DEFAULTS.floorColor[lane]!;

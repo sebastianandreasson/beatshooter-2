@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import {
     createPlayerStats,
     DEFAULT_PLAYER_STATS,
+    MAX_DASH_DISTANCE,
+    MAX_PICKUP_RADIUS_MULTIPLIER,
     recordPlayerHit,
     recordPlayerShot,
     removePlayerStatModifier,
@@ -198,5 +200,69 @@ describe("player weapon stats", () => {
             .toThrow(RangeError);
         removePlayerStatModifier(stats, "upgrades");
         expect(stats.effective).toEqual(DEFAULT_PLAYER_STATS);
+    });
+
+    test("utility stats preserve fractional additions and multipliers through replacement and removal", () => {
+        const stats = createPlayerStats();
+        setPlayerStatModifier(stats, "upgrade:utility", {
+            add: { pickupRadiusMultiplier: 0.25, dashDistance: 0.6 },
+        });
+        expect(stats.effective.pickupRadiusMultiplier).toBe(1.25);
+        expect(stats.effective.dashDistance).toBeCloseTo(4.2, 12);
+        const first = stats.effective;
+        setPlayerStatModifier(stats, "temporary:utility", {
+            multiply: { pickupRadiusMultiplier: 1.1, dashDistance: 1.25 },
+        });
+        expect(stats.effective.pickupRadiusMultiplier).toBeCloseTo(1.375, 12);
+        expect(stats.effective.dashDistance).toBeCloseTo(5.25, 12);
+        expect(first.dashDistance).toBeCloseTo(4.2, 12);
+        removePlayerStatModifier(stats, "temporary:utility");
+        expect(stats.effective).toEqual(first);
+        setPlayerStatModifier(stats, "upgrade:utility", {
+            add: { pickupRadiusMultiplier: 0.5, dashDistance: 1.2 },
+        });
+        expect(stats.effective.pickupRadiusMultiplier).toBe(1.5);
+        expect(stats.effective.dashDistance).toBeCloseTo(4.8, 12);
+        removePlayerStatModifier(stats, "upgrade:utility");
+        expect(stats.effective).toEqual(DEFAULT_PLAYER_STATS);
+        expect(stats.base).toEqual(DEFAULT_PLAYER_STATS);
+    });
+
+    test("utility caps limit resolved values while finite debuffs remain removable", () => {
+        const stats = createPlayerStats();
+        setPlayerStatModifier(stats, "many-upgrades", {
+            add: { pickupRadiusMultiplier: 100, dashDistance: 100 },
+        });
+        expect(stats.effective.pickupRadiusMultiplier).toBe(MAX_PICKUP_RADIUS_MULTIPLIER);
+        expect(stats.effective.dashDistance).toBe(MAX_DASH_DISTANCE);
+        removePlayerStatModifier(stats, "many-upgrades");
+        setPlayerStatModifier(stats, "debuff", {
+            multiply: { pickupRadiusMultiplier: 0.25, dashDistance: 0.5 },
+        });
+        expect(stats.effective.pickupRadiusMultiplier).toBe(0.25);
+        expect(stats.effective.dashDistance).toBe(1.8);
+        setPlayerStatModifier(stats, "debuff", {
+            multiply: { pickupRadiusMultiplier: 0, dashDistance: 0 },
+        });
+        expect(stats.effective.pickupRadiusMultiplier).toBe(0);
+        expect(stats.effective.dashDistance).toBe(0);
+        removePlayerStatModifier(stats, "debuff");
+        expect(stats.effective).toEqual(DEFAULT_PLAYER_STATS);
+    });
+
+    test("invalid utility modifiers cannot replace the current contribution", () => {
+        const stats = createPlayerStats();
+        setPlayerStatModifier(stats, "utility", { add: { pickupRadiusMultiplier: 0.25, dashDistance: 0.6 } });
+        const previous = stats.effective, modifiers = stats.modifiers;
+        for (const modifier of [
+            { add: { pickupRadiusMultiplier: -2 } }, { add: { dashDistance: -4 } },
+            { multiply: { pickupRadiusMultiplier: Infinity } }, { add: { dashDistance: NaN } },
+        ]) {
+            expect(() => setPlayerStatModifier(stats, "utility", modifier)).toThrow(RangeError);
+            expect(stats.effective).toBe(previous);
+            expect(stats.modifiers).toBe(modifiers);
+        }
+        expect(() => createPlayerStats({ pickupRadiusMultiplier: -1 })).toThrow(RangeError);
+        expect(() => createPlayerStats({ dashDistance: Infinity })).toThrow(RangeError);
     });
 });

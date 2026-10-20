@@ -7,6 +7,7 @@ import { PLAYER_SPEED } from "../src/player/movement";
 import { DASH_DISTANCE, DashController } from "../src/dash/state";
 import { createDashTiming } from "../src/dash/timing";
 import { generateTimeline } from "../src/rhythm/timeline";
+import { MAX_DASH_DISTANCE } from "../src/player-stats";
 
 const fixture: Plugin = {
     name: "PlayerFixture", recovery: "stateless", deterministic: false,
@@ -41,7 +42,8 @@ test("real Shallot fixed physics keeps movement planar, normalizes diagonals, re
     } finally { app.dispose(); }
 });
 
-test("real physics dash reaches the arena corner without crossing walls or leaving the play plane", async () => {
+for (const distance of [DASH_DISTANCE, MAX_DASH_DISTANCE]) {
+test(`real physics ${distance}-unit dash reaches the arena corner without crossing walls or leaving the play plane`, async () => {
     const app = await createApp({ defaults: false, plugins: [StandardPhysicsPlugin, fixture] });
     try {
         const { world } = app, state = world.resource(PlayerState);
@@ -65,7 +67,7 @@ test("real physics dash reaches the arena corner without crossing walls or leavi
         setTransform(world, state.body, [16.5, 0.55, 16.5], [0, 0, 0, 1]);
         world.step(1 / 60);
         const dash = new DashController(createDashTiming(generateTimeline(5, 300)));
-        expect(dash.press(0, { x: 1, z: 1 }, { x: 0, z: -1 })).toBe(true);
+        expect(dash.press(0, { x: 1, z: 1 }, { x: 0, z: -1 }, state.position, distance)).toBe(true);
         const velocity = world.storage(GlobalTransform).linearVelocity;
         const translation = world.storage(GlobalTransform).translation;
         for (let frame = 0; frame < 20; frame++) {
@@ -73,6 +75,11 @@ test("real physics dash reaches the arena corner without crossing walls or leavi
             const active = dash.active;
             state.dashVelocity = active ? {
                 x: active.direction.x * active.speed, z: active.direction.z * active.speed,
+            } : undefined;
+            const progress = active ? (frame / 60) / (active.endsAt - active.startedAt) : 0;
+            state.dashTarget = active ? {
+                x: active.origin.x + active.direction.x * active.distance * progress,
+                z: active.origin.z + active.direction.z * active.distance * progress,
             } : undefined;
             world.step(1 / 60);
             expect(state.position.x).toBeLessThanOrEqual(17.5);
@@ -87,6 +94,7 @@ test("real physics dash reaches the arena corner without crossing walls or leavi
         expect(state.wasDashing).toBe(false);
     } finally { app.dispose(); }
 });
+}
 
 test("a real physics dash ends at normal movement speed and reset removes an active override", async () => {
     const app = await createApp({ defaults: false, plugins: [StandardPhysicsPlugin, fixture] });

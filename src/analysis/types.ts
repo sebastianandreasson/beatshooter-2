@@ -7,6 +7,8 @@ export interface EnergyCurve {
     loudness: number[];
     /** Normalized 0..1 low-band RMS, using the same reference as loudness. */
     bass: number[];
+    /** Compact FFT bands and energy-change envelopes; optional for older analyses. */
+    features?: import("./features").VisualFeatures;
 }
 
 /** Versioned, local-only output. All event times are seconds from file start. */

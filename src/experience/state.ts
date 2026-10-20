@@ -1,3 +1,5 @@
+import { MAX_PICKUP_RADIUS_MULTIPLIER } from "../player-stats";
+
 export interface Vec2 {
     x: number;
     z: number;
@@ -131,19 +133,27 @@ export function advanceExperience(
     dt: number,
     player: Vec2,
     previousPlayer: Vec2 = player,
+    pickupRadiusMultiplier = 1,
 ): ExperienceStep {
+    if (!Number.isFinite(pickupRadiusMultiplier)
+        || pickupRadiusMultiplier < 0 || pickupRadiusMultiplier > MAX_PICKUP_RADIUS_MULTIPLIER) {
+        throw new RangeError(`Pickup radius multiplier must be between 0 and ${MAX_PICKUP_RADIUS_MULTIPLIER}.`);
+    }
     const result: ExperienceStep = { collected: 0, gainedXp: 0, levelsGained: 0 };
     if (!Number.isFinite(dt) || dt <= 0 || !validPosition(player) || !validPosition(previousPlayer)) {
         return result;
     }
     assertExperienceRange(state);
+    // Debuffs may remove attraction, but physical contact still collects a gem.
+    // Derive the range per step so modifiers never compound into base tuning.
+    const magnetRadius = Math.max(state.tuning.pickupRadius, state.tuning.magnetRadius * pickupRadiusMultiplier);
     const remaining: ExperienceDrop[] = [];
     for (const drop of state.drops) {
         drop.previousX = drop.x;
         drop.previousZ = drop.z;
         let attractionStart = 0;
         if (!drop.attracted) {
-            const entry = circleEntry(previousPlayer, player, drop, state.tuning.magnetRadius);
+            const entry = circleEntry(previousPlayer, player, drop, magnetRadius);
             if (entry === undefined) {
                 remaining.push(drop);
                 continue;

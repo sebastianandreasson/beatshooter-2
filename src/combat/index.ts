@@ -658,7 +658,9 @@ export function advanceCombat(
         }
     }
     if (!state.defeated) {
-        const progress = advanceExperience(state.experience, dt, player, previousPlayer);
+        const progress = advanceExperience(
+            state.experience, dt, player, previousPlayer, state.playerStats.effective.pickupRadiusMultiplier,
+        );
         if (progress.levelsGained > 0) {
             queueUpgradeLevels(state.upgrades, state.experience.level);
             result.events.push({

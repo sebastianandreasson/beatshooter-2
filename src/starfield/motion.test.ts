@@ -38,17 +38,21 @@ describe("absolute music-time starfield travel", () => {
 
     test("an exact off-beat boundary smoothly boosts speed and preserves all completed travel", () => {
         const timeline = new StarfieldTimeline(sections([0, 2.25, 10]), generateTimeline(10, 120));
+        const start = 2.25, duration = 2 / 1.3, midpoint = start + duration / 2;
         expect(timeline.sample(2.25)).toEqual({ distance: 11.25, speed: 5, boost: 0 });
-        expect(timeline.sample(2.75).speed).toBeCloseTo(65);
-        expect(timeline.sample(3.25)).toEqual({ distance: 76.25, speed: 125, boost: 1 });
-        expect(timeline.sample(3.25).speed / timeline.sample(2.25).speed).toBe(25);
+        expect(timeline.sample(start + duration / 4).speed).toBeCloseTo(65);
+        expect(timeline.sample(midpoint).distance).toBeCloseTo(5 * midpoint + 30 * duration, 10);
+        expect(timeline.sample(midpoint).boost).toBeCloseTo(1, 12);
+        expect(timeline.sample(midpoint).speed / timeline.sample(start).speed).toBe(25);
         expect(STAR_BASE_SPEED).toBe(5);
         expect(STAR_HYPERSPACE_MULTIPLIER).toBe(25);
-        expect(timeline.sample(3.75).speed).toBeCloseTo(65);
-        // The two-second boost has mean extra speed 60, hence 120 extra units.
-        expect(timeline.sample(4.25)).toEqual({ distance: 141.25, speed: 5, boost: 0 });
-        expect(timeline.sample(7)).toEqual({ distance: 155, speed: 5, boost: 0 });
-        expect(timeline.sample(12)).toEqual({ distance: 180, speed: 5, boost: 0 });
+        expect(timeline.sample(start + duration * 0.75).speed).toBeCloseTo(65);
+        // Mean extra speed remains 60; the 30% faster wave shortens its integral.
+        for (const time of [start + duration, 7, 12]) {
+            expect(timeline.sample(time).distance).toBeCloseTo(5 * time + 60 * duration, 10);
+            expect(timeline.sample(time).speed).toBe(5);
+            expect(timeline.sample(time).boost).toBe(0);
+        }
     });
 
     test("variable-tempo speed follows the section envelope and distance matches its integral", () => {
@@ -57,7 +61,8 @@ describe("absolute music-time starfield travel", () => {
         const wave = new SectionTransitionTimeline(structure, beats);
         const timeline = new StarfieldTimeline(structure, beats);
         const start = 0.7, end = wave.sample(start).endTime;
-        expect(end).toBeCloseTo(3.05);
+        // Start coordinate is 1.5. The shortened span ends between beats 4 and 5.
+        expect(end).toBeCloseTo(2.3 + 0.5 * (1.5 + 4 / 1.3 - 4), 12);
         for (const position of [start, 0.9, 1, 1.4, 1.8, 2.05, 2.3, 2.55, 2.8]) {
             const expectedBoost = wave.sample(position).envelope;
             expect(timeline.sample(position).boost).toBeCloseTo(expectedBoost, 12);
@@ -80,11 +85,17 @@ describe("absolute music-time starfield travel", () => {
     test("adjacent repeated-label windows add travel without jumping at shared boundaries", () => {
         const structure = sections([0, 2, 3, 8], ["intro", "chorus", "chorus"]);
         const timeline = new StarfieldTimeline(structure, generateTimeline(8, 120));
-        // First window is clipped to one second; the second lasts two seconds.
-        expect(timeline.sample(3)).toEqual({ distance: 75, speed: 5, boost: 0 });
-        expect(timeline.sample(4)).toEqual({ distance: 140, speed: 125, boost: 1 });
-        expect(timeline.sample(5)).toEqual({ distance: 205, speed: 5, boost: 0 });
-        for (const boundary of [2, 2.5, 3, 3.5, 4, 4.5, 5]) {
+        // Clipping happens before both windows are shortened by the wave speed.
+        const firstDuration = 1 / 1.3, secondDuration = 2 / 1.3;
+        const secondMidpoint = 3 + secondDuration / 2;
+        expect(timeline.sample(3).distance).toBeCloseTo(15 + 60 * firstDuration, 10);
+        expect(timeline.sample(3).speed).toBe(5);
+        expect(timeline.sample(secondMidpoint).distance)
+            .toBeCloseTo(5 * secondMidpoint + 60 * firstDuration + 30 * secondDuration, 10);
+        expect(timeline.sample(secondMidpoint).speed).toBe(125);
+        expect(timeline.sample(5).distance).toBeCloseTo(25 + 60 * (firstDuration + secondDuration), 10);
+        expect(timeline.sample(5).speed).toBe(5);
+        for (const boundary of [2, 2.5, 2 + firstDuration, 3, 3.5, secondMidpoint, 4, 4.5, 3 + secondDuration]) {
             const before = timeline.sample(boundary - 1e-7);
             const after = timeline.sample(boundary + 1e-7);
             expect(after.distance).toBeGreaterThan(before.distance);
@@ -96,10 +107,12 @@ describe("absolute music-time starfield travel", () => {
     test("quiet gaps, missing beats, tiny spans and the song tail never invent a boost", () => {
         const beats = chart([0, 0.5, 1, 1.5, 21.5, 22, 22.5, 23, 23.5, 24]);
         const gap = new StarfieldTimeline(sections([0, 0.5, 10, 25]), beats);
-        // The first valid wave ends at the gap's start; the later quiet fade adds no travel.
-        expect(gap.sample(1.5)).toEqual({ distance: 67.5, speed: 5, boost: 0 });
-        expect(gap.sample(10.3)).toEqual({ distance: 111.5, speed: 5, boost: 0 });
-        expect(gap.sample(21.6)).toEqual({ distance: 168, speed: 5, boost: 0 });
+        // The eligible window is clipped before the gap then shortened; the quiet fade adds no travel.
+        for (const time of [1.5, 10.3, 21.6]) {
+            expect(gap.sample(time).distance).toBeCloseTo(5 * time + 60 / 1.3, 10);
+            expect(gap.sample(time).speed).toBe(5);
+            expect(gap.sample(time).boost).toBe(0);
+        }
         for (const missing of [[], chart([0])]) {
             expect(new StarfieldTimeline(sections([0, 2, 10]), missing).sample(2.3))
                 .toEqual({ distance: 11.5, speed: 5, boost: 0 });
@@ -112,13 +125,15 @@ describe("absolute music-time starfield travel", () => {
 
     test("slow and fast tracks integrate the existing bounded musical windows", () => {
         const slow = new StarfieldTimeline(sections([0, 3.75, 30]), generateTimeline(30, 20));
-        expect(slow.sample(5.25).speed).toBe(125);
-        expect(slow.sample(6.75).distance).toBeCloseTo(213.75, 10);
+        expect(slow.sample(3.75 + 3 / 1.3 / 2).speed).toBe(125);
+        expect(slow.sample(6.75).distance).toBeCloseTo(33.75 + 180 / 1.3, 10);
         expect(slow.sample(6.75).speed).toBe(5);
         expect(slow.sample(6.75).boost).toBe(0);
         const fast = new StarfieldTimeline(sections([0, 2, 30]), generateTimeline(30, 300));
-        expect(fast.sample(2.4).speed).toBeCloseTo(125);
-        expect(fast.sample(3).distance).toBeCloseTo(63);
+        // The original 0.8s window is eligible before speeding up, even though
+        // the shorter window now falls below the initial 0.65s cutoff.
+        expect(fast.sample(2 + 0.8 / 1.3 / 2).speed).toBeCloseTo(125);
+        expect(fast.sample(3).distance).toBeCloseTo(15 + 48 / 1.3);
         expect(fast.sample(3).boost).toBe(0);
     });
 

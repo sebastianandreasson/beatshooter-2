@@ -1,8 +1,12 @@
 import { expect, test } from "bun:test";
 import { createApp, Materials, StandardMaterial } from "@dylanebert/shallot";
 import { Arena } from "../arena";
+import { Session } from "../session";
+import { SectionEffects } from "../section-effects/runtime";
+import { SECTION_PALETTES } from "../section-effects/state";
+import { PresentMusicalVisuals, SampleMusicalVisuals } from "./index";
 import {
-    MusicFloorState, sectionShockwave, musicFloorShaderSource, updateMusicFloor, type MusicFloorInput,
+    MusicFloorState, sectionCharge, sectionShockwave, musicFloorShaderSource, updateMusicFloor, type MusicFloorInput,
 } from "./floor";
 
 const input = (): MusicFloorInput => ({
@@ -64,7 +68,7 @@ test("comfort settings keep the section palette while independently disabling mo
         frame.motionAllowed = false;
         frame.highQuality = false;
         frame.section = {
-            progress: 0.7, strength: 1,
+            progress: 0.7, strength: 1, charge: 1,
             floor: [0.009, 0.014, 0.026], line: [0.03, 0.064, 0.1], accent: [0.06, 0.17, 0.31],
         };
         updateMusicFloor(world, frame);
@@ -80,6 +84,93 @@ test("comfort settings keep the section palette while independently disabling mo
     } finally {
         app.dispose();
     }
+});
+
+test("the precharge is a bounded stationary glow with no second wavefront", () => {
+    expect(sectionCharge(0, 0)).toBe(0);
+    expect(sectionCharge(0.4, 0)).toBeCloseTo(0.4);
+    expect(sectionCharge(1, 0)).toBe(1);
+    expect(sectionCharge(10, 0)).toBe(1);
+    expect(sectionCharge(-1, 0)).toBe(0);
+    for (const charge of [0.2, 0.6, 1]) {
+        let previous = Math.fround(charge);
+        for (let radius = 0; radius <= 25; radius += 0.25) {
+            const glow = sectionCharge(charge, radius);
+            expect(glow).toBeLessThanOrEqual(previous + 1e-8);
+            if (radius >= 4.8) expect(glow).toBe(0);
+            previous = glow;
+        }
+    }
+});
+
+test("charge preserves the existing palette, freezes with repeated samples and clears on reset", async () => {
+    const app = await createApp({ defaults: false, plugins: [] });
+    try {
+        const { world } = app, state = world.resource(MusicFloorState), frame = input();
+        frame.section = {
+            progress: 1, strength: 0, charge: 0.65,
+            floor: [0.009, 0.014, 0.026], line: [0.03, 0.064, 0.1], accent: [0.06, 0.17, 0.31],
+        };
+        updateMusicFloor(world, frame);
+        expect(state.parameters.section).toEqual([1, 0, 1, 0.65]);
+        expect(state.parameters.accentColor).toEqual([0.06, 0.17, 0.31, 1]);
+        expect(state.parameters.fromAccent).toEqual(state.parameters.accentColor);
+        const held = structuredClone(state.parameters);
+        for (let draw = 0; draw < 20; draw++) updateMusicFloor(world, frame);
+        expect(state.parameters).toEqual(held);
+        frame.section.charge = 2;
+        updateMusicFloor(world, frame);
+        expect(state.parameters.section[3]).toBe(1);
+        frame.section.charge = NaN;
+        updateMusicFloor(world, frame);
+        expect(state.parameters.section[3]).toBe(0);
+        frame.section.charge = 1;
+        updateMusicFloor(world, frame);
+        expect(state.parameters.section[3]).toBe(1);
+        updateMusicFloor(world, input());
+        expect(state.parameters.section).toEqual([0, 0, 0, 0]);
+    } finally { app.dispose(); }
+});
+
+test("music presentation routes eased wave travel and comfort-scaled charge without recoloring before launch", async () => {
+    const app = await createApp({ defaults: false, plugins: [] });
+    try {
+        const { world } = app, session = world.resource(Session);
+        const section = world.resource(SectionEffects), floor = world.resource(MusicFloorState);
+        session.phase = "playing";
+        session.preferences.settings.effectsIntensity = "standard";
+        session.preferences.settings.reducedFlash = false;
+        section.motionAllowed = true;
+        section.strength = 0;
+        section.frame = {
+            ...section.frame, index: 0, progress: 0.35, waveProgress: 0.28175, impact: 0.7,
+            palette: SECTION_PALETTES.intro, from: SECTION_PALETTES.intro, to: SECTION_PALETTES.chorus,
+        };
+        SampleMusicalVisuals.update!(world);
+        PresentMusicalVisuals.update!(world);
+        expect(floor.parameters.section).toEqual([0.28175, 0, 1, 0.7]);
+        expect(floor.parameters.accentColor.slice(0, 3)).toEqual([...SECTION_PALETTES.intro.accent]);
+        session.preferences.settings.effectsIntensity = "calm";
+        SampleMusicalVisuals.update!(world);
+        PresentMusicalVisuals.update!(world);
+        expect(floor.parameters.section[3]).toBeCloseTo(0.21);
+        section.motionAllowed = false;
+        PresentMusicalVisuals.update!(world);
+        expect(floor.parameters.section[3]).toBe(0);
+        section.motionAllowed = true;
+        session.preferences.settings.effectsIntensity = "off";
+        SampleMusicalVisuals.update!(world);
+        PresentMusicalVisuals.update!(world);
+        expect(floor.parameters.section[3]).toBe(0);
+        session.preferences.settings.effectsIntensity = "standard";
+        session.preferences.settings.reducedFlash = true;
+        SampleMusicalVisuals.update!(world);
+        PresentMusicalVisuals.update!(world);
+        expect(floor.parameters.section[3]).toBe(0);
+        session.phase = "menu";
+        PresentMusicalVisuals.update!(world);
+        expect(floor.parameters.section).toEqual([0, 0, 0, 0]);
+    } finally { app.dispose(); }
 });
 
 test("one outward wave paints only the space behind it and stays visible near its origin", () => {
@@ -150,6 +241,7 @@ test("the production floor preflight resolves both vertex bulging and world-XZ c
     expect(source).toContain("fn floorVertex");
     expect(source).toContain("@fragment fn floorFragment");
     expect(source).toContain("shockwaveSurface(");
+    expect(source).toContain("sectionCharge(");
     expect(source).toContain("surface.position.y * 0.1");
     expect(source).toContain("world.xz");
     expect(source).toContain("floorColor: vec4f");

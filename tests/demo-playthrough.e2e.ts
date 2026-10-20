@@ -13,6 +13,7 @@ interface PlaySnapshot {
     player: { position: Point; target: Point; bodyY: number };
     combat: { health: number; score: number; kills: number; enemies: number };
     targets: Point[];
+    sectionEffects: { sectionIndex: number; label?: string; active: boolean; shockwave: { active: boolean } };
 }
 interface PlayInspection {
     snapshot(): PlaySnapshot;
@@ -35,6 +36,17 @@ test("the full 72-second demo can be won through normal movement and aiming", as
     await page.getByRole("button", { name: "Enter the arena" }).click();
     await chooseStartingUpgrade(page);
     await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible({ timeout: 20_000 });
+    const bands = page.locator(".bs-run-progress .bs-player-band");
+    await expect(bands).toHaveCount(6);
+    expect(await bands.evaluateAll(elements => elements.map(element => ({
+        label: (element as HTMLElement).dataset.section,
+        start: Number((element as HTMLElement).dataset.start),
+        end: Number((element as HTMLElement).dataset.end),
+    })))).toEqual([
+        { label: "intro", start: 0, end: 8 }, { label: "verse", start: 8, end: 24 },
+        { label: "chorus", start: 24, end: 40 }, { label: "bridge", start: 40, end: 48 },
+        { label: "chorus", start: 48, end: 64 }, { label: "outro", start: 64, end: 72 },
+    ]);
 
     // A reproducible ordinary playthrough: circle inside the spawn perimeter and
     // aim at the nearest enemy. Every action is a browser keyboard/pointer event.
@@ -46,6 +58,8 @@ test("the full 72-second demo can be won through normal movement and aiming", as
     let waypoint = 0;
     const held = new Set<string>();
     const checkpoints: object[] = [];
+    const seenSections = new Map<number, string>();
+    const seenWaves = new Set<number>();
     let nextCheckpoint = 0;
     const deadline = Date.now() + 105_000;
     try {
@@ -68,6 +82,10 @@ test("the full 72-second demo can be won through normal movement and aiming", as
                 };
             });
             const state = observed.state;
+            if (state.phase === "playing" && state.position >= 0) {
+                seenSections.set(state.sectionEffects.sectionIndex, state.sectionEffects.label!);
+                if (state.sectionEffects.shockwave.active) seenWaves.add(state.sectionEffects.sectionIndex);
+            }
             if (state.position >= nextCheckpoint) {
                 const checkpoint = { position: state.position, ...state.combat, player: state.player.position };
                 checkpoints.push(checkpoint);
@@ -119,6 +137,8 @@ test("the full 72-second demo can be won through normal movement and aiming", as
     expect(result.combat.score).toBeGreaterThan(0);
     expect(result.pending).toBe(0);
     expect(result.sounds).toBe(0);
+    expect([...seenSections.values()]).toEqual(["intro", "verse", "chorus", "bridge", "chorus", "outro"]);
+    expect([...seenWaves]).toEqual([1, 2, 3, 4, 5]);
     expect(errors).toEqual([]);
     const screenshotPath = testInfo.outputPath("demo-complete.png");
     await page.screenshot({ path: screenshotPath });

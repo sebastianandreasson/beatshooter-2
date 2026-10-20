@@ -160,7 +160,7 @@ test("enemy health bars, beat-timed hit and kill numbers, and player damage stat
     }, undefined, { polling: "raf", timeout: 10_000 });
     const full = await observe(page);
     expect(full.state.playerStats.base).toMatchObject({ damageMin: 13, damageMax: 17 });
-    expect(full.state.playerStats.effective).toEqual({ ...full.state.playerStats.base, criticalMultiplier: 2.25 });
+    expect(full.state.playerStats.effective).toEqual({ ...full.state.playerStats.base, pickupRadiusMultiplier: 1.25 });
     expect(full.state.enemyHealthbars).toBe(full.state.enemies.length);
     for (const enemy of full.state.enemies) {
         const bar = full.bars.find(bar => bar.enemyId === enemy.id)!;
@@ -229,6 +229,7 @@ test("enemy health bars, beat-timed hit and kill numbers, and player damage stat
 
     await page.keyboard.press("KeyR");
     await chooseStartingUpgrade(page);
+    await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
     await expect.poll(async () => (await snapshot(page)).generation).toBe(held.state.generation + 1);
     await expect(page.locator(".enemy-healthbar")).toHaveCount(0);
     await expect(page.locator(".damage-number")).toHaveCount(0);
@@ -267,6 +268,8 @@ test("damage and health stay readable with effects Off and with reduced motion",
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.getByRole("button", { name: "Close settings", exact: true }).click();
     await page.getByRole("button", { name: "Restart session" }).click();
+    await chooseStartingUpgrade(page);
+    await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
     await expect.poll(async () => (await snapshot(page)).generation).toBe(off.state.generation + 1);
     const reduced = await aimUntil(page, observed => Boolean(nonfatalHit(observed)));
     const reducedHit = nonfatalHit(reduced)!;

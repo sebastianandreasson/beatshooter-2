@@ -14,6 +14,7 @@ import { StarfieldPlugin } from "../starfield";
 import { ShockwavePlugin } from "../shockwave";
 import { NeonPlugin } from "../neon";
 import { NeonTrailsPlugin } from "../neon-trails";
+import { MusicStagePlugin } from "../music-stage";
 
 export async function startApp(): Promise<void> {
     const bootstrap = document.querySelector<HTMLElement>("[data-shallot-bootstrap]") ?? undefined;
@@ -21,7 +22,7 @@ export async function startApp(): Promise<void> {
         plugins: [
             StandardPhysicsPlugin, StandardAudioPlugin, ArenaPlugin, PlayerPlugin, SessionPlugin, DashPlugin,
             MusicVisualsPlugin, SectionEffectsPlugin, ShockwavePlugin, StarfieldPlugin, EnemySpawnPlugin,
-            PresentationPlugin, ExperiencePlugin, NeonPlugin, NeonTrailsPlugin,
+            PresentationPlugin, ExperiencePlugin, NeonPlugin, NeonTrailsPlugin, MusicStagePlugin,
             ...(new URLSearchParams(location.search).get("stress") === "1" ? [StressPlugin] : []),
         ],
         loading: shallotDark({ bootstrap }),

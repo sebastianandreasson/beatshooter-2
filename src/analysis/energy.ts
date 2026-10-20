@@ -1,4 +1,5 @@
 import { ANALYSIS_SAMPLE_RATE, type EnergyCurve } from "./types";
+import { calculateFeatures, validateFeatures } from "./features";
 
 export const ENERGY_SAMPLE_RATE = 20;
 const SILENCE_FLOOR = 0.001; // -60 dBFS amplitude: do not amplify near-silence.
@@ -44,10 +45,10 @@ function normalizeAndSmooth(values: number[], reference: number): void {
 }
 
 /**
- * One bounded pass over already-owned mono PCM, followed by work at 20 Hz.
- * A 20 Hz high-pass and two 180 Hz low-pass poles estimate bass without FFT
- * allocation. RMS and low-band energy share the track's 95th-percentile RMS
- * reference, so a high-frequency-only track cannot normalize its bass to full.
+ * RMS and bass use one bounded pass over already-owned mono PCM. A 20 Hz
+ * high-pass and two 180 Hz low-pass poles estimate bass. These and the subsequent
+ * 20 Hz FFT features share the track's 95th-percentile RMS reference, so a
+ * high-frequency-only track cannot normalize its bass to full.
  * Input is only read; inference receives exactly the original PCM.
  */
 export function calculateEnergy(pcm: Float32Array, sampleRate = ANALYSIS_SAMPLE_RATE): EnergyCurve {
@@ -84,7 +85,10 @@ export function calculateEnergy(pcm: Float32Array, sampleRate = ANALYSIS_SAMPLE_
     const reference = referenceAmplitude(loudness);
     normalizeAndSmooth(loudness, reference);
     normalizeAndSmooth(bass, reference);
-    return { version: 1, sampleRate: ENERGY_SAMPLE_RATE, duration, loudness, bass };
+    return {
+        version: 1, sampleRate: ENERGY_SAMPLE_RATE, duration, loudness, bass,
+        features: calculateFeatures(pcm, sampleRate, reference, loudness),
+    };
 }
 
 /** Reject optional malformed decoration without preventing a valid chart from playing. */
@@ -109,6 +113,7 @@ export function validateEnergyCurve(value: unknown, expectedDuration?: number): 
     return {
         version: 1, sampleRate: ENERGY_SAMPLE_RATE, duration: source.duration,
         loudness: source.loudness.slice(), bass: source.bass.slice(),
+        ...(source.features ? { features: validateFeatures(source.features, length) } : {}),
     };
 }
 
