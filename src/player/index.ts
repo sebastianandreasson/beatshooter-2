@@ -6,13 +6,16 @@ import {
 import { Shape, ShapeKind } from "@dylanebert/shallot/physics";
 import { PhysicsWorldDefinition } from "@dylanebert/shallot/standard/physics";
 import { viewportToWorld } from "@dylanebert/shallot/rendering";
-import { Arena, box } from "../arena";
+import { Arena } from "../arena";
 import { aimDirection, movementVelocity, planeIntersection, type Planar } from "./movement";
+import { createPlayerShip, type PlayerShip } from "./ship";
+import type { ShipEngineFrame } from "./engine";
 
 export const Player = component("Beatshooter/Player", {});
 export const PLANAR_LOCKS = BodyMotionLock.linearY | BodyMotionLock.angularX | BodyMotionLock.angularY | BodyMotionLock.angularZ;
 export const PlayerState: Resource<{
     body: number; ship: number; nose: number; wings: number[]; enabled: boolean;
+    visual?: PlayerShip; engine?: ShipEngineFrame;
     input: Planar; aim: Planar; target: Planar; previous: Planar; position: Planar;
     pointer: { x: number; y: number; active: boolean }; keys: Set<string>;
     dashVelocity?: Planar; dashTarget?: Planar; wasDashing: boolean;
@@ -36,6 +39,11 @@ export function resetPlayer(world: World): void {
     player.dashVelocity = undefined;
     player.dashTarget = undefined;
     player.wasDashing = false;
+    player.engine = undefined;
+    for (const thruster of player.visual?.thrusters ?? []) {
+        world.storage(Transform).scale.set(thruster.plume, 0, 0, 0);
+        world.storage(Transform).scale.set(thruster.core, 0, 0, 0);
+    }
 }
 
 export function readMovementInput(keys: ReadonlySet<string>): Planar {
@@ -111,19 +119,11 @@ export const PresentPlayer: System = {
         const pose = world.storage(Transform);
         pose.translation.set(arena.camera, x * 0.28, 32, 19 + z * 0.28);
         // Cosmetic entities never write the solver's body pose.
-        pose.translation.set(player.ship, x, 0.55, z);
         const rotation = lookAtRotation(0, 0, 0, player.aim.x, 0, player.aim.z);
-        pose.rotation.set(player.ship, ...rotation);
-        pose.translation.set(player.nose, x + player.aim.x * 0.6, 0.7, z + player.aim.z * 0.6);
-        player.wings.forEach((eid, index) => {
-            const side = index === 0 ? -1 : 1;
-            pose.translation.set(eid,
-                x - player.aim.x * 0.25 - player.aim.z * side * 0.43,
-                0.45,
-                z - player.aim.z * 0.25 + player.aim.x * side * 0.43,
-            );
+        for (const eid of player.visual?.parts ?? []) {
+            pose.translation.set(eid, x, 0.55, z);
             pose.rotation.set(eid, ...rotation);
-        });
+        }
         for (const eid of arena.reticle) pose.translation.set(eid, player.target.x, 0.55, player.target.z);
     },
 };
@@ -139,10 +139,10 @@ export const PlayerPlugin: Plugin = {
         world.add(player.body, Transform, { translation: [0, 0.55, 0] });
         world.add(player.body, Body, { type: BodyType.Dynamic, motionLocks: PLANAR_LOCKS, gravityScale: 0, enableSleep: 0 });
         world.add(player.body, Shape, { kind: ShapeKind.Sphere, radius: 0.55, friction: 0, filterCategoryLow: 1, filterMaskLow: 6, filterCategoryHigh: 0, filterMaskHigh: 0 });
-        const materials = world.resource(Arena).materials;
-        player.ship = box(world, materials.player, [0, 0.55, 0], [0.75, 0.5, 1.15]);
-        player.nose = box(world, materials.white, [0, 0.7, -0.6], [0.23, 0.25, 0.23]);
-        player.wings = [-1, 1].map(side => box(world, materials.player, [side * 0.43, 0.45, 0.25], [0.25, 0.25, 0.75]));
+        player.visual = createPlayerShip(world);
+        player.ship = player.visual.hull;
+        player.nose = player.visual.cockpit;
+        player.wings = player.visual.wings;
         if (typeof window === "undefined") return;
         const options = { signal: world.signal };
         window.addEventListener("keydown", event => {

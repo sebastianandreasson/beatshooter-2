@@ -1,17 +1,19 @@
 import { chooseStartingUpgrade } from "./starting-upgrade";
 import { writeFile } from "node:fs/promises";
-import { expect, test, type Page } from "playwright/test";
+import { expect, test, type Page } from "./fixtures";
 
 type Point = { x: number; z: number };
 interface PlaySnapshot {
     phase: string;
     position: number;
     pending: number;
-    upgrade: { pending: number };
+    upgrade: { pending: number; choices: { id: string }[] };
+    playerStats: { effective: { maxHealth: number } };
     sounds: number;
     entityCount: number;
     player: { position: Point; target: Point; bodyY: number };
     combat: { health: number; score: number; kills: number; enemies: number };
+    dash: { state: string; accepted: number };
     targets: Point[];
     sectionEffects: { sectionIndex: number; label?: string; active: boolean; shockwave: { active: boolean } };
 }
@@ -27,7 +29,7 @@ async function boot(page: Page): Promise<void> {
     await page.waitForFunction(() => Boolean((window as unknown as PlayWindow).__beatshooter));
 }
 
-test("the full 72-second demo can be won through normal movement and aiming", async ({ page }, testInfo) => {
+test("the full 72-second demo can be won through movement, aiming and beat-timed dashes", async ({ page }, testInfo) => {
     test.setTimeout(120_000);
     await page.setViewportSize({ width: 1280, height: 800 });
     const errors: string[] = [];
@@ -49,11 +51,12 @@ test("the full 72-second demo can be won through normal movement and aiming", as
     ]);
 
     // A reproducible ordinary playthrough: circle inside the spawn perimeter and
-    // aim at the nearest enemy. Every action is a browser keyboard/pointer event.
+    // aim at the nearest enemy and dash on beats along clear route segments.
+    // Every action is a browser keyboard/pointer event.
     // Inspection reads positions only; no health, timer, or result is changed.
     const route: Point[] = [
-        { x: 8, z: 0 }, { x: 8, z: 8 }, { x: -8, z: 8 },
-        { x: -8, z: -8 }, { x: 8, z: -8 },
+        { x: 12, z: 0 }, { x: 12, z: 12 }, { x: -12, z: 12 },
+        { x: -12, z: -12 }, { x: 12, z: -12 },
     ];
     let waypoint = 0;
     const held = new Set<string>();
@@ -93,7 +96,15 @@ test("the full 72-second demo can be won through normal movement and aiming", as
                 nextCheckpoint += 12;
             }
             if (state.phase === "results") break;
-            if (state.upgrade.pending > 0) await page.keyboard.press("1");
+            if (state.upgrade.pending > 0) {
+                // Choose damage/crowd control as health scales, and healing when
+                // wounded. Arbitrarily pressing 1 can repeatedly buy utility.
+                const priorities = state.combat.health < state.playerStats.effective.maxHealth * 0.65
+                    ? ["health", "barrage", "regeneration", "damage", "bounce", "projectiles", "crit-chance", "crit-damage", "dash-distance", "pickup-radius"]
+                    : ["barrage", "damage", "bounce", "projectiles", "crit-chance", "regeneration", "health", "crit-damage", "dash-distance", "pickup-radius"];
+                const best = priorities.find(id => state.upgrade.choices.some(choice => choice.id === id));
+                if (best) await page.keyboard.press(String(state.upgrade.choices.findIndex(choice => choice.id === best) + 1));
+            }
             expect(state.phase, "normal play should remain active until the result").toBe("playing");
             const player = state.player.position;
             let target = route[waypoint]!;
@@ -116,7 +127,12 @@ test("the full 72-second demo can be won through normal movement and aiming", as
                 if (!held.has(key)) { await page.keyboard.down(key); held.add(key); }
             }
             if (observed.pointer) await page.mouse.move(observed.pointer.x, observed.pointer.y);
-            await page.waitForTimeout(100);
+            if (state.position >= 0 && state.position % 0.5 < 0.055 && state.dash.state === "ready"
+                && Math.hypot(dx, dz) > 6 && desired.size > 0) {
+                await page.keyboard.press("Space");
+            }
+            // Follow the new beat bursts at a realistic pointer update rate.
+            await page.waitForTimeout(35);
         }
     } finally {
         for (const key of held) await page.keyboard.up(key);
@@ -135,6 +151,7 @@ test("the full 72-second demo can be won through normal movement and aiming", as
     expect(result.combat.health).toBeGreaterThan(0);
     expect(result.combat.kills).toBeGreaterThan(0);
     expect(result.combat.score).toBeGreaterThan(0);
+    expect(result.dash.accepted).toBeGreaterThan(0);
     expect(result.pending).toBe(0);
     expect(result.sounds).toBe(0);
     expect([...seenSections.values()]).toEqual(["intro", "verse", "chorus", "bridge", "chorus", "outro"]);

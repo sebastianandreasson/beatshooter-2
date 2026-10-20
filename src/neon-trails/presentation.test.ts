@@ -26,7 +26,8 @@ async function fixture() {
             id, shooterId: 0, collisionMask: hostile ? PLAYER_COLLISION_GROUP : 2,
             x, z: 2, previousX: x - 0.3, previousZ: 2, velocityX: hostile ? 9 : 32, velocityZ: 0,
             remainingLifetime: (hostile ? session.combat.tuning.enemyProjectileLifetime : session.combat.tuning.projectileLifetime) - age,
-            radius: 0.13, damage: 10, critical: false, bouncesRemaining: 1,
+            radius: 0.13, damage: 10, initialDamage: 10, critical: false, bouncesRemaining: 1,
+            wallBouncesRemaining: 0, homingTurnRemaining: 0,
             hitEnemyIds: [], waitingForBounce: false, lastBounceBeat: 0,
         };
         const eid = world.create();

@@ -5,12 +5,14 @@ import {
 import {
     beginRenderPass, draw, endRenderPass, setRenderBindGroup, setRenderPipeline,
 } from "@dylanebert/shallot/runtime";
+import { Vignette, VignettePlugin } from "@dylanebert/shallot/vignette";
+import { Arena } from "../arena";
 import { MusicVisuals } from "../music-visuals";
 import { SampleSectionEffects } from "../section-effects";
 import { SectionEffects } from "../section-effects/runtime";
 import { isArenaPhase, Session } from "../session";
 import {
-    neonShaderSource, neonTargetDimensions, sampleNeonFrame, type NeonDimensions, type NeonFrame,
+    isNeonGameplay, neonShaderSource, neonTargetDimensions, sampleNeonFrame, type NeonDimensions, type NeonFrame,
 } from "./postprocess";
 
 interface Target { texture: GPUTexture; view: GPUTextureView }
@@ -36,6 +38,7 @@ export const Neon: Resource<{
     frame: NeonFrame;
     passes: number;
     dimensions: NeonDimensions;
+    vignetteCamera?: number;
     cameras: Map<number, CameraEffect>;
     pipelines?: Record<PipelineName, GPURenderPipeline>;
     layout?: GPUBindGroupLayout;
@@ -44,7 +47,7 @@ export const Neon: Resource<{
     create: () => ({
         status: "pending",
         frame: sampleNeonFrame({
-            visible: false, intensity: "off", reducedMotion: false, reducedFlash: false,
+            visible: false, gameplay: false, intensity: "off", reducedMotion: false, reducedFlash: false,
             highQuality: true, beatPulse: 0, downbeatPulse: 0, musicalStrength: 0,
             sectionActive: false, sectionProgress: 0,
         }),
@@ -60,6 +63,7 @@ export const SampleNeon: System = {
         const section = world.resource(SectionEffects), settings = session.preferences.settings;
         world.resource(Neon).frame = sampleNeonFrame({
             visible: isArenaPhase(session.phase),
+            gameplay: isNeonGameplay(session.phase, session.position, session.track.duration),
             intensity: settings.effectsIntensity,
             reducedMotion: visuals.osReducedMotion,
             reducedFlash: settings.reducedFlash,
@@ -70,6 +74,26 @@ export const SampleNeon: System = {
             sectionActive: section.frame.active && section.frame.musical,
             sectionProgress: section.frame.progress,
         });
+    },
+};
+
+/** Native camera effect; zero intensity detaches its GPU pass while menus are open. */
+export const ApplyNeonVignette: System = {
+    name: "Beatshooter/ApplyNeonVignette", group: "setup", after: [SampleNeon],
+    update(world) {
+        const state = world.resource(Neon), camera = world.resource(Arena).camera;
+        if (state.vignetteCamera !== undefined && state.vignetteCamera !== camera
+            && world.has(state.vignetteCamera, Vignette)) {
+            world.remove(state.vignetteCamera, Vignette);
+        }
+        if (!world.has(camera, Vignette)) {
+            world.add(camera, Vignette, {
+                intensity: 0, radius: 0.8, smoothness: 1, roundness: 1,
+                center: [0.5, 0.5], edgeCompensation: 1, color: 0,
+            });
+        }
+        state.vignetteCamera = camera;
+        world.storage(Vignette).intensity.set(camera, state.frame.vignette);
     },
 };
 
@@ -198,7 +222,7 @@ export const PrepareNeon: System = {
                 const frame = state.frame, bytes = camera.bytes;
                 bytes[0] = frame.bloom; bytes[1] = frame.threshold;
                 bytes[2] = frame.knee; bytes[3] = frame.chromatic;
-                bytes[4] = frame.vignette; bytes[5] = view.width;
+                bytes[4] = 0; bytes[5] = view.width;
                 bytes[6] = view.height; bytes[7] = frame.reducedDetail ? 1 : 0;
                 world.gpu.device.queue.writeBuffer(camera.buffer, 0, bytes);
                 let stack = effects.get(eid);
@@ -206,7 +230,8 @@ export const PrepareNeon: System = {
                     stack = { before: [], after: [] };
                     effects.set(eid, stack);
                 }
-                if (!stack.before.includes(camera.effect)) stack.before.push(camera.effect);
+                // Bloom precedes native finishing effects even after either pass is re-enabled.
+                if (!stack.before.includes(camera.effect)) stack.before.unshift(camera.effect);
                 state.passes = frame.reducedDetail ? 3 : 4;
                 state.dimensions = camera.dimensions;
             }
@@ -268,7 +293,7 @@ async function initializePipelines(world: World): Promise<void> {
 export const NeonPlugin: Plugin = {
     name: "Beatshooter/Neon",
     gpu: {},
-    dependencies: [CorePipelinePlugin],
+    dependencies: [CorePipelinePlugin, VignettePlugin],
     initialize(world) {
         const state = world.resource(Neon), effects = world.resource(EffectPasses);
         world.onDispose(() => {
@@ -285,5 +310,5 @@ export const NeonPlugin: Plugin = {
         });
     },
     warm: initializePipelines,
-    systems: [SampleNeon, PrepareNeon],
+    systems: [SampleNeon, ApplyNeonVignette, PrepareNeon],
 };

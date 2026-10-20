@@ -7,7 +7,7 @@
 .bs-menu-main {
     width: 60vw;
     max-width: none;
-    padding: 12px 0 28px;
+    padding: 12px 0 20px;
 }
 .bs-menu .bs-intro { margin-bottom: 32px; }
 .bs-menu .bs-intro h1 {
@@ -25,8 +25,10 @@
     margin: 0;
 }
 .bs-menu .bs-credit { font-size: 13px; }
+.bs-menu .bs-intro-copy, .bs-menu .bs-small-card > p { font-size: 15px; }
+.bs-menu .bs-pill, .bs-menu .bs-card-kicker, .bs-menu .bs-private-note { font-size: 13px; }
 .bs-menu .bs-track-meta { font-size: 13px; margin: 16px 0 20px; }
-.bs-menu .bs-track-bottom { justify-content: flex-end; font-size: 10px; }
+.bs-menu .bs-track-bottom { justify-content: flex-end; font-size: 13px; }
 .bs-menu .bs-card-top { margin-bottom: 10px; }
 .bs-menu .bs-small-icon svg { width: 22px; height: 22px; }
 .bs-menu .bs-button, .bs-modal .bs-button, .bs-cover .bs-button {
@@ -44,10 +46,10 @@
     height: 46px;
 }
 .bs-menu .bs-dojo-controls { margin-top: 16px; gap: 16px; flex-wrap: wrap; }
-.bs-menu .bs-dojo-controls > label { font-size: 10px; }
+.bs-menu .bs-dojo-controls > label { font-size: 13px; }
 .bs-menu .bs-number-wrap { min-height: 48px; padding: 10px 12px; }
 .bs-menu .bs-number-wrap input { width: 62px; font-size: 18px; }
-.bs-menu .bs-number-wrap > span { font-size: 11px; }
+.bs-menu .bs-number-wrap > span { font-size: 13px; }
 .bs-menu .bs-local-card .bs-button { margin-top: 22px; }
 .bs-menu .bs-controls {
     justify-content: center;
@@ -62,14 +64,26 @@
     min-width: 30px;
     height: 34px;
     padding: 0 8px;
-    font-size: 12px;
+    font-size: 13px;
 }
 .bs-menu .bs-mouse-icon { width: 20px; height: 30px; border-radius: 9px; }
 .bs-menu .bs-mouse-icon::before { height: 8px; left: 8px; top: 5px; }
 .bs-menu .bs-beat-control { font-size: 36px; }
+.bs-menu .bs-message, .bs-modal .bs-message, .bs-cover .bs-message { font-size: 14px; }
 .bs-modal .bs-dialog { max-width: 560px; padding: 36px; }
 .bs-modal .bs-dialog h2, .bs-cover .bs-dialog h2 { font-size: 32px; }
-.bs-modal .bs-dialog p { font-size: 14px; }
+.bs-modal .bs-dialog p, .bs-cover .bs-dialog > p:not(.bs-eyebrow) { font-size: 15px; }
+.bs-modal .bs-dialog .bs-eyebrow, .bs-cover .bs-dialog .bs-eyebrow { font-size: 13px; }
+.bs-modal .bs-dialog .bs-dialog-footnote, .bs-cover .bs-dialog .bs-dialog-footnote {
+    font-size: 13px;
+    color: #a5bfb3;
+}
+.bs-modal .bs-dialog kbd, .bs-cover .bs-dialog kbd { min-width: 28px; height: 28px; font-size: 13px; }
+.bs-cover .bs-result-score > span { font-size: 13px; }
+.bs-cover .bs-result-stats strong { font-size: 24px; overflow-wrap: anywhere; }
+.bs-cover .bs-result-stats span { font-size: 13px; letter-spacing: .3px; color: #9ab8a8; }
+.bs-cover .bs-dialog > p.bs-result-experience { flex-wrap: wrap; gap: 8px 24px; font-size: 14px; }
+.bs-cover .bs-dialog .bs-score-rule { font-size: 13px !important; color: #9ab8a8 !important; }
 .bs-modal .bs-text-button, .bs-cover .bs-text-button {
     min-height: 44px;
     font-size: 13px;
@@ -78,35 +92,36 @@
 .bs-modal .bs-slider-label, .bs-modal .bs-select-label, .bs-modal .bs-checkbox-label {
     font-size: 14px;
 }
-.bs-modal .bs-slider-label output { font-size: 12px; }
+.bs-modal .bs-slider-label output { font-size: 13px; }
 .bs-modal .bs-settings-section input[type="range"] { height: 24px; margin: 8px 0 16px; }
-.bs-modal .bs-setting-help, .bs-modal .bs-checkbox-label small { font-size: 12px; }
+.bs-modal .bs-dialog .bs-setting-help, .bs-modal .bs-checkbox-label small { font-size: 13px; }
 .bs-modal .bs-select-label select { min-height: 44px; font-size: 13px; padding: 10px 12px; }
 .bs-modal .bs-checkbox-label input { width: 22px; height: 22px; }
-.bs-modal .bs-settings-footer > span { font-size: 11px; }
+.bs-modal .bs-settings-footer > span { font-size: 13px; }
 .bs-modal .bs-file-label { padding: 20px; margin: 24px 0; font-size: 16px; }
-.bs-modal .bs-file-label small { font-size: 11px; }
-.bs-modal .bs-file-label input { font-size: 12px; }
+.bs-modal .bs-file-label small { font-size: 13px; }
+.bs-modal .bs-file-label input { font-size: 13px; }
 .bs-modal .bs-file-label input::file-selector-button { min-height: 44px; font-size: 13px; }
 .bs-modal .bs-analysis { margin: 0 0 18px; padding: 16px; }
 .bs-modal .bs-analysis-actions { margin-bottom: 8px; }
 .bs-modal .bs-analysis-status p { margin-top: 0; }
-.bs-modal .bs-analysis-summary { font-size: 13px; }
+.bs-modal .bs-analysis-status, .bs-modal .bs-analysis-warnings { font-size: 14px; }
+.bs-modal .bs-dialog .bs-analysis-summary { font-size: 13px; }
 .bs-timing-options { margin: 18px 0; border-top: 1px solid var(--bs-line); }
 .bs-timing-options summary { padding: 12px 0; min-height: 44px; font-size: 14px; cursor: pointer; }
 .bs-timing-options summary:focus-visible { outline: 2px solid var(--bs-accent); outline-offset: 3px; }
 .bs-modal .bs-beat-source { margin: 6px 0 16px; }
 .bs-modal .bs-import-fields { margin-bottom: 6px; }
-.bs-modal .bs-import-fields label { font-size: 11px; }
+.bs-modal .bs-import-fields label { font-size: 13px; }
 .bs-modal .bs-import-fields input { min-height: 48px; font-size: 18px; }
-.bs-modal .bs-import-fields small { font-size: 11px; }
+.bs-modal .bs-import-fields small { font-size: 13px; }
 .bs-modal .bs-preview-section { margin-top: 18px; }
 .bs-modal .bs-dialog .bs-local-reselect {
     padding: 0;
     border: 0;
     background: none;
     color: var(--bs-muted);
-    font-size: 12px;
+    font-size: 14px;
 }
 @media (max-width: 800px) {
     .bs-menu-main { width: calc(100% - 48px); padding-top: 12px; }

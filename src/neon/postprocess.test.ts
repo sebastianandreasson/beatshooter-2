@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
 import {
-    bloomContribution, neonShaderSource, neonTargetDimensions, sampleNeonFrame, type NeonInput,
+    bloomContribution, isNeonGameplay, neonShaderSource, neonTargetDimensions, sampleNeonFrame, type NeonInput,
 } from "./postprocess";
 
 const input = (): NeonInput => ({
-    visible: true, intensity: "standard", reducedMotion: false, reducedFlash: false, highQuality: true,
+    visible: true, gameplay: true, intensity: "standard", reducedMotion: false, reducedFlash: false, highQuality: true,
     beatPulse: 0, downbeatPulse: 0, musicalStrength: 1, sectionActive: false, sectionProgress: 0,
 });
 
@@ -23,23 +23,51 @@ test("highlight extraction has a smooth knee and leaves the dark arena outside t
     expect(Number.isFinite(bloomContribution(0, 0.8, 0))).toBe(true);
 });
 
+test("vignette gameplay gating excludes menus, count-in, pause and the finished-track boundary", () => {
+    for (const phase of ["menu", "loading", "starting", "paused", "results"]) {
+        expect(isNeonGameplay(phase, 12, 120)).toBe(false);
+    }
+    for (const position of [-1, -0.001, NaN, Infinity, -Infinity, 120, 120.001]) {
+        expect(isNeonGameplay("playing", position, 120)).toBe(false);
+    }
+    for (const position of [0, 0.001, 12, 119.999]) {
+        expect(isNeonGameplay("playing", position, 120)).toBe(true);
+    }
+    for (const duration of [0, -1, NaN]) {
+        expect(isNeonGameplay("playing", 0, duration)).toBe(false);
+    }
+});
+
+test("leaving active gameplay removes only vignette while retaining the same bloom and chromatic frame", () => {
+    const settings = { ...input(), beatPulse: 1, sectionActive: true, sectionProgress: 0.5 };
+    const variants: Partial<NeonInput>[] = [{}, { intensity: "calm" }, { reducedMotion: true }, { reducedFlash: true }];
+    for (const variant of variants) {
+        const playing = sampleNeonFrame({ ...settings, ...variant });
+        expect(playing.vignette).toBe(variant.intensity === "calm" || variant.reducedMotion || variant.reducedFlash
+            ? 0.08 : 0.12);
+        expect(sampleNeonFrame({ ...settings, ...variant, gameplay: false })).toEqual({
+            ...playing, vignette: 0,
+        });
+    }
+});
+
 test("music-clock envelopes stay bounded, hold on pause and restart deterministically", () => {
     const settings = input();
     const quiet = sampleNeonFrame(settings);
-    expect(quiet.bloom).toBe(0.62);
+    expect(quiet.bloom).toBe(0.54);
     expect(quiet.chromatic).toBe(0);
     settings.beatPulse = 1;
     settings.sectionActive = true;
     settings.sectionProgress = 0.5;
     const peak = sampleNeonFrame(settings);
-    expect(peak.bloom).toBeCloseTo(0.78);
+    expect(peak.bloom).toBeCloseTo(0.82);
     expect(peak.chromatic).toBe(0.75);
     for (let frame = 0; frame < 30; frame++) expect(sampleNeonFrame(settings)).toEqual(peak);
     for (const progress of [0, 0.1, 0.25, 0.5, 0.75, 0.99, 1]) {
         settings.sectionProgress = progress;
         const frame = sampleNeonFrame(settings);
-        expect(frame.bloom).toBeGreaterThanOrEqual(0.62);
-        expect(frame.bloom).toBeLessThanOrEqual(0.8);
+        expect(frame.bloom).toBeGreaterThanOrEqual(0.54);
+        expect(frame.bloom).toBeLessThanOrEqual(0.83);
         expect(frame.chromatic).toBeLessThanOrEqual(0.75);
         expect(frame.vignette).toBe(0.12);
     }
@@ -90,4 +118,8 @@ test("all production HDR shader entries resolve, including the shared soft-knee 
     }
     expect(source).toContain("textureLoad(scene");
     expect(source).toContain("bloomContribution");
+    // Native Vignette owns edge darkening; the custom pass retains colour separation.
+    expect(source).not.toContain("vignette");
+    expect(source).toContain("color.r = textureSampleLevel");
+    expect(source).toContain("color.b = textureSampleLevel");
 });

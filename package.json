@@ -14,7 +14,7 @@
         "setup:audio": "bun scripts/setup-audio-analysis.ts"
     },
     "dependencies": {
-        "@dylanebert/shallot": "0.10.0",
+        "@dylanebert/shallot": "0.10.1-next.2",
         "@jgorset/beat-this": "1.0.0",
         "onnxruntime-web": "1.23.2",
         "typegpu": "0.12.8"

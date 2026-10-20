@@ -58,6 +58,16 @@ test("every layer runs from the song clock and fixed pools survive pause, seek a
         expect(poses()).not.toEqual(original);
         render(26.2);
         expect(poses()).toEqual(original);
+        render(26.3);
+        const resting = state.frame!;
+        expect(resting.accent).toBe(0);
+        render(26.49);
+        expect(state.frame!.travel).toBe(resting.travel);
+        expect(state.frame!.beat).toBe(resting.beat);
+        expect(state.frame!.accent).toBe(0);
+        render(26.51);
+        expect(state.frame!.travel).toBeGreaterThan(resting.travel);
+        expect(state.frame!.accent).toBeGreaterThan(0);
         session.generation++;
         render(0);
         expect(Object.values(state.entities).flat()).toEqual(entities);

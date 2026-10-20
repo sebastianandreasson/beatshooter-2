@@ -2,6 +2,7 @@ import type { FeatureSample } from "../analysis/features";
 import type { SectionLabel } from "../analysis/sections";
 import type { EnergySample } from "../analysis/energy";
 import type { MusicalFrame } from "../rhythm/visual";
+import { beatMotionCoordinate } from "../rhythm/pulse";
 
 export interface Arrangement {
     spectrum: number; lasers: number; aurora: number; echoes: number; geometry: number; sides: number;
@@ -39,6 +40,7 @@ export function sampleStageFrame(input: {
     }
     const moving = input.visible && input.motionAllowed;
     const energy = clamp(input.energy.loudness), features = input.features;
+    const beatMotion = beatMotionCoordinate(input.music, input.intensity <= 0.3 ? 0.35 : 1);
     return {
         enabled: input.visible && input.intensity > 0,
         moving, low: !input.highQuality,
@@ -46,12 +48,12 @@ export function sampleStageFrame(input: {
         energy, bass: clamp(input.energy.bass),
         mid: input.hasFeatures ? features.mid : energy * 0.45,
         high: input.hasFeatures ? features.high : energy * 0.2,
-        accent: moving ? clamp(input.music.beatPulse * input.music.strength * input.energy.bass * 0.6
-            + features.transient * 0.4) : 0,
+        accent: moving ? clamp(input.music.beatPulse * input.music.strength
+            * (0.5 + input.energy.bass * 0.5) * (0.8 + features.transient * 0.2)) : 0,
         buildup: moving ? features.buildup : 0,
         release: moving ? features.release : 0,
-        travel: moving ? (input.hasFeatures ? features.travel : Math.max(0, input.music.position) * 0.6) : 0,
-        beat: moving ? input.music.beatCoordinate : 0,
+        travel: moving ? beatMotion * 0.3 : 0,
+        beat: moving ? beatMotion : 0,
         bar: moving ? input.music.barCoordinate : 0,
         opening: moving ? clamp(input.sectionImpact) * energy : 0,
         arrangement, fromSides: from.sides, shapeBlend: blend,

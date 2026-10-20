@@ -52,6 +52,21 @@ describe("player weapon stats", () => {
         expect(stats.effective).toEqual(DEFAULT_PLAYER_STATS);
     });
 
+    test("global damage keeps fractional penalties through critical multiplication and rounds once", () => {
+        const stats = createPlayerStats();
+        setPlayerStatModifier(stats, "split-shot", { multiply: { damageMultiplier: 0.9 } });
+        expect(stats.effective.damageMultiplier).toBe(0.9);
+        expect(rollPlayerDamage(stats, 0, 0.9).damage).toBe(12);
+        const critical = rollPlayerDamage(stats, 0, 0);
+        expect(critical.damage).toBe(23); // round(13 × 0.9 × 2), not round(13 × 0.9) × 2.
+        expect(rollPlayerDamage(stats, 1 - Number.EPSILON, 0).damage).toBe(31);
+        setPlayerStatModifier(stats, "split-shot", { multiply: { damageMultiplier: 0.8 } });
+        expect(rollPlayerDamage(stats, 0, 0).damage).toBe(21);
+        expect(critical.damage).toBe(23);
+        removePlayerStatModifier(stats, "split-shot");
+        expect(rollPlayerDamage(stats, 0, 0).damage).toBe(26);
+    });
+
     test("additions combine before multipliers in deterministic source order", () => {
         const forward = createPlayerStats();
         const reverse = createPlayerStats();

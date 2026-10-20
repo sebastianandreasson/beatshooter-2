@@ -40,6 +40,7 @@ export interface UIView {
     kills?: number;
     health?: number;
     maxHealth?: number;
+    shield?: { ready: boolean; remaining: number };
     level?: number;
     xp?: number;
     requiredXp?: number;
@@ -189,7 +190,7 @@ const template = `
     </div>
     <div class="bs-hud" data-screen="hud" hidden>
         <div class="bs-hud-top">
-            <div class="bs-vitals"><div class="bs-hud-label"><span>HULL INTEGRITY</span><strong data-value="health-label">100 / 100</strong></div><progress class="bs-health" max="100" value="100" aria-label="Player health"></progress><p class="bs-track-playing"><span class="bs-live-dot"></span><span data-value="track-title">Neon Circuit</span><span class="bs-mode-label" data-value="mode-label">LIVE</span></p></div>
+            <div class="bs-vitals"><div class="bs-hud-label"><span>HULL INTEGRITY</span><strong data-value="health-label">100 / 100</strong></div><progress class="bs-health" max="100" value="100" aria-label="Player health"></progress><div class="bs-shield-status" hidden><span>${icon("health")} Shield</span><strong data-value="shield-status"></strong></div><p class="bs-track-playing"><span class="bs-live-dot"></span><span data-value="track-title">Neon Circuit</span><span class="bs-mode-label" data-value="mode-label">LIVE</span></p></div>
             <div class="bs-hud-score"><span class="bs-hud-label">SCORE</span><strong data-value="score">0</strong><span class="bs-kills"><b data-value="kills">0</b> ELIMINATED</span></div>
             <button class="bs-icon-button" data-action="pause" aria-label="Pause game" title="Pause (Escape)">${icon("pause")}</button>
         </div>
@@ -318,6 +319,7 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
         projectiles: "projectiles", barrage: "barrage",
         "crit-chance": "critical", "crit-damage": "critical", bounce: "bounce",
         "pickup-radius": "pickup", "dash-distance": "dash",
+        "wall-bounce": "bounce", homing: "target", "regenerative-shield": "health",
     };
     const clearSelection = () => {
         selection = undefined;
@@ -419,14 +421,15 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
                 button.className = "bs-upgrade-card";
                 button.dataset.action = "choose-upgrade";
                 button.dataset.upgradeId = choice.id;
+                button.dataset.rarity = choice.rarity;
                 button.dataset.upgradeLevel = String(choiceState.level);
                 button.setAttribute("aria-keyshortcuts", String(index + 1));
                 button.innerHTML = `<kbd>${index + 1}</kbd><span class="bs-upgrade-copy"><span class="bs-upgrade-card-top"><strong class="bs-upgrade-name"></strong><span class="bs-upgrade-rank"></span></span><span class="bs-upgrade-detail"></span><span class="bs-upgrade-description"></span></span><span class="bs-upgrade-icon" aria-hidden="true">${icon(upgradeArt[choice.id] ?? "target")}</span>`;
-                button.querySelector<HTMLElement>(".bs-upgrade-rank")!.textContent = `R${choice.nextRank}`;
+                button.querySelector<HTMLElement>(".bs-upgrade-rank")!.textContent = choice.rarity === "special" ? "RARE · UNIQUE" : `R${choice.nextRank}`;
                 button.querySelector<HTMLElement>(".bs-upgrade-name")!.textContent = choice.title;
                 renderUpgradeText(button.querySelector<HTMLElement>(".bs-upgrade-description")!, choice.descriptionParts);
                 renderUpgradeText(button.querySelector<HTMLElement>(".bs-upgrade-detail")!, choice.detailParts);
-                button.setAttribute("aria-label", `${choice.title}. ${choice.detail}. ${choice.description} Rank ${choice.nextRank}. Press ${index + 1} to choose.`);
+                button.setAttribute("aria-label", `${choice.title}. ${choice.detail}. ${choice.description} ${choice.rarity === "special" ? "Rare, single-tier upgrade" : `Rank ${choice.nextRank}`}. Press ${index + 1} to choose.`);
                 return button;
             }));
             // Preserve deliberate keyboard focus between queued offers without
@@ -444,8 +447,8 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
                 button.style.setProperty("--upgrade-scale", String(chosen ? feedback.scale : 1));
                 if (chosen) {
                     const choice = choiceState.choices.find(choice => choice.id === selection!.id)!;
-                    button.querySelector<HTMLElement>(".bs-upgrade-rank")!.textContent = `✓ R${choice.nextRank}`;
-                    button.setAttribute("aria-label", `${choice.title} selected. Rank ${choice.nextRank}.`);
+                    button.querySelector<HTMLElement>(".bs-upgrade-rank")!.textContent = choice.rarity === "special" ? "✓ UNLOCKED" : `✓ R${choice.nextRank}`;
+                    button.setAttribute("aria-label", `${choice.title} selected. ${choice.rarity === "special" ? "Special unlocked" : `Rank ${choice.nextRank}`}.`);
                 }
             }
         }
@@ -743,6 +746,10 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
             health.max = next.maxHealth ?? 100;
             health.value = Math.max(0, next.health ?? 100);
             health.classList.toggle("bs-health-low", health.value / health.max <= 0.3);
+            const shield = root.querySelector<HTMLElement>(".bs-shield-status")!;
+            shield.hidden = !next.shield;
+            shield.dataset.ready = String(!!next.shield?.ready);
+            text("shield-status", next.shield?.ready ? "Ready" : `${Math.ceil(next.shield?.remaining ?? 0)}s`);
             const level = Math.max(1, Math.floor(next.level ?? 1));
             const requiredXp = Math.max(1, Math.floor(next.requiredXp ?? 30));
             const xp = Math.min(requiredXp, Math.max(0, Math.floor(next.xp ?? 0)));

@@ -1,5 +1,5 @@
 import { chooseStartingUpgrade } from "./starting-upgrade";
-import { expect, test, type Page } from "playwright/test";
+import { expect, test, type Page } from "./fixtures";
 
 type Planar = { x: number; z: number };
 interface Snapshot {

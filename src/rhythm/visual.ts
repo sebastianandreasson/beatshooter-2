@@ -1,4 +1,5 @@
 import type { Beat } from "./timeline";
+import { beatEnvelope } from "./pulse";
 
 export interface MusicalFrame {
     position: number;
@@ -144,7 +145,7 @@ export class MusicalTimeline {
             : clamp01(1 - (position - interval.quietSince) / fadeDuration);
         // A malformed/terminal interval only fades the scene; it does not
         // create another rhythmic accent without a usable pair of timestamps.
-        const beatPulse = interval.usable ? Math.exp(-6 * beatPhase) * (1 - beatPhase) : 0;
+        const beatPulse = interval.usable ? beatEnvelope(beatPhase) : 0;
         const downbeatPulse = interval.accentedBar && interval.usable
             ? Math.exp(-4 * barPhase) * (1 - barPhase) : 0;
         return {

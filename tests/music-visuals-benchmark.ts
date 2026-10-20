@@ -1,4 +1,5 @@
 import { chooseStartingUpgrade } from "./starting-upgrade";
+import { installUpgradeEntropy } from "./upgrade-entropy";
 /**
  * Sequential production renderer comparison; intentionally outside test-discovery suffixes.
  * Serve the current build first. This script does not build, serve, or modify application code.
@@ -75,6 +76,7 @@ async function measure(browser: Browser, mode: Mode) {
             localStorage.setItem(key, JSON.stringify(value));
         }, { key: STORAGE_KEY, value: preferences });
         const page = await context.newPage();
+        await installUpgradeEntropy(page);
         const pageErrors: string[] = [];
         page.on("pageerror", error => pageErrors.push(error.message));
         await page.goto(url.href, { waitUntil: "domcontentloaded", timeout: 60_000 });

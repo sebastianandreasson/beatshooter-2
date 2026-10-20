@@ -1,5 +1,5 @@
 import { chooseStartingUpgrade } from "./starting-upgrade";
-import { expect, test, type Page } from "playwright/test";
+import { expect, test, type Page } from "./fixtures";
 import { ANALYZER_VERSION, type BeatAnalysis } from "../src/analysis/types";
 import { SECTION_ANALYZER_VERSION } from "../src/analysis/sections";
 import { shockwaveHeight } from "../src/shockwave/surface";
@@ -298,7 +298,8 @@ test("a section charges and eases into a shockwave while controls and replay sta
     expectFlatSurface(baseline);
     expect(baseline.starfield.motionAllowed).toBe(true);
     expect(baseline.starfield.distance).toBeGreaterThan(0);
-    expect(baseline.starfield.speed).toBe(5);
+    expect(baseline.starfield.speed).toBeGreaterThanOrEqual(0);
+    expect(baseline.starfield.speed).toBeLessThanOrEqual(18.19);
     expect(baseline.starfield.boost).toBe(0);
     expect(baseline.starfield.entityCount).toBe(960);
     const driftingHandle = await page.waitForFunction(position => {
@@ -307,7 +308,8 @@ test("a section charges and eases into a shockwave while controls and replay sta
     }, baseline.position, { polling: "raf", timeout: 3_000 });
     const drifting = await driftingHandle.jsonValue() as SectionSnapshot;
     expect(drifting.starfield.distance).toBeGreaterThan(baseline.starfield.distance);
-    expect(drifting.starfield.speed).toBe(5);
+    expect(drifting.starfield.speed).toBeGreaterThanOrEqual(0);
+    expect(drifting.starfield.speed).toBeLessThanOrEqual(18.19);
     expect(drifting.starfield.entityCount).toBe(baseline.starfield.entityCount);
     const baselinePath = "output/playwright/section-starfield-drift.png";
     await page.screenshot({ path: baselinePath });
@@ -338,7 +340,8 @@ test("a section charges and eases into a shockwave while controls and replay sta
     expect(charge.sectionEffects.camera.size).toBeLessThan(17);
     expect(charge.sectionEffects.map).toEqual(baseline.sectionEffects.map);
     expectFlatSurface(charge);
-    expect(charge.starfield.speed).toBe(5);
+    expect(charge.starfield.speed).toBeGreaterThanOrEqual(0);
+    expect(charge.starfield.speed).toBeLessThanOrEqual(18.19);
     expect(charge.starfield.boost).toBe(0);
     expect(heldCharge.sectionEffects.anticipating).toBe(true);
     expectCameraZoom(heldCharge);
@@ -449,7 +452,9 @@ test("a section charges and eases into a shockwave while controls and replay sta
     expect(Math.max(...allMotion.map(frame => frame.impact))).toBeGreaterThan(0.97);
     expect(allMotion.some(frame => frame.position >= 2.5 && frame.impact === 0)).toBe(true);
     const peakSpeed = Math.max(...allMotion.map(frame => frame.starfield.speed));
-    expect(Math.abs(peakSpeed / baseline.starfield.speed - 25)).toBeLessThan(0.5);
+    // The section adds up to 120 units/s to the beat's surge/rest baseline.
+    expect(peakSpeed).toBeGreaterThan(119);
+    expect(peakSpeed).toBeLessThanOrEqual(138.19);
     const liftedBars = allMotion.flatMap(frame => frame.healthbarAnchors
         .filter(bar => bar.lift > 0.05).map(bar => ({
             ...bar, waveProgress: frame.waveProgress, strength: frame.strength,
@@ -485,7 +490,8 @@ test("a section charges and eases into a shockwave while controls and replay sta
     expect(settled.sectionEffects.palette).toEqual(beginning.sectionEffects.shockwave.to);
     expect(settled.sectionEffects.camera.clearColor).not.toBe(baseline.sectionEffects.camera.clearColor);
     expect(settled.starfield.distance).toBeGreaterThan(held.starfield.distance);
-    expect(settled.starfield.speed).toBe(5);
+    expect(settled.starfield.speed).toBeGreaterThanOrEqual(0);
+    expect(settled.starfield.speed).toBeLessThanOrEqual(18.19);
     expect(settled.starfield.boost).toBe(0);
     expect(settled.starfield.entityCount).toBe(baseline.starfield.entityCount);
 

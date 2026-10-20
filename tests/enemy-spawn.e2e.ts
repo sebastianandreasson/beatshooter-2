@@ -1,5 +1,5 @@
 import { chooseStartingUpgrade } from "./starting-upgrade";
-import { expect, test, type Page } from "playwright/test";
+import { expect, test, type Page } from "./fixtures";
 
 interface MeshWitness {
     position: { x: number; y: number; z: number };
@@ -135,10 +135,7 @@ test("enemies beam in for one authored beat, freeze on pause, and only then acqu
     expect(grown.body!.position.x).toBe(first.body!.position.x);
     expect(grown.body!.position.z).toBe(first.body!.position.z);
 
-    // Capture the unobscured beam before opening the pause cover.
-    const screenshotPath = "output/playwright/enemy-arrival.png";
-    await page.screenshot({ path: screenshotPath });
-    await testInfo.attach("enemy-beam-arrival", { path: screenshotPath, contentType: "image/png" });
+    // Pause before screenshot readback can consume the remaining arrival beat.
     await pause(page);
     const held = await snapshot(page);
     onlyTelegraph(held, initial);
@@ -186,6 +183,10 @@ test("enemies beam in for one authored beat, freeze on pause, and only then acqu
     expect(reset.entityCount).toBe(initial.entityCount);
 
     await arrival(page, 0.2);
+    // This capture has no subsequent assertion that the beat is still in progress.
+    const screenshotPath = "output/playwright/enemy-arrival.png";
+    await page.screenshot({ path: screenshotPath });
+    await testInfo.attach("enemy-beam-arrival", { path: screenshotPath, contentType: "image/png" });
     await pause(page);
     await page.getByRole("button", { name: "Return to menu", exact: true }).click();
     await expect(page.locator('.bs-ui[data-phase="menu"]')).toBeVisible();

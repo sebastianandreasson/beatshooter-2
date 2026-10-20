@@ -82,7 +82,12 @@ export const PresentMusicStage: System = {
         state.frame = frame;
         const transform = world.storage(Transform);
         for (const layer of LAYERS) state.counts[layer] = 0;
-        const hide = (eid: number) => transform.scale.set(eid, 0, 0, 0);
+        const hide = (eid: number) => {
+            // Hidden slots must also be deterministic after a seek/retry.
+            transform.translation.set(eid, 0, -2, 0);
+            transform.rotation.set(eid, 0, 0, 0, 1);
+            transform.scale.set(eid, 0, 0, 0);
+        };
         if (!frame.enabled) {
             for (const layer of LAYERS) for (const eid of state.entities[layer]) hide(eid);
             state.cpuMs = visuals.profileCpu ? performance.now() - started : 0;
@@ -95,12 +100,12 @@ export const PresentMusicStage: System = {
         const color = section.palette.accent, peak = Math.max(...color, 0.001);
         const materialStore = world.resource(StageMaterial);
         const gain: Record<Layer, number> = {
-            spectrum: arrangement.spectrum * (0.65 + response * 1.1),
+            spectrum: arrangement.spectrum * (0.55 + response * 0.9 + frame.accent * 0.55),
             lasers: arrangement.lasers * (2.2 + frame.accent * 1.4),
-            aurora: arrangement.aurora * 2.8,
+            aurora: arrangement.aurora * (2.4 + frame.accent * 0.9),
             particles: arrangement.aurora * (2.1 + frame.high * 0.8),
             echoes: arrangement.echoes * 0.24,
-            geometry: arrangement.geometry * 0.4,
+            geometry: arrangement.geometry * (0.32 + frame.accent * 0.35),
         };
         for (const layer of LAYERS) {
             const handle = state.materials[layer];
@@ -130,7 +135,7 @@ export const PresentMusicStage: System = {
             const along = (band + 0.5) / sides * 35 - 17.5;
             const spectral = !frame.moving ? 0.18 : state.hasFeatures ? state.features.spectrum[band]!
                 : frame.bass * (1 - band / 22) * (0.55 + frame.accent);
-            const length = 0.12 + spectral * (2.5 + frame.buildup) * arrangement.spectrum;
+            const length = 0.12 + spectral * (2.5 + frame.buildup + frame.accent * 0.8) * arrangement.spectrum;
             const rotation = edge * Math.PI / 2;
             const c = Math.cos(rotation), s = Math.sin(rotation);
             segment("spectrum", edge * sides + band, along * c - 19.3 * s, along * s + 19.3 * c,
@@ -139,7 +144,7 @@ export const PresentMusicStage: System = {
         }
         // Four fans point outwards from the corners. Changing target formations
         // is interpolated over the beat, so there is no one-frame laser snap.
-        const beatIndex = Math.floor(frame.beat), beatMix = smooth((frame.beat - beatIndex) / 0.8);
+        const beatIndex = Math.floor(frame.beat), beatMix = frame.beat - beatIndex;
         const formation = Math.sin(beatIndex * 2.39996) * (1 - beatMix) + Math.sin((beatIndex + 1) * 2.39996) * beatMix;
         const rays = frame.low ? 3 : 6;
         for (let corner = 0; corner < 4; corner++) for (let ray = 0; ray < 6; ray++) {
@@ -181,9 +186,9 @@ export const PresentMusicStage: System = {
                 const index = ring * 24 + vertex;
                 if (ring >= visibleRings) { hide(state.entities[layer][index]!); continue; }
                 const echo = layer === "echoes";
-                const age = echo ? ((frame.bar / 2 + ring / 3) % 1 + 1) % 1 : 0;
+                const age = echo ? ((frame.beat / 8 + ring / 3) % 1 + 1) % 1 : 0;
                 const fade = echo ? smooth(age / 0.15) * (1 - smooth((age - 0.35) / 0.65)) : 1;
-                const radius = echo ? 21 + age * 16 : 24 + ring * 4 + frame.opening * 1.5;
+                const radius = echo ? 21 + age * 16 : 24 + ring * 4 + frame.opening * 1.5 + frame.accent * 0.55;
                 const rotation = (echo ? frame.travel * 0.035 - age * 0.25 : frame.travel * (ring ? -0.025 : 0.025))
                     + ring * Math.PI / 12;
                 const point = (corner: number): [number, number] => {

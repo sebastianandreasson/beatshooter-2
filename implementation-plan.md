@@ -3,6 +3,11 @@
 Status: **M0–M6 implemented and automated acceptance passed. Human audio-latency sign-off remains.**
 Prepared 2026-10-20 against `@dylanebert/shallot@0.10.0`.
 
+The application now pins `@dylanebert/shallot@0.10.1-next.2` and uses its native
+vignette during active gameplay only. Chromatic section accents retain the
+existing shader because this prerelease does not include native chromatic
+aberration. Historical engine references below describe the original baseline.
+
 Follow-up experiment: local Beat This! analysis is now implemented and tested
 on the four private tracks in `local-audio/`. It is separate from the original
 M0–M6 scope. See [prototype results](docs/beat-this-prototype.md) for measured
@@ -164,6 +169,14 @@ The fixture does not change normal progression. Current behavior and catalog
 values are also documented in [README.md](README.md); the original selection
 checks are recorded in [upgrade verification](docs/upgrades-verification.md),
 with the earlier pacing changes in [spawn and pacing verification](docs/spawn-pacing-verification.md).
+
+Follow-up specials: offers now have a 12% chance to include one rare, single-tier
+upgrade. Wall Bounce reflects a shot once at the arena boundary, independently
+of enemy ricochets. Homing Shots applies limited steering toward enemies ahead.
+Regenerative Shield absorbs one hit and recharges over 25 raw song seconds,
+with a musical charge outline and HUD countdown. Acquired specials disappear
+from the offer pool and reset with the run. See
+[special upgrade verification](docs/special-upgrades-verification.md).
 
 ## Implementation record — 2026-10-20
 

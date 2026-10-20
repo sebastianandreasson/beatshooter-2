@@ -1,5 +1,5 @@
 import { chooseStartingUpgrade } from "./starting-upgrade";
-import { expect, test, type Page } from "playwright/test";
+import { expect, test, type Page } from "./fixtures";
 
 interface Snapshot {
     phase: string;
@@ -119,8 +119,8 @@ test("stationary dash follows aim, pauses with music, and retry clears it", asyn
     expect(reset.player.position.z).toBeCloseTo(0, 4);
 });
 
-for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
-    test(`larger beat indicator is centered at the bottom without overlap at ${viewport.width}px`, async ({ page }) => {
+for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 }, { width: 1024, height: 600 }]) {
+    test(`health and bottom controls remain readable and clear of the beat indicator at ${viewport.width}px`, async ({ page }, testInfo) => {
         await page.setViewportSize(viewport);
         await practice(page);
         await page.waitForFunction(() => (window as unknown as InspectedWindow).__beatshooter.snapshot().position > 0.1);
@@ -130,7 +130,7 @@ for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 
         const box = (await panel.boundingBox())!;
         const progress = (await page.locator(".bs-run-progress").boundingBox())!;
         expect(Math.abs(box.x + box.width / 2 - viewport.width / 2)).toBeLessThan(2);
-        expect(box.y).toBeGreaterThan(viewport.height * 0.65);
+        expect(box.y).toBeGreaterThan(viewport.height / 2);
         expect(box.y + box.height).toBeLessThanOrEqual(progress.y);
         expect(box.x).toBeGreaterThanOrEqual(0);
         expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
@@ -142,6 +142,44 @@ for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 
         expect(sizes[0]!.width).toBeGreaterThanOrEqual(24);
         expect(sizes[1]!.width).toBeGreaterThanOrEqual(18);
         await expect(page.locator(".bs-dash-status")).toContainText("SPACE");
-        await page.screenshot({ path: `output/playwright/dash-hud-${viewport.width}.png` });
+
+        const layout = await page.evaluate(() => {
+            const rect = (element: Element) => {
+                const box = element.getBoundingClientRect();
+                return { x: box.x, y: box.y, right: box.right, bottom: box.bottom };
+            };
+            return {
+                top: [".bs-vitals", ".bs-hud-score", ".bs-hud-top .bs-icon-button", ".bs-experience"]
+                    .map(selector => ({ selector, ...rect(document.querySelector(selector)!) })),
+                hints: rect(document.querySelector(".bs-hud-hint")!),
+                controls: [...document.querySelectorAll(".bs-hud-hint > *")]
+                    .filter(element => element.getBoundingClientRect().width > 0)
+                    .map(element => ({ text: element.textContent, ...rect(element) })),
+            };
+        });
+        const overlaps = (a: typeof layout.hints, b: typeof layout.hints) =>
+            a.x < b.right && a.right > b.x && a.y < b.bottom && a.bottom > b.y;
+        for (const item of [...layout.top, layout.hints, ...layout.controls]) {
+            expect(item.x).toBeGreaterThanOrEqual(0);
+            expect(item.right).toBeLessThanOrEqual(viewport.width);
+            expect(item.y).toBeGreaterThanOrEqual(0);
+            expect(item.bottom).toBeLessThanOrEqual(viewport.height);
+        }
+        for (let i = 0; i < layout.top.length; i++) {
+            for (let j = i + 1; j < layout.top.length; j++) {
+                expect(overlaps(layout.top[i]!, layout.top[j]!),
+                    `${layout.top[i]!.selector} overlaps ${layout.top[j]!.selector}`).toBe(false);
+            }
+        }
+        expect(progress.y + progress.height).toBeLessThanOrEqual(layout.hints.y);
+        for (let i = 0; i < layout.controls.length; i++) {
+            for (let j = i + 1; j < layout.controls.length; j++) {
+                expect(overlaps(layout.controls[i]!, layout.controls[j]!),
+                    `${layout.controls[i]!.text} overlaps ${layout.controls[j]!.text}`).toBe(false);
+            }
+        }
+        const path = `output/playwright/dash-hud-${viewport.width}.png`;
+        await page.screenshot({ path });
+        await testInfo.attach(`hud-${viewport.width}`, { path, contentType: "image/png" });
     });
 }

@@ -1,5 +1,5 @@
-import { describe, expect, test } from "bun:test";
-import { Body, createApp, StandardPhysicsPlugin } from "@dylanebert/shallot";
+import { describe, expect, spyOn, test } from "bun:test";
+import { Body, createApp, StandardPhysicsPlugin, Transform } from "@dylanebert/shallot";
 import { AudioOutput } from "@dylanebert/shallot/audio";
 import { spawnOnBeat } from "../combat";
 import { dropExperience } from "../experience/state";
@@ -7,7 +7,7 @@ import { PlayerState } from "../player";
 import type { MusicTransport, TransportObservation, TransportState } from "../rhythm/transport";
 import { prepareUpgradeChoices, queueUpgradeLevels } from "../upgrades";
 import {
-    ObserveMusic, pauseSession, PrepareCombat, resumeSession, ResolveCombat, selectUpgrade, Session,
+    ObserveMusic, pauseSession, PrepareCombat, quitSession, resumeSession, ResolveCombat, selectUpgrade, Session, startSession,
 } from "./index";
 
 async function fixture(physics = false) {
@@ -60,6 +60,45 @@ async function fixture(physics = false) {
 }
 
 describe("upgrades during uninterrupted play", () => {
+    test("new runs and restarts draw fresh upgrade seeds without changing the combat sequence", async () => {
+        const f = await fixture(true);
+        const seeds = [2026, 42, 99];
+        let draws = 0;
+        const entropy = spyOn(crypto, "getRandomValues").mockImplementation((array: ArrayBufferView) => {
+            if (!(array instanceof Uint32Array) || array.length !== 1) {
+                throw new Error("Unexpected random request.");
+            }
+            const seed = seeds[draws++];
+            if (seed === undefined) throw new Error("An existing offer was rerolled.");
+            array[0] = seed;
+            return array;
+        });
+        try {
+            f.player.body = f.world.create();
+            f.world.add(f.player.body, Transform);
+            f.world.add(f.player.body, Body);
+            const offers: string[] = [];
+            for (let run = 0; run < seeds.length; run++) {
+                if (run === 2) quitSession(f.world);
+                // Reusing the selection is also the pause/retry and dojo-reset path.
+                await startSession(f.world, { mode: "dojo", bpm: 120 });
+                expect(f.session.phase).toBe("starting");
+                expect(f.session.error).toBeUndefined();
+                const choices = f.session.combat.upgrades.choices;
+                expect(choices).toHaveLength(3);
+                expect(new Set(choices.map(choice => choice.id)).size).toBe(3);
+                offers.push(choices.map(choice => choice.id).sort().join(","));
+                expect(f.session.combat.randomState).toBe(2026);
+                expect(prepareUpgradeChoices(f.session.combat)).toBe(choices);
+            }
+            expect(new Set(offers).size).toBe(3);
+            expect(draws).toBe(3);
+        } finally {
+            entropy.mockRestore();
+            f.dispose();
+        }
+    });
+
     test("the free starting choice applies once before playback and leaves XP-earned levels intact", async () => {
         const f = await fixture();
         try {

@@ -14,6 +14,7 @@ export interface NeonFrame {
 
 export interface NeonInput {
     visible: boolean;
+    gameplay: boolean;
     intensity: "standard" | "calm" | "off";
     reducedMotion: boolean;
     reducedFlash: boolean;
@@ -27,6 +28,11 @@ export interface NeonInput {
 
 const unit = (value: number): number => Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0;
 
+/** Keep lens shading out of menus, including the starting choice and count-in. */
+export function isNeonGameplay(phase: string, position: number, duration: number): boolean {
+    return phase === "playing" && Number.isFinite(position) && position >= 0 && position < duration;
+}
+
 /** Music-clock envelopes only; comfort modes keep a steady glow with no colour separation. */
 export function sampleNeonFrame(input: NeonInput): NeonFrame {
     const enabled = input.visible && input.intensity !== "off";
@@ -37,11 +43,11 @@ export function sampleNeonFrame(input: NeonInput): NeonFrame {
     return {
         enabled,
         bloom: enabled ? (steady ? 0.3 : calm ? 0.32 + pulse * 0.02 + section * 0.03
-            : 0.62 + pulse * 0.06 + section * 0.1) : 0,
+            : 0.54 + pulse * 0.18 + section * 0.1) : 0,
         threshold: 0.8,
         knee: 0.3,
         chromatic: enabled ? section * (calm ? 0.18 : 0.75) : 0,
-        vignette: enabled ? (calm || steady ? 0.08 : 0.12) : 0,
+        vignette: enabled && input.gameplay ? (calm || steady ? 0.08 : 0.12) : 0,
         reducedDetail: !input.highQuality,
     };
 }
@@ -153,8 +159,7 @@ fn gaussian(uv: vec2f, step: vec2f) -> vec3f {
     }
     let halo = textureSampleLevel(bloom, linearSampler, input.uv, 0.0).rgb;
     color += halo * settings.glow.x;
-    let vignette = smoothstep(0.35, 1.35, length(centered));
-    return vec4f(color * (1.0 - settings.finish.x * vignette), original.a);
+    return vec4f(color, original.a);
 }`,
     });
 }

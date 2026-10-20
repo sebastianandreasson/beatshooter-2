@@ -9,6 +9,8 @@ import { MusicVisuals, PresentMusicalVisuals } from "../music-visuals";
 import { damageNumberPose, feedbackAge } from "../music-visuals/effects";
 import { SectionEffects } from "../section-effects/runtime";
 import { shockwaveHeight } from "../shockwave/surface";
+import { presentPlayerEngines } from "./player-ship";
+import { presentShield } from "./shield";
 
 export const Presentation: Resource<{
     generation: number; projectiles: Map<number, number>; effects: Map<number, HTMLElement>;
@@ -34,9 +36,11 @@ function present(world: World): void {
         p.healthbars.clear();
         p.flashing.clear();
         p.playerFlashing = false;
-        world.storage(MeshMaterial).material.set(player.ship, arena.materials.player.material);
+        world.storage(MeshMaterial).material.set(player.ship, (player.visual?.hullMaterial ?? arena.materials.player).material);
         p.generation = s.generation;
     }
+    presentPlayerEngines(world);
+    presentShield(world);
     deriveTransforms(world);
     sampleAim(world);
     for (const eid of arena.reticle) pose.translation.set(eid, player.target.x, 0.55, player.target.z);
@@ -163,7 +167,7 @@ function present(world: World): void {
                 element.dataset.targetId = String(effect.targetId);
                 element.dataset.enemyId = String(effect.targetId);
             }
-            element.textContent = `${effect.critical ? "✦ " : ""}${effect.amount}`;
+            element.textContent = String(effect.amount);
             p.layer.append(element);
             p.effects.set(effect.id, element);
         }
@@ -201,9 +205,11 @@ function present(world: World): void {
             if (flash) p.flashing.add(eid); else p.flashing.delete(eid);
         }
     }
-    const playerFlash = s.combat.invulnerableUntil > s.combat.time;
+    const playerFlash = s.combat.invulnerableUntil > s.combat.time
+        && s.position - s.combat.shieldLastBlockedAt > s.combat.tuning.invulnerabilitySeconds;
     if (playerFlash !== p.playerFlashing) {
-        world.storage(MeshMaterial).material.set(player.ship, (playerFlash ? arena.materials.hit : arena.materials.player).material);
+        world.storage(MeshMaterial).material.set(player.ship,
+            (playerFlash ? arena.materials.hit : player.visual?.hullMaterial ?? arena.materials.player).material);
         p.playerFlashing = playerFlash;
     }
 }
@@ -226,7 +232,7 @@ export const PresentationPlugin: Plugin = {
             .enemy-healthbar{box-sizing:border-box;width:32px;height:5px;border:1px solid #06100fe6;border-radius:2px;background:#081310e6;box-shadow:0 1px 3px #0009;opacity:.7;will-change:transform}
             .enemy-healthbar[data-damaged=true]{opacity:1}
             .enemy-healthbar-fill{height:100%;border-radius:1px;background:#b8e4cf;transform-origin:left center}
-            .damage-number{z-index:1;white-space:nowrap;font:700 16px ui-monospace,monospace;color:#e5fff5;text-shadow:0 2px 4px #000;transform-origin:center}
+            .damage-number{z-index:1;white-space:nowrap;font:800 16px ui-monospace,monospace;font-variant-numeric:tabular-nums;color:#e5fff5;-webkit-text-stroke:.35px #071411;text-shadow:0 1px 2px #000;transform-origin:center}
             .damage-number.critical{color:#ffe0a3;font-size:21px}
             .damage-number.player-damage{color:#ff817a}
         `;

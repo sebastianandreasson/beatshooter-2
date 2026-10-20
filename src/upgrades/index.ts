@@ -6,10 +6,13 @@ import {
     type PlayerStatsValues,
 } from "../player-stats";
 
-export const UPGRADE_IDS = [
+export const STANDARD_UPGRADE_IDS = [
     "damage", "health", "regeneration", "projectiles", "barrage",
     "crit-chance", "crit-damage", "bounce", "pickup-radius", "dash-distance",
 ] as const;
+export const SPECIAL_UPGRADE_IDS = ["wall-bounce", "homing", "regenerative-shield"] as const;
+export const SPECIAL_OFFER_CHANCE = 0.12;
+export const UPGRADE_IDS = [...STANDARD_UPGRADE_IDS, ...SPECIAL_UPGRADE_IDS] as const;
 export type UpgradeId = typeof UPGRADE_IDS[number];
 export type UpgradeCategory = "damage" | "health" | "utility";
 export type UpgradeTextPart = string | Readonly<{ value: string; category: UpgradeCategory }>;
@@ -20,6 +23,7 @@ export interface UpgradeChoice {
     description: string;
     rank: number;
     nextRank: number;
+    rarity: "standard" | "special";
     detail: string;
     detailParts: readonly UpgradeTextPart[];
     descriptionParts: readonly UpgradeTextPart[];
@@ -68,9 +72,14 @@ function available(id: UpgradeId, stats: Readonly<PlayerStatsValues>): boolean {
         case "bounce": return stats.bounces < 5;
         case "pickup-radius": return stats.pickupRadiusMultiplier < MAX_PICKUP_RADIUS_MULTIPLIER;
         case "dash-distance": return stats.dashDistance < MAX_DASH_DISTANCE - 1e-9;
+        case "wall-bounce": return stats.wallBounces < 1;
+        case "homing": return stats.homing < 1;
+        case "regenerative-shield": return stats.regenerativeShield < 1;
         default: return true;
     }
 }
+
+const splitShotDamageMultiplier = (rank: number): number => Math.max(0, 100 - rank * 10) / 100;
 
 function description(id: UpgradeId, rank: number, stats: Readonly<PlayerStatsValues>): UpgradeChoice {
     const value = (amount: number | string, category: UpgradeCategory): UpgradeTextPart =>
@@ -78,16 +87,18 @@ function description(id: UpgradeId, rank: number, stats: Readonly<PlayerStatsVal
     const damage = (amount: number | string) => value(amount, "damage");
     const health = (amount: number | string) => value(amount, "health");
     const utility = (amount: number | string) => value(amount, "utility");
+    const damageRange = (bonus = 0) => `${Math.round((stats.damageMin + bonus) * stats.damageMultiplier)}–${Math.round((stats.damageMax + bonus) * stats.damageMultiplier)}`;
     const plain = (parts: readonly UpgradeTextPart[]) => parts.map(part => typeof part === "string" ? part : part.value).join("");
     const card = (title: string, descriptionParts: UpgradeTextPart[], detailParts: UpgradeTextPart[]): UpgradeChoice => ({
         id, rank, nextRank: rank + 1, title,
+        rarity: isSpecialUpgrade(id) ? "special" : "standard",
         description: plain(descriptionParts), detail: plain(detailParts),
         descriptionParts: Object.freeze(descriptionParts), detailParts: Object.freeze(detailParts),
     });
     switch (id) {
         case "damage": return card("Power",
             ["Every new projectile deals more damage."],
-            [damage(`${stats.damageMin}–${stats.damageMax}`), " → ", damage(`${stats.damageMin + 3}–${stats.damageMax + 3}`), " damage"]);
+            [damage(damageRange()), " → ", damage(damageRange(3)), " damage"]);
         case "health": return card("Vitality",
             ["Increase maximum health and restore ", health(20), " health now."],
             [health(stats.maxHealth), " → ", health(stats.maxHealth + 20), " maximum health"]);
@@ -95,7 +106,11 @@ function description(id: UpgradeId, rank: number, stats: Readonly<PlayerStatsVal
             ["Restore health every 5 music seconds, landing on the next beat."],
             [health(stats.healthRegen), " → ", health(stats.healthRegen + 2), " health / 5 seconds"]);
         case "projectiles": return card("Split Shot",
-            ["Add a projectile to a centered fan on every firing beat."],
+            ["Add a projectile on every firing beat. All weapon damage: ",
+                damage(`${Math.round(stats.damageMultiplier * 100)}%`), " → ",
+                damage(`${Math.round(stats.damageMultiplier * splitShotDamageMultiplier(rank + 1)
+                    / Math.max(0.01, splitShotDamageMultiplier(rank)) * 100)}%`),
+                ". −", damage("10%"), " per rank."],
             [damage(stats.projectileCount), " → ", damage(stats.projectileCount + 1), " projectiles"]);
         case "barrage": return card("Downbeat Barrage",
             ["Fire a ring of projectiles on each accented main beat."],
@@ -107,7 +122,7 @@ function description(id: UpgradeId, rank: number, stats: Readonly<PlayerStatsVal
             ["Critical projectiles hit harder."],
             [damage(`${stats.criticalMultiplier}×`), " → ", damage(`${stats.criticalMultiplier + 0.25}×`), " critical damage"]);
         case "bounce": return card("Ricochet",
-            ["After a hit, wait for the next beat and bounce to a new enemy."],
+            ["Bounce to a new enemy on the next beat. Retain ", damage("70%"), " damage per bounce."],
             [damage(stats.bounces), " → ", damage(stats.bounces + 1), " bounces / projectile"]);
         case "pickup-radius": return card("Pickup Radius",
             ["Pull XP gems in from farther away."],
@@ -116,7 +131,20 @@ function description(id: UpgradeId, rank: number, stats: Readonly<PlayerStatsVal
         case "dash-distance": return card("Dash Distance",
             ["Travel farther with each on-beat dash."],
             [utility(stats.dashDistance), " → ", utility(Math.min(MAX_DASH_DISTANCE, stats.dashDistance + 0.6)), " dash distance"]);
+        case "wall-bounce": return card("Wall Bounce",
+            ["Shots rebound once from a wall with full damage. The next wall stops them."],
+            [damage(1), " wall rebound / projectile"]);
+        case "homing": return card("Homing Shots",
+            ["Shots bend gently toward the closest enemy ahead. A small correction, with no sharp turns."],
+            ["Up to ", damage(30), "° total steering / projectile"]);
+        case "regenerative-shield": return card("Regenerative Shield",
+            ["Block one hit, then recharge over 25 seconds of song time. Starts charged."],
+            [health(1), " hit blocked · ", health(25), "s recharge"]);
     }
+}
+
+export function isSpecialUpgrade(id: UpgradeId): boolean {
+    return (SPECIAL_UPGRADE_IDS as readonly string[]).includes(id);
 }
 
 /** Repeated render calls keep the same three choices and never reroll the RNG. */
@@ -124,12 +152,20 @@ export function prepareUpgradeChoices(combat: CombatState): readonly UpgradeChoi
     const upgrades = combat.upgrades;
     if (upgrades.pending <= 0 || combat.defeated) return [];
     if (upgrades.choices.length > 0) return upgrades.choices;
-    const pool = UPGRADE_IDS.filter(id => available(id, combat.playerStats.effective));
+    const pool = STANDARD_UPGRADE_IDS.filter(id => available(id, combat.playerStats.effective));
     const choices: UpgradeChoice[] = [];
     for (let slot = 0; slot < 3 && pool.length > 0; slot++) {
         const index = Math.floor(offerRandom(upgrades) * pool.length);
         const [id] = pool.splice(index, 1);
         if (id) choices.push(description(id, upgrades.ranks[id], combat.playerStats.effective));
+    }
+    const specials = SPECIAL_UPGRADE_IDS.filter(id => upgrades.ranks[id] === 0
+        && available(id, combat.playerStats.effective));
+    // One rare slot at most. Normal offers and the combat RNG remain independent.
+    if (specials.length && offerRandom(upgrades) < SPECIAL_OFFER_CHANCE) {
+        const id = specials[Math.floor(offerRandom(upgrades) * specials.length)]!;
+        const slot = Math.floor(offerRandom(upgrades) * Math.max(1, choices.length));
+        choices[slot] = description(id, 0, combat.playerStats.effective);
     }
     upgrades.offeredLevel = upgrades.earnedThrough - upgrades.pending + 1;
     upgrades.choices = Object.freeze(choices.map(choice => Object.freeze(choice)));
@@ -141,13 +177,19 @@ function modifierFor(id: UpgradeId, rank: number): PlayerStatModifier {
         case "damage": return { add: { damageMin: rank * 3, damageMax: rank * 3 } };
         case "health": return { add: { maxHealth: rank * 20 } };
         case "regeneration": return { add: { healthRegen: rank * 2 } };
-        case "projectiles": return { add: { projectileCount: rank } };
+        case "projectiles": return {
+            add: { projectileCount: rank },
+            multiply: { damageMultiplier: splitShotDamageMultiplier(rank) },
+        };
         case "barrage": return { add: { barrageCount: rank > 0 ? 6 + (rank - 1) * 2 : 0 } };
         case "crit-chance": return { add: { criticalChance: rank * 0.05 } };
         case "crit-damage": return { add: { criticalMultiplier: rank * 0.25 } };
         case "bounce": return { add: { bounces: rank } };
         case "pickup-radius": return { add: { pickupRadiusMultiplier: rank * 0.25 } };
         case "dash-distance": return { add: { dashDistance: rank * 0.6 } };
+        case "wall-bounce": return { add: { wallBounces: 1 } };
+        case "homing": return { add: { homing: 1 } };
+        case "regenerative-shield": return { add: { regenerativeShield: 1 } };
     }
 }
 
@@ -160,6 +202,7 @@ export function chooseUpgrade(
     const upgrades = combat.upgrades;
     if (combat.defeated || upgrades.pending <= 0 || !Number.isFinite(songPosition)
         || !upgrades.choices.some(choice => choice.id === id)
+        || (isSpecialUpgrade(id) && upgrades.ranks[id] > 0)
         || !available(id, combat.playerStats.effective)) return false;
     const rank = upgrades.ranks[id] + 1;
     const oldRegen = combat.playerStats.effective.healthRegen;
@@ -167,6 +210,7 @@ export function chooseUpgrade(
     if (id === "health") {
         combat.health = Math.min(combat.playerStats.effective.maxHealth, combat.health + 20);
     }
+    if (id === "regenerative-shield") combat.shieldRechargeAt = songPosition;
     if (oldRegen === 0 && combat.playerStats.effective.healthRegen > 0) {
         combat.regenerationDueAt = songPosition + 5;
     }

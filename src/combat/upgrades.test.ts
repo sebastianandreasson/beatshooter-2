@@ -135,7 +135,7 @@ describe("upgraded music-timed combat", () => {
         expect(shot.bouncesRemaining).toBe(1);
         advanceCombat(combat, 0.3, origin);
         expect(first.health).toBe(11);
-        expect(second.health).toBe(11);
+        expect(second.health).toBe(15); // First bounce: round(13 × 0.7) = 9.
         expect(third.health).toBe(24);
         expect(shot.waitingForBounce).toBe(true);
         expect(shot.hitEnemyIds).toEqual([first.id, second.id]);
@@ -144,10 +144,10 @@ describe("upgraded music-timed combat", () => {
         expect(third.health).toBe(24);
         beat(combat, 1, 0.9);
         advanceCombat(combat, 0.3, origin);
-        expect(third.health).toBe(11);
+        expect(third.health).toBe(18); // Second bounce: round(13 × 0.7²) = 6.
         expect(combat.projectiles.some(projectile => projectile.id === shot.id)).toBe(false);
         expect(combat.playerStats.metrics.hits).toBe(3);
-        expect(combat.playerStats.metrics.totalDamageDealt).toBe(39);
+        expect(combat.playerStats.metrics.totalDamageDealt).toBe(28);
     });
 
     test("ricochets choose nearest unhit enemy, resolve ties by ID and retire with no target", () => {
@@ -160,7 +160,7 @@ describe("upgraded music-timed combat", () => {
         beat(combat, 0);
         expect(shot.velocityZ).toBeGreaterThan(0);
         advanceCombat(combat, 0.2, origin);
-        expect(lowerId.health).toBe(11);
+        expect(lowerId.health).toBe(15);
         expect(higherId.health).toBe(24);
         higherId.health = 0;
         beat(combat, 1);
@@ -179,6 +179,47 @@ describe("upgraded music-timed combat", () => {
         expect(old.damage).toBe(13);
         expect(next.bouncesRemaining).toBe(3);
         expect(next.damage).toBe(16);
+    });
+
+    test("all five bounces compound from fired damage without rounding drift or upgrade changes", () => {
+        for (const [stats, damage] of [
+            [{ damageMin: 15, damageMax: 15 }, [15, 11, 7, 5, 4, 3]],
+            [{ damageMin: 25, damageMax: 25, criticalChance: 1 }, [50, 35, 25, 17, 12, 8]],
+            [{ damageMin: 25, damageMax: 25, damageMultiplier: 0.8, criticalChance: 1 }, [40, 28, 20, 14, 10, 7]],
+        ] as const) {
+            const combat = fixture({ ...stats, bounces: 5 });
+            combat.tuning.enemyHealth = 100;
+            const targets = Array.from({ length: 6 }, (_, i) => enemy(combat, 3 + i * 3));
+            const shot = fireProjectile(combat, origin, right)!;
+            setPlayerStatModifier(combat.playerStats, "later-upgrade", {
+                add: { damageMin: 30, damageMax: 30 }, multiply: { damageMultiplier: 0.5 },
+            });
+            for (let i = 0; i < targets.length; i++) {
+                if (i > 0) {
+                    beat(combat, i - 1);
+                    expect(shot.damage).toBe(damage[i]!);
+                    beat(combat, i - 1); // No double attenuation on a duplicate.
+                    expect(shot.damage).toBe(damage[i]!);
+                }
+                advanceCombat(combat, 0.2, origin);
+                expect(targets[i]!.health).toBe(100 - damage[i]!);
+            }
+            expect(combat.projectiles.some(item => item.id === shot.id)).toBe(false);
+            expect(combat.playerStats.metrics.totalDamageDealt).toBe(damage.reduce((sum, value) => sum + value, 0));
+        }
+    });
+
+    test("global damage reductions apply equally to the fan, barrage and critical hits", () => {
+        const combat = fixture({
+            damageMin: 25, damageMax: 25, damageMultiplier: 0.8,
+            criticalChance: 1, projectileCount: 3, barrageCount: 6,
+        });
+        beat(combat, 0, 0, true);
+        expect(combat.projectiles).toHaveLength(9);
+        expect(combat.projectiles.every(shot => shot.damage === 40 && shot.initialDamage === 40 && shot.critical)).toBe(true);
+        setPlayerStatModifier(combat.playerStats, "later-penalty", { multiply: { damageMultiplier: 0.5 } });
+        expect(combat.projectiles.every(shot => shot.damage === 40)).toBe(true);
+        expect(fireProjectile(combat, origin, right)!.damage).toBe(20);
     });
 
     test("multi-level XP collection queues every upgrade once", () => {

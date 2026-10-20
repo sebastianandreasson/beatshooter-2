@@ -117,6 +117,8 @@ describe("damage, feedback, and defeat", () => {
         expect(enemyVelocity(enemy, origin, state).x).toBeGreaterThan(0);
         advanceCombat(state, 1, origin, freezePositions(state));
         expect(state.effects).toHaveLength(0);
+        expect(enemyVelocity(enemy, origin, state).x).toBe(0);
+        onCombatBeat(state, { index: 0, barIndex: 0, time: state.time, nextBeatTime: state.time + 0.5 }, origin, right);
         expect(enemyVelocity(enemy, origin, state).x).toBeLessThan(0);
     });
 

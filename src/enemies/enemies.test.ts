@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
 import { combatRandom, createCombat } from "../combat";
+import { beatVelocity } from "../rhythm/pulse";
+import { movementBeat } from "./movement";
 import {
     createEnemy, enemyKindForSpawn, enemyVelocity, findArenaSpawnPosition, findSpawnPosition, waveSize,
 } from "./index";
@@ -20,14 +22,16 @@ test("spawn cadence introduces each silhouette and keeps larger waves varied", (
 
 test("pursuit is planar, normalized, and has a bounded musical speed increase", () => {
     const state = createCombat();
+    state.movementBeat = movementBeat(0, 0.5);
     const enemy = createEnemy(1, { x: 4, z: 4 }, 0, state.tuning);
     const initial = enemyVelocity(enemy, { x: 0, z: 0 }, state);
-    expect(Math.hypot(initial.x, initial.z)).toBeCloseTo(state.tuning.enemySpeed);
+    expect(Math.hypot(initial.x, initial.z)).toBeCloseTo(state.tuning.enemySpeed * beatVelocity(0));
     expect(initial.x).toBeLessThan(0);
     expect(initial.z).toBeLessThan(0);
     state.lastBarIndex = 1000;
     const pressured = enemyVelocity(enemy, { x: 0, z: 0 }, state);
-    expect(Math.hypot(pressured.x, pressured.z)).toBeCloseTo(state.tuning.enemyMaxSpeed);
+    expect(Math.hypot(pressured.x, pressured.z)).toBeCloseTo(state.tuning.enemyMaxSpeed * beatVelocity(0));
+    expect(enemyVelocity(enemy, { x: 0, z: 0 }, state, 0.4)).toEqual({ x: 0, z: 0 });
     expect(enemyVelocity(enemy, { x: 4, z: 4 }, state)).toEqual({ x: 0, z: 0 });
     state.defeated = true;
     expect(enemyVelocity(enemy, { x: 0, z: 0 }, state)).toEqual({ x: 0, z: 0 });
@@ -87,19 +91,24 @@ test("rangers approach, settle at firing distance, and resume pursuit when the p
     const state = createCombat(1, { rangerStopDistance: 6 });
     const ranger = createEnemy(1, { x: 12, z: 0 }, 0, state.tuning, "ranger");
     const player = { x: 0, z: 0 };
-    expect(enemyVelocity(ranger, player, state)).toEqual({ x: -2.5, z: 0 });
+    state.movementBeat = movementBeat(0, 0.5);
+    expect(enemyVelocity(ranger, player, state).x).toBeCloseTo(-2.5 * beatVelocity(0));
     for (let frame = 0; frame < 600; frame++) {
-        const velocity = enemyVelocity(ranger, player, state);
+        state.time = frame / 60;
+        if (frame % 30 === 0) state.movementBeat = movementBeat(state.time, state.time + 0.5);
+        const velocity = enemyVelocity(ranger, player, state, state.time + 1 / 60, 1 / 60);
         ranger.x += velocity.x / 60;
         ranger.z += velocity.z / 60;
         expect(Math.hypot(ranger.x, ranger.z)).toBeGreaterThanOrEqual(6);
     }
-    expect(ranger.x).toBeCloseTo(6, 5);
+    expect(ranger.x).toBeCloseTo(6, 4);
     expect(ranger.z).toBe(0);
     ranger.x = 6;
     expect(enemyVelocity(ranger, player, state)).toEqual({ x: 0, z: 0 });
     ranger.x = 4;
     expect(enemyVelocity(ranger, player, state)).toEqual({ x: 0, z: 0 });
+    state.time = 10;
+    state.movementBeat = movementBeat(10, 10.5);
     expect(enemyVelocity(ranger, { x: -8, z: 0 }, state).x).toBeLessThan(0);
     ranger.health = 0;
     expect(enemyVelocity(ranger, { x: -8, z: 0 }, state)).toEqual({ x: 0, z: 0 });

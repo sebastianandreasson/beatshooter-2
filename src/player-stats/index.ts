@@ -2,6 +2,8 @@
 export interface PlayerStatsValues {
     damageMin: number;
     damageMax: number;
+    /** Applies to every player projectile after its base damage and critical roll. */
+    damageMultiplier: number;
     criticalChance: number;
     criticalMultiplier: number;
     maxHealth: number;
@@ -10,6 +12,10 @@ export interface PlayerStatsValues {
     projectileCount: number;
     barrageCount: number;
     bounces: number;
+    /** Single-tier special upgrades, clamped to zero or one. */
+    wallBounces: number;
+    homing: number;
+    regenerativeShield: number;
     /** Scales the range that starts attracting XP; collection contact is unchanged. */
     pickupRadiusMultiplier: number;
     /** World-space distance captured when a dash is accepted. */
@@ -22,6 +28,7 @@ export const MAX_DASH_DISTANCE = 7.2;
 export const DEFAULT_PLAYER_STATS: Readonly<PlayerStatsValues> = Object.freeze({
     damageMin: 13,
     damageMax: 17,
+    damageMultiplier: 1,
     criticalChance: 0.12,
     criticalMultiplier: 2,
     maxHealth: 100,
@@ -29,6 +36,9 @@ export const DEFAULT_PLAYER_STATS: Readonly<PlayerStatsValues> = Object.freeze({
     projectileCount: 1,
     barrageCount: 0,
     bounces: 0,
+    wallBounces: 0,
+    homing: 0,
+    regenerativeShield: 0,
     pickupRadiusMultiplier: 1,
     dashDistance: 3.6,
 });
@@ -56,8 +66,9 @@ export interface PlayerStatsState {
 
 type MutableState = { -readonly [Key in keyof PlayerStatsState]: PlayerStatsState[Key] };
 const keys = [
-    "damageMin", "damageMax", "criticalChance", "criticalMultiplier",
+    "damageMin", "damageMax", "damageMultiplier", "criticalChance", "criticalMultiplier",
     "maxHealth", "healthRegen", "projectileCount", "barrageCount", "bounces",
+    "wallBounces", "homing", "regenerativeShield",
     "pickupRadiusMultiplier", "dashDistance",
 ] as const;
 
@@ -138,7 +149,7 @@ export function rollPlayerDamage(
     );
     const critical = criticalRoll < stats.criticalChance;
     return {
-        damage: Math.round(baseDamage * (critical ? stats.criticalMultiplier : 1)),
+        damage: Math.round(baseDamage * stats.damageMultiplier * (critical ? stats.criticalMultiplier : 1)),
         critical,
     };
 }
@@ -223,7 +234,7 @@ function resolveStats(
             if (value < 0 || value > Number.MAX_SAFE_INTEGER) {
                 throw new RangeError(`${key} must resolve to a nonnegative safe number.`);
             }
-            result[key] = key === "criticalMultiplier" || key === "pickupRadiusMultiplier" || key === "dashDistance"
+            result[key] = key === "damageMultiplier" || key === "criticalMultiplier" || key === "pickupRadiusMultiplier" || key === "dashDistance"
                 ? value : Math.round(value);
         }
     }
@@ -231,12 +242,16 @@ function resolveStats(
     result.projectileCount = Math.min(7, Math.max(1, result.projectileCount));
     result.barrageCount = Math.min(24, result.barrageCount);
     result.bounces = Math.min(5, result.bounces);
+    result.wallBounces = Math.min(1, result.wallBounces);
+    result.homing = Math.min(1, result.homing);
+    result.regenerativeShield = Math.min(1, result.regenerativeShield);
     result.pickupRadiusMultiplier = Math.min(MAX_PICKUP_RADIUS_MULTIPLIER, result.pickupRadiusMultiplier);
     result.dashDistance = Math.min(MAX_DASH_DISTANCE, result.dashDistance);
     if (base.damageMin > base.damageMax || result.damageMin > result.damageMax) {
         throw new RangeError("Minimum damage must not exceed maximum damage.");
     }
-    if (!Number.isSafeInteger(Math.round(result.damageMax * result.criticalMultiplier))) {
+    if (!Number.isSafeInteger(Math.round(result.damageMax * result.damageMultiplier))
+        || !Number.isSafeInteger(Math.round(result.damageMax * result.damageMultiplier * result.criticalMultiplier))) {
         throw new RangeError("Critical damage exceeded the safe integer range.");
     }
     return Object.freeze(result);

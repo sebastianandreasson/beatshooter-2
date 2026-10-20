@@ -1,5 +1,6 @@
 import { Body, Camera, GlobalTransform, MeshMaterial, Sound, Transform, type World } from "@dylanebert/shallot";
-import { worldToViewport } from "@dylanebert/shallot/rendering";
+import { EffectPasses, worldToViewport } from "@dylanebert/shallot/rendering";
+import { Vignette } from "@dylanebert/shallot/vignette";
 import { Arena } from "../arena";
 import { PlayerState } from "../player";
 import { Session, SessionEntity } from "../session";
@@ -63,6 +64,14 @@ export function installInspection(world: World): void {
                 neon: {
                     status: neon.status, error: neon.error, frame: { ...neon.frame },
                     passes: neon.passes, dimensions: { ...neon.dimensions },
+                    native: {
+                        vignette: world.has(arena.camera, Vignette),
+                        intensity: world.storage(Vignette).intensity.get(arena.camera),
+                        radius: world.storage(Vignette).radius.get(arena.camera),
+                        smoothness: world.storage(Vignette).smoothness.get(arena.camera),
+                        beforePasses: world.resource(EffectPasses).get(arena.camera)?.before.length ?? 0,
+                        afterPasses: world.resource(EffectPasses).get(arena.camera)?.after.length ?? 0,
+                    },
                 },
                 neonTrails: {
                     visibleCount: trails.visibleCount, capacity: trails.capacity,
@@ -127,9 +136,24 @@ export function installInspection(world: World): void {
                     position: { ...p.position }, aim: { ...p.aim }, target: { ...p.target },
                     bodyY: pose.translation.y.get(p.body),
                     velocity: { x: pose.linearVelocity.x.get(p.body), z: pose.linearVelocity.z.get(p.body) },
+                    ship: p.visual ? {
+                        hull: mesh(p.visual.hull), cockpit: mesh(p.visual.cockpit),
+                        hullMaterial: p.visual.hullMaterial.material,
+                        parts: p.visual.parts.map(entity => ({ entity, ...mesh(entity) })),
+                        engine: p.engine ? { ...p.engine } : undefined,
+                        thrusters: p.visual.thrusters.map(thruster => ({
+                            offset: [...thruster.offset],
+                            nozzle: { entity: thruster.nozzle, ...mesh(thruster.nozzle) },
+                            plume: { entity: thruster.plume, ...mesh(thruster.plume) },
+                            core: { entity: thruster.core, ...mesh(thruster.core) },
+                        })),
+                    } : undefined,
                 },
                 combat: {
                     health: s.combat.health, score: s.combat.score, kills: s.combat.kills, time: s.combat.time,
+                    healthSection: s.combat.healthSection,
+                    shieldRechargeAt: Number.isFinite(s.combat.shieldRechargeAt) ? s.combat.shieldRechargeAt : null,
+                    shieldBlocks: s.combat.shieldBlocks,
                     enemies: s.combat.enemies.length, projectiles: s.combat.projectiles.length, effects: s.combat.effects.length,
                 },
                 playerStats: {
@@ -168,7 +192,8 @@ export function installInspection(world: World): void {
                         id: shot.id, shooterId: shot.shooterId, collisionMask: shot.collisionMask,
                         x: shot.x, z: shot.z, velocityX: shot.velocityX, velocityZ: shot.velocityZ,
                         remainingLifetime: shot.remainingLifetime,
-                        damage: shot.damage, critical: shot.critical,
+                        damage: shot.damage, initialDamage: shot.initialDamage, critical: shot.critical,
+                        wallBouncesRemaining: shot.wallBouncesRemaining, homingTurnRemaining: shot.homingTurnRemaining,
                         waitingForBounce: shot.waitingForBounce, bouncesRemaining: shot.bouncesRemaining,
                         hitEnemyIds: shot.hitEnemyIds.slice(), lastBounceBeat: shot.lastBounceBeat,
                         mesh: eid === undefined ? undefined : mesh(eid),

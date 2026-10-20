@@ -1,5 +1,5 @@
 import { chooseStartingUpgrade } from "./starting-upgrade";
-import { expect, test, type Page } from "playwright/test";
+import { expect, test, type Page } from "./fixtures";
 import { DEFAULT_EXPERIENCE_TUNING } from "../src/experience/state";
 
 const firstRequirement = DEFAULT_EXPERIENCE_TUNING.initialRequirement;

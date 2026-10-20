@@ -1,4 +1,5 @@
 import { chooseStartingUpgrade } from "./starting-upgrade";
+import { installUpgradeEntropy } from "./upgrade-entropy";
 /**
  * Explicit local-file experiment, excluded from CI and automatic test discovery.
  * bun tests/audio-analysis.ts [http://127.0.0.1:4174] [--headed]
@@ -73,6 +74,7 @@ function comparison(actual: number[], expected: number[]) {
 try {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();
+    await installUpgradeEntropy(page);
     const errors: string[] = [];
     const unexpectedRequests: string[] = [];
     page.on("pageerror", error => errors.push(error.message));

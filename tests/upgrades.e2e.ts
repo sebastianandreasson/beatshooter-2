@@ -1,5 +1,6 @@
 import { chooseStartingUpgrade } from "./starting-upgrade";
-import { expect, test, type Page } from "playwright/test";
+import { installUpgradeEntropy } from "./upgrade-entropy";
+import { expect, test, type Page } from "./fixtures";
 import type { UpgradeId } from "../src/upgrades";
 
 type Point = { x: number; z: number };
@@ -18,6 +19,7 @@ interface Snapshot {
     projectiles: (Point & {
         id: number; shooterId: number; waitingForBounce: boolean;
         bouncesRemaining: number; hitEnemyIds: number[]; lastBounceBeat: number;
+        damage: number; initialDamage: number;
         velocityX: number; velocityZ: number;
     })[];
     experience: { level: number; drops: Point[]; totalXp: number };
@@ -51,6 +53,7 @@ const cardIds = (page: Page) => page.locator(".bs-upgrade-card").evaluateAll(car
 
 async function expectNumericColors(page: Page, required: ("damage" | "health" | "utility")[] = []) {
     const cards = await page.locator(".bs-upgrade-card").evaluateAll(cards => cards.map(card => ({
+        rarity: (card as HTMLElement).dataset.rarity,
         values: [...card.querySelectorAll<HTMLElement>(".bs-upgrade-value")].map(value => ({
             category: value.dataset.statCategory!, text: value.textContent!,
             color: getComputedStyle(value).color,
@@ -64,7 +67,7 @@ async function expectNumericColors(page: Page, required: ("damage" | "health" | 
     const rgb = (color: string) => color.match(/\d+(?:\.\d+)?/g)!.slice(0, 3).map(Number);
     const seen = new Set<string>();
     for (const card of cards) {
-        expect(card.values.length).toBeGreaterThanOrEqual(2);
+        expect(card.values.length).toBeGreaterThanOrEqual(card.rarity === "special" ? 1 : 2);
         for (const value of card.values) {
             seen.add(value.category);
             expect(value.text).toMatch(/^\d+(?:\.\d+)?(?:–\d+(?:\.\d+)?)?[%×]?$/);
@@ -302,6 +305,9 @@ test.setTimeout(65_000);
 
 test("upgrade choices leave music and movement running, apply immediately, and retain normal pause", async ({ page }, testInfo) => {
     test.setTimeout(110_000);
+    // With the rare-card roll, this seed offers Pickup Radius first and Barrage
+    // at the first earned level, leaving time to exercise the full UI lifecycle.
+    await installUpgradeEntropy(page, [19]);
     const errors: string[] = [];
     page.on("pageerror", error => errors.push(error.message));
     await page.setViewportSize({ width: 1280, height: 800 });
@@ -331,11 +337,13 @@ test("upgrade choices leave music and movement running, apply immediately, and r
         const panel = page.locator(".bs-upgrade-panel");
         const panelBox = (await panel.boundingBox())!;
         const beatBox = (await page.locator(".bs-hud-bottom .bs-hud-beat").boundingBox())!;
+        const experienceBox = (await page.locator(".bs-experience").boundingBox())!;
         expect(panelBox.x).toBeGreaterThanOrEqual(0);
         expect(panelBox.y).toBeGreaterThanOrEqual(0);
         expect(panelBox.x + panelBox.width).toBeLessThanOrEqual(width!);
         expect(panelBox.y + panelBox.height).toBeLessThanOrEqual(height!);
         expect(panelBox.y + panelBox.height).toBeLessThanOrEqual(beatBox.y);
+        expect(panelBox.y).toBeGreaterThanOrEqual(experienceBox.y + experienceBox.height);
         expect(panelBox.width).toBeGreaterThanOrEqual(Math.min(500, width! - 40));
         const overflow = await panel.evaluate(element => ({
             scroll: element.scrollHeight, client: element.clientHeight,
@@ -447,6 +455,8 @@ test("upgrade choices leave music and movement running, apply immediately, and r
 });
 
 test("a keyboard-selected ricochet waits at impact until the following beat", async ({ page }, testInfo) => {
+    // The first earned offer contains Ricochet and green regeneration values.
+    await installUpgradeEntropy(page, [21]);
     await page.setViewportSize({ width: 1280, height: 800 });
     const offer = await earnSpecificUpgrade(page, "bounce", false);
     await expectNumericColors(page, ["damage", "health"]);
@@ -476,6 +486,7 @@ test("a keyboard-selected ricochet waits at impact until the following beat", as
         const shot = state.projectiles.find(item => item.waitingForBounce);
         if (shot && state.visuals.frame.beatPhase < 0.75 && state.enemies.some(enemy => !shot.hitEnemyIds.includes(enemy.id))) {
             expect(shot.hitEnemyIds).toHaveLength(1);
+            expect(shot.damage).toBe(shot.initialDamage);
             expect(shot.velocityX).toBe(0);
             expect(shot.velocityZ).toBe(0);
             let waitingSamples = 0;
@@ -490,9 +501,11 @@ test("a keyboard-selected ricochet waits at impact until the following beat", as
                     expect(same.z).toBe(shot.z);
                     expect(same.hitEnemyIds).toEqual(shot.hitEnemyIds);
                     expect(same.lastBounceBeat).toBe(shot.lastBounceBeat);
+                    expect(same.damage).toBe(shot.damage);
                 } else {
                     expect(same.lastBounceBeat).toBe(shot.lastBounceBeat + 1);
                     expect(same.bouncesRemaining).toBe(0);
+                    expect(same.damage).toBe(Math.round(shot.initialDamage * 0.7));
                     expect(same.hitEnemyIds).toEqual(shot.hitEnemyIds);
                     expect(Math.hypot(same.velocityX, same.velocityZ)).toBeCloseTo(32);
                     witnessed = waitingSamples > 1;

@@ -3,6 +3,7 @@ import {
     findArenaSpawnPosition, findSpawnPosition, waveSize,
     type Enemy,
 } from "../enemies";
+import { movementBeat, type EnemyMovementBeat } from "../enemies/movement";
 import {
     advanceExperience, createExperience, dropExperience, type ExperienceState,
 } from "../experience/state";
@@ -11,6 +12,11 @@ import {
     type PlayerStatsState, type PlayerStatsValues,
 } from "../player-stats";
 import { createUpgradeState, queueUpgradeLevels, type UpgradeState } from "../upgrades";
+import { scaleEnemyHealth } from "./difficulty";
+import {
+    firstWallHit, HOMING_TURN_BUDGET, shieldReady, SHIELD_RECHARGE_SECONDS,
+    steerProjectile, wallFlightLifetime,
+} from "./specials";
 
 export type { Enemy } from "../enemies";
 export interface Vec2 { x: number; z: number }
@@ -119,6 +125,10 @@ export interface Projectile {
     remainingLifetime: number;
     radius: number;
     damage: number;
+    /** Fired damage, including critical/global modifiers, before ricochet attenuation. */
+    initialDamage: number;
+    wallBouncesRemaining: number;
+    homingTurnRemaining: number;
     critical: boolean;
     bouncesRemaining: number;
     hitEnemyIds: number[];
@@ -167,6 +177,11 @@ export interface CombatState {
     upgrades: UpgradeState;
     regenerationDueAt: number;
     health: number;
+    /** Zero-based song section reached by the accepted audio clock. */
+    healthSection: number;
+    shieldRechargeAt: number;
+    shieldLastBlockedAt: number;
+    shieldBlocks: number;
     score: number;
     kills: number;
     time: number;
@@ -176,6 +191,7 @@ export interface CombatState {
     nextId: number;
     eventSequence: number;
     lastBeatIndex: number;
+    movementBeat?: EnemyMovementBeat;
     lastBarIndex: number;
     lastSpawnBar: number;
     lastEnemyAttackBar: number;
@@ -220,7 +236,8 @@ export function createCombat(
         tuning, enemies: [], pendingSpawns: [], projectiles: [], effects: [], experience: createExperience(),
         playerStats: stats, upgrades: createUpgradeState(seed),
         regenerationDueAt: stats.effective.healthRegen > 0 ? 5 : Infinity,
-        health: stats.effective.maxHealth, score: 0, kills: 0, time: 0,
+        health: stats.effective.maxHealth, healthSection: 0, score: 0, kills: 0, time: 0,
+        shieldRechargeAt: -Infinity, shieldLastBlockedAt: -Infinity, shieldBlocks: 0,
         invulnerableUntil: 0, defeated: false,
         randomState: seed >>> 0, nextId: 1, eventSequence: 0,
         lastBeatIndex: -1, lastBarIndex: -1, lastSpawnBar: -1, lastEnemyAttackBar: -1,
@@ -261,6 +278,7 @@ export function spawnOnBeat(state: CombatState, beat: CombatBeat, player: Vec2):
         if (!point) break;
         const heading = kind === "spinner" ? combatRandom(state) * Math.PI * 2 : 0;
         const enemy = createEnemy(state.nextId++, point, beat.barIndex, state.tuning, kind, heading);
+        scaleEnemyHealth(enemy, state.healthSection);
         state.pendingSpawns.push({ enemy, startTime, endTime, activateBeat: beat.index + 1 });
         spawned.push(enemy);
     }
@@ -309,9 +327,12 @@ export function fireProjectile(
         x, z, previousX: x, previousZ: z,
         velocityX: direction.x * state.tuning.projectileSpeed,
         velocityZ: direction.z * state.tuning.projectileSpeed,
-        remainingLifetime: state.tuning.projectileLifetime,
+        remainingLifetime: state.playerStats.effective.wallBounces > 0
+            ? wallFlightLifetime(state) : state.tuning.projectileLifetime,
         radius: state.tuning.projectileRadius,
-        damage, critical,
+        damage, initialDamage: damage, critical,
+        wallBouncesRemaining: state.playerStats.effective.wallBounces,
+        homingTurnRemaining: state.playerStats.effective.homing > 0 ? HOMING_TURN_BUDGET : 0,
         bouncesRemaining: state.playerStats.effective.bounces,
         hitEnemyIds: [], waitingForBounce: false, lastBounceBeat: state.lastBeatIndex,
     };
@@ -386,10 +407,16 @@ function releaseRicochets(state: CombatState, beat: CombatBeat): void {
         const length = Math.hypot(dx, dz);
         projectile.velocityX = length > 0 ? dx / length * state.tuning.projectileSpeed : 0;
         projectile.velocityZ = length > 0 ? dz / length * state.tuning.projectileSpeed : 0;
+        // Retain full precision between bounces; round only the next impact's
+        // damage. Duplicate beat delivery never applies this a second time.
+        const bounce = projectile.hitEnemyIds.length;
+        // Integer powers avoid 0.7² becoming 0.489999… (50 damage must round to 25).
+        projectile.damage = Math.round(projectile.initialDamage * 7 ** bounce / 10 ** bounce);
         projectile.bouncesRemaining--;
         projectile.waitingForBounce = false;
         projectile.lastBounceBeat = beat.index;
-        projectile.remainingLifetime = state.tuning.projectileLifetime;
+        projectile.remainingLifetime = projectile.wallBouncesRemaining > 0
+            ? wallFlightLifetime(state) : state.tuning.projectileLifetime;
     }
     if (retired.size > 0) state.projectiles = state.projectiles.filter(shot => !retired.has(shot.id));
 }
@@ -415,7 +442,8 @@ export function fireEnemyProjectile(state: CombatState, enemy: Enemy, direction:
         velocityZ: dz * state.tuning.enemyProjectileSpeed,
         remainingLifetime: state.tuning.enemyProjectileLifetime,
         radius: state.tuning.enemyProjectileRadius,
-        damage: state.tuning.enemyProjectileDamage, critical: false,
+        damage: state.tuning.enemyProjectileDamage, initialDamage: state.tuning.enemyProjectileDamage, critical: false,
+        wallBouncesRemaining: 0, homingTurnRemaining: 0,
         bouncesRemaining: 0, hitEnemyIds: [], waitingForBounce: false, lastBounceBeat: -1,
     };
     state.projectiles.push(projectile);
@@ -451,6 +479,7 @@ export function onCombatBeat(state: CombatState, beat: CombatBeat, player: Vec2,
     if (state.defeated || beat.index <= state.lastBeatIndex) return [];
     state.lastBeatIndex = beat.index;
     state.lastBarIndex = beat.barIndex;
+    state.movementBeat = movementBeat(beat.time ?? state.time, beat.nextBeatTime, state.movementBeat);
     state.score += state.tuning.beatSurvivalScore;
     activateEnemySpawns(state, beat);
     const events: CombatEvent[] = spawnOnBeat(state, beat, player).map(enemy => ({
@@ -524,6 +553,7 @@ export function advanceCombat(
     player: Vec2,
     enemyPositions?: ReadonlyMap<number, Vec2>,
     previousPlayer: Vec2 = player,
+    songPosition = state.time + dt,
 ): CombatStep {
     const result: CombatStep = { killedIds: [], playerDamaged: false, defeated: state.defeated, events: [] };
     const feedback = (effect: Omit<CombatEffect, "id" | "expiresAt">) => {
@@ -533,6 +563,13 @@ export function advanceCombat(
     if (state.defeated || !Number.isFinite(dt) || dt <= 0) return result;
     const damagePlayer = (amount: number, hitTime = state.time) => {
         if (state.defeated || amount <= 0 || hitTime < state.invulnerableUntil) return;
+        if (shieldReady(state, songPosition)) {
+            state.shieldRechargeAt = songPosition + SHIELD_RECHARGE_SECONDS;
+            state.shieldLastBlockedAt = songPosition;
+            state.shieldBlocks++;
+            state.invulnerableUntil = hitTime + state.tuning.invulnerabilitySeconds;
+            return;
+        }
         state.health = Math.max(0, state.health - amount);
         state.invulnerableUntil = hitTime + state.tuning.invulnerabilitySeconds;
         result.playerDamaged = true;
@@ -544,7 +581,7 @@ export function advanceCombat(
             const position = enemyPositions.get(enemy.id);
             if (position) { enemy.x = position.x; enemy.z = position.z; }
         } else {
-            const velocity = enemyVelocity(enemy, player, state);
+            const velocity = enemyVelocity(enemy, player, state, state.time + dt, dt);
             const limit = state.tuning.arenaHalfExtent - enemy.radius;
             enemy.x = Math.max(-limit, Math.min(limit, enemy.x + velocity.x * dt));
             enemy.z = Math.max(-limit, Math.min(limit, enemy.z + velocity.z * dt));
@@ -555,7 +592,7 @@ export function advanceCombat(
     }
     state.time += dt;
     const survivingProjectiles: Projectile[] = [];
-    for (const projectile of state.projectiles) {
+    projectileLoop: for (const projectile of state.projectiles) {
         if (projectile.waitingForBounce) {
             projectile.previousX = projectile.x;
             projectile.previousZ = projectile.z;
@@ -564,86 +601,106 @@ export function advanceCombat(
         }
         const travelTime = Math.min(dt, projectile.remainingLifetime);
         if (travelTime <= 0) continue;
+        steerProjectile(projectile, state, travelTime);
         projectile.previousX = projectile.x;
         projectile.previousZ = projectile.z;
-        const start = { x: projectile.x, z: projectile.z };
-        const end = {
-            x: projectile.x + projectile.velocityX * travelTime,
-            z: projectile.z + projectile.velocityZ * travelTime,
-        };
-        if (projectile.collisionMask & PLAYER_COLLISION_GROUP) {
-            // Relative motion also catches a dashing player crossing a slow bullet.
-            // A shot expiring partway through this tick sees only that part of motion.
-            const fraction = travelTime / dt;
-            const playerEnd = {
-                x: previousPlayer.x + (player.x - previousPlayer.x) * fraction,
-                z: previousPlayer.z + (player.z - previousPlayer.z) * fraction,
+        let remainingTime = travelTime;
+        // At most two swept legs: one wall reflection, then a target or second wall.
+        for (let leg = 0; leg < 2; leg++) {
+            const start = { x: projectile.x, z: projectile.z };
+            const end = {
+                x: projectile.x + projectile.velocityX * remainingTime,
+                z: projectile.z + projectile.velocityZ * remainingTime,
             };
-            const hit = segmentCircleHit(
-                { x: start.x - previousPlayer.x, z: start.z - previousPlayer.z },
-                { x: end.x - playerEnd.x, z: end.z - playerEnd.z },
-                { x: 0, z: 0 }, state.tuning.playerRadius + projectile.radius,
-            );
-            if (hit !== undefined) {
-                damagePlayer(projectile.damage, state.time - dt + hit * travelTime);
-                continue; // Invulnerability absorbs the shot; it cannot hit again later.
+            const limit = state.tuning.arenaHalfExtent - projectile.radius;
+            const wall = firstWallHit(start, end, limit);
+            if (projectile.collisionMask & PLAYER_COLLISION_GROUP) {
+                // Relative motion also catches a dashing player crossing a slow bullet.
+                // A shot expiring partway through this tick sees only that part of motion.
+                const fraction = travelTime / dt;
+                const playerEnd = {
+                    x: previousPlayer.x + (player.x - previousPlayer.x) * fraction,
+                    z: previousPlayer.z + (player.z - previousPlayer.z) * fraction,
+                };
+                const hit = segmentCircleHit(
+                    { x: start.x - previousPlayer.x, z: start.z - previousPlayer.z },
+                    { x: end.x - playerEnd.x, z: end.z - playerEnd.z },
+                    { x: 0, z: 0 }, state.tuning.playerRadius + projectile.radius,
+                );
+                if (hit !== undefined && hit <= (wall?.fraction ?? Infinity)) {
+                    damagePlayer(projectile.damage, state.time - dt + hit * travelTime);
+                    continue projectileLoop; // Invulnerability absorbs it permanently.
+                }
             }
-        }
-        let nearest: Enemy | undefined;
-        let nearestFraction = Infinity;
-        for (const enemy of state.enemies) {
-            if (!(projectile.collisionMask & ENEMY_COLLISION_GROUP)
-                || enemy.health <= 0 || enemy.id === projectile.shooterId
-                || projectile.hitEnemyIds.includes(enemy.id)
-                || !(enemy.collisionGroup & projectile.collisionMask)) continue;
-            const fraction = segmentCircleHit(start, end, enemy, enemy.radius + projectile.radius);
-            if (fraction !== undefined && (fraction < nearestFraction
-                || (fraction === nearestFraction && enemy.id < (nearest?.id ?? Infinity)))) {
-                nearest = enemy;
-                nearestFraction = fraction;
+            let nearest: Enemy | undefined;
+            let nearestFraction = Infinity;
+            for (const enemy of state.enemies) {
+                if (!(projectile.collisionMask & ENEMY_COLLISION_GROUP)
+                    || enemy.health <= 0 || enemy.id === projectile.shooterId
+                    || projectile.hitEnemyIds.includes(enemy.id)
+                    || !(enemy.collisionGroup & projectile.collisionMask)) continue;
+                const fraction = segmentCircleHit(start, end, enemy, enemy.radius + projectile.radius);
+                if (fraction !== undefined && (fraction < nearestFraction
+                    || (fraction === nearestFraction && enemy.id < (nearest?.id ?? Infinity)))) {
+                    nearest = enemy;
+                    nearestFraction = fraction;
+                }
             }
-        }
-        if (nearest) {
-            const appliedDamage = Math.min(nearest.health, projectile.damage);
-            nearest.health = Math.max(0, nearest.health - projectile.damage);
-            recordPlayerHit(state.playerStats, appliedDamage, projectile.critical);
-            const speed = Math.hypot(projectile.velocityX, projectile.velocityZ);
-            nearest.knockbackX = speed > 0 ? projectile.velocityX / speed * state.tuning.knockbackSpeed : 0;
-            nearest.knockbackZ = speed > 0 ? projectile.velocityZ / speed * state.tuning.knockbackSpeed : 0;
-            nearest.knockbackStartedAt = state.time;
-            nearest.knockbackUntil = state.time + state.tuning.knockbackDuration;
-            feedback({
-                x: nearest.x, z: nearest.z, amount: projectile.damage,
-                targetId: nearest.id,
-                critical: projectile.critical, kind: nearest.health === 0 ? "kill" : "hit",
-            });
-            if (nearest.health === 0) {
-                state.kills++;
-                state.score += state.tuning.killScore;
-                result.killedIds.push(nearest.id);
-                dropExperience(state.experience, nearest);
+            if (nearest && nearestFraction <= (wall?.fraction ?? Infinity)) {
+                const appliedDamage = Math.min(nearest.health, projectile.damage);
+                nearest.health = Math.max(0, nearest.health - projectile.damage);
+                recordPlayerHit(state.playerStats, appliedDamage, projectile.critical);
+                const speed = Math.hypot(projectile.velocityX, projectile.velocityZ);
+                nearest.knockbackX = speed > 0 ? projectile.velocityX / speed * state.tuning.knockbackSpeed : 0;
+                nearest.knockbackZ = speed > 0 ? projectile.velocityZ / speed * state.tuning.knockbackSpeed : 0;
+                nearest.knockbackStartedAt = state.time;
+                nearest.knockbackUntil = state.time + state.tuning.knockbackDuration;
+                feedback({
+                    x: nearest.x, z: nearest.z, amount: projectile.damage,
+                    targetId: nearest.id,
+                    critical: projectile.critical, kind: nearest.health === 0 ? "kill" : "hit",
+                });
+                if (nearest.health === 0) {
+                    state.kills++;
+                    state.score += state.tuning.killScore;
+                    result.killedIds.push(nearest.id);
+                    dropExperience(state.experience, nearest);
+                }
+                projectile.hitEnemyIds.push(nearest.id);
+                if (projectile.bouncesRemaining > 0) {
+                    projectile.x = start.x + (end.x - start.x) * nearestFraction;
+                    projectile.z = start.z + (end.z - start.z) * nearestFraction;
+                    projectile.previousX = projectile.x;
+                    projectile.previousZ = projectile.z;
+                    projectile.velocityX = 0;
+                    projectile.velocityZ = 0;
+                    projectile.waitingForBounce = true;
+                    projectile.lastBounceBeat = state.lastBeatIndex;
+                    survivingProjectiles.push(projectile);
+                }
+                continue projectileLoop; // Another enemy impact waits for a later musical beat.
             }
-            projectile.hitEnemyIds.push(nearest.id);
-            if (projectile.bouncesRemaining > 0) {
-                projectile.x = start.x + (end.x - start.x) * nearestFraction;
-                projectile.z = start.z + (end.z - start.z) * nearestFraction;
+            if (wall) {
+                if (projectile.wallBouncesRemaining <= 0) continue projectileLoop;
+                projectile.x = Math.max(-limit, Math.min(limit, start.x + (end.x - start.x) * wall.fraction));
+                projectile.z = Math.max(-limit, Math.min(limit, start.z + (end.z - start.z) * wall.fraction));
+                if (wall.reflectX) projectile.velocityX *= -1;
+                if (wall.reflectZ) projectile.velocityZ *= -1;
+                projectile.wallBouncesRemaining--;
+                projectile.remainingLifetime = wallFlightLifetime(state);
+                // Interpolation must not cut a diagonal through the wall corner.
                 projectile.previousX = projectile.x;
                 projectile.previousZ = projectile.z;
-                projectile.velocityX = 0;
-                projectile.velocityZ = 0;
-                projectile.waitingForBounce = true;
-                projectile.lastBounceBeat = state.lastBeatIndex;
+                remainingTime *= 1 - wall.fraction;
+                continue;
+            }
+            projectile.x = end.x;
+            projectile.z = end.z;
+            projectile.remainingLifetime -= remainingTime;
+            if (projectile.remainingLifetime > 0) {
                 survivingProjectiles.push(projectile);
             }
-            continue; // Another impact is possible only after a later musical beat.
-        }
-        projectile.x = end.x;
-        projectile.z = end.z;
-        projectile.remainingLifetime -= dt;
-        const outerLimit = state.tuning.arenaHalfExtent + 1;
-        if (projectile.remainingLifetime > 0
-            && Math.abs(projectile.x) <= outerLimit && Math.abs(projectile.z) <= outerLimit) {
-            survivingProjectiles.push(projectile);
+            continue projectileLoop;
         }
     }
     state.projectiles = survivingProjectiles;

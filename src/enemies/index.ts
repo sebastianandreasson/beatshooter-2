@@ -1,4 +1,5 @@
 import type { CombatState, CombatTuning, Vec2 } from "../combat";
+import { enemyStrideGain } from "./movement";
 
 /** Physics and projectile masks share these groups. Only group 2 takes player fire. */
 export const ENEMY_COLLISION_GROUP = 2;
@@ -14,7 +15,9 @@ export interface Enemy {
     z: number;
     radius: number;
     health: number;
-    /** Spawn-time capacity; damage only changes health. */
+    /** Unscaled capacity, retained to avoid rounding drift across sections. */
+    baseHealth: number;
+    /** Current section-scaled capacity; damage only changes health. */
     maxHealth: number;
     collisionGroup: number;
     spawnBar: number;
@@ -112,6 +115,7 @@ export function createEnemy(
         ...point,
         radius: tuning.enemyRadius,
         health: tuning.enemyHealth,
+        baseHealth: tuning.enemyHealth,
         maxHealth: tuning.enemyHealth,
         collisionGroup: ENEMY_COLLISION_GROUP,
         spawnBar: barIndex,
@@ -123,7 +127,10 @@ export function createEnemy(
 }
 
 /** Desired planar velocity; the app applies it through Shallot's physics API. */
-export function enemyVelocity(enemy: Enemy, player: Vec2, state: CombatState): Vec2 {
+export function enemyVelocity(
+    enemy: Enemy, player: Vec2, state: CombatState, musicPosition = state.time, dt = 0,
+    previousMusicPosition = musicPosition - dt,
+): Vec2 {
     if (enemy.health <= 0 || state.defeated) return { x: 0, z: 0 };
     const dx = player.x - enemy.x;
     const dz = player.z - enemy.z;
@@ -137,11 +144,13 @@ export function enemyVelocity(enemy: Enemy, player: Vec2, state: CombatState): V
     const knockback = state.time < enemy.knockbackUntil
         ? Math.exp(-state.tuning.knockbackDecay * Math.max(0, state.time - enemy.knockbackStartedAt))
         : 0;
-    // Rangers ease into their firing distance; spinners only move when knocked back.
+    const strideSpeed = speed * enemyStrideGain(state.movementBeat, musicPosition, dt, previousMusicPosition);
+    // Pursuit rests between beats. Knockback still confirms a hit immediately.
+    // Rangers ease into firing distance; spinners remain stationary shooters.
     const approachSpeed = enemy.kind === "spinner" ? 0
         : enemy.kind === "ranger"
-        ? Math.min(speed, Math.max(0, distance - state.tuning.rangerStopDistance) * 4)
-        : speed;
+        ? Math.min(strideSpeed, Math.max(0, distance - state.tuning.rangerStopDistance) * 4)
+        : Math.min(strideSpeed, dt > 0 ? distance / dt : Infinity);
     return {
         x: (distance > 0.00001 ? dx / distance * approachSpeed : 0) + enemy.knockbackX * knockback,
         z: (distance > 0.00001 ? dz / distance * approachSpeed : 0) + enemy.knockbackZ * knockback,

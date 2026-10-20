@@ -2,6 +2,40 @@
 
 Implemented with Shallot 0.10.0, TypeGPU 0.12.8 and Bun 1.4.3.
 
+## Shallot 0.10.1-next.2 update
+
+The engine and lockfile now pin `0.10.1-next.2`. This published prerelease
+provides native `Vignette`; native chromatic aberration is not included, so
+section transitions retain the existing bounded chromatic shader.
+
+The old composite-shader vignette is removed. The arena camera carries the
+native component at intensity 0.12 (0.08 with Calm or reduced effects), radius
+0.8 and smoothness 1. Only active gameplay at nonnegative song time enables it.
+Menu, loading, starting upgrades/count-in, pause/settings and results set
+intensity to zero, which removes its GPU pass. Bloom runs before native vignette
+even after toggling effects. The native pass adds one full-resolution draw when
+enabled; the DOM HUD remains outside both effects.
+
+Verification on Bun 1.4.3:
+
+- Frozen-lockfile install succeeds without changes.
+- Production build and typechecking across 384 files pass; shared preview is refreshed.
+- Full unit suite: 371 tests passed, 52,780 assertions.
+- Five real Shallot physics checks passed, including movement and dash collisions.
+- Nine focused postprocessing/lifecycle checks passed, covering gameplay gating,
+  comfort modes, preserved chromatic/bloom envelopes, and effect ordering.
+- Six browser checks passed: four neon and two player-ship scenarios. Lifecycle
+  coverage inspects the native camera component and actual
+  effect-stack counts through menu, starting/count-in, playing, pause/settings,
+  resume, natural track completion and menu return. The existing chromatic
+  section envelope still holds with the paused song. Low graphics, resize,
+  comfort settings and ship thrusters pass without page, WebGPU or shader errors.
+- Gameplay and menu captures were visually inspected:
+  `output/playwright/neon-native-gameplay.png` and
+  `output/playwright/neon-native-menu.png`.
+
+The following sections retain the original 0.10.0 implementation record.
+
 ## Presentation and timing
 
 Player and enemy cubes retain dark faces with bright, antialiased geometric

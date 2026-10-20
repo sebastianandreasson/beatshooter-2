@@ -1,5 +1,7 @@
 import { chooseStartingUpgrade } from "./starting-upgrade";
-import { expect, test, type Page } from "playwright/test";
+import { expect, test, type Page } from "./fixtures";
+import { ANALYZER_VERSION } from "../src/analysis/types";
+import { SECTION_ANALYZER_VERSION } from "../src/analysis/sections";
 
 interface NeonSnapshot {
     phase: string;
@@ -22,6 +24,10 @@ interface NeonSnapshot {
         };
         passes: number;
         dimensions: { width: number; height: number; bloomWidth: number; bloomHeight: number };
+        native: {
+            vignette: boolean; intensity: number; radius: number; smoothness: number;
+            beforePasses: number; afterPasses: number;
+        };
     };
     neonTrails: { visibleCount: number; capacity: number; samples: unknown[] };
 }
@@ -35,6 +41,62 @@ type InspectedWindow = Window & {
 
 const snapshot = (page: Page) => page.evaluate(() =>
     (window as unknown as InspectedWindow).__beatshooter.snapshot());
+
+async function expectNativeVignette(page: Page, enabled: boolean, passes: number) {
+    // The camera component stays installed; intensity zero removes its GPU pass.
+    await expect.poll(async () => (await snapshot(page)).neon.native.vignette).toBe(true);
+    await expect.poll(async () => (await snapshot(page)).neon.native.beforePasses).toBe(passes);
+    const neon = (await snapshot(page)).neon;
+    expect(neon.native.intensity).toBeCloseTo(neon.frame.vignette, 5);
+    expect(neon.native.afterPasses).toBe(0);
+    if (enabled) {
+        expect(neon.native.intensity).toBeGreaterThan(0);
+        expect(neon.native.radius).toBeGreaterThan(0);
+        expect(neon.native.smoothness).toBeGreaterThan(0);
+    } else {
+        expect(neon.frame.vignette).toBe(0);
+        expect(neon.native.intensity).toBe(0);
+    }
+}
+
+async function sectionTrack(page: Page) {
+    const duration = 6, sampleRate = 8000, samples = duration * sampleRate;
+    const bytes = Buffer.alloc(44 + samples * 2);
+    bytes.write("RIFF", 0); bytes.writeUInt32LE(bytes.length - 8, 4);
+    bytes.write("WAVEfmt ", 8); bytes.writeUInt32LE(16, 16);
+    bytes.writeUInt16LE(1, 20); bytes.writeUInt16LE(1, 22);
+    bytes.writeUInt32LE(sampleRate, 24); bytes.writeUInt32LE(sampleRate * 2, 28);
+    bytes.writeUInt16LE(2, 32); bytes.writeUInt16LE(16, 34);
+    bytes.write("data", 36); bytes.writeUInt32LE(samples * 2, 40);
+    // Replace inference at its existing worker boundary; real decoding, chart
+    // validation, selection and playback drive every lifecycle transition.
+    await page.route(/\/(?:assets\/worker-[^/]+\.js|src\/analysis\/worker\.ts)(?:\?.*)?$/, route =>
+        route.fulfill({
+            contentType: "application/javascript",
+            headers: { "Cross-Origin-Embedder-Policy": "require-corp" },
+            body: `self.onmessage = ({ data }) => {
+                if (data.type !== "analyze") return;
+                const beats = Array.from({ length: data.duration * 2 }, (_, i) => i * .5);
+                self.postMessage({ type: "result", result: {
+                    schemaVersion: 1, analyzerVersion: ${JSON.stringify(ANALYZER_VERSION)},
+                    duration: data.duration, beats, downbeats: beats.filter((_, i) => i % 4 === 0),
+                    elapsedMs: 1, backend: "wasm",
+                    structure: {
+                        version: 1, analyzerVersion: ${JSON.stringify(SECTION_ANALYZER_VERSION)},
+                        duration: data.duration, elapsedMs: 1, backend: "wasm",
+                        sections: [{ start: 0, end: 2, label: "intro" },
+                            { start: 2, end: data.duration, label: "chorus" }],
+                    },
+                } });
+            };`,
+        }));
+    await page.getByRole("button", { name: "Import local audio", exact: true }).click();
+    await page.locator("#bs-audio-file").setInputFiles({
+        name: "native-vignette-lifecycle.wav", mimeType: "audio/wav", buffer: bytes,
+    });
+    await expect(page.locator('.bs-analysis[data-analysis-state="ready"]')).toBeVisible();
+    await expect(page.locator(".bs-section-preview .bs-player-band")).toHaveCount(2);
+}
 
 async function boot(page: Page) {
     await page.emulateMedia({ reducedMotion: "no-preference" });
@@ -168,6 +230,7 @@ test("Calm weakens bloom, Off bypasses processing, and reduced motion keeps a st
     expect(off.neon.frame.chromatic).toBe(0);
     expect(off.position).toBe(standard.position);
     expect(off.neonTrails.capacity).toBe(standard.neonTrails.capacity);
+    await expectNativeVignette(page, false, 0);
 
     await intensity.selectOption("standard");
     await page.emulateMedia({ reducedMotion: "reduce" });
@@ -183,9 +246,76 @@ test("Calm weakens bloom, Off bypasses processing, and reduced motion keeps a st
     expect(later.neon.frame.bloom).toBe(reduced.neon.frame.bloom);
     expect(later.neon.frame.chromatic).toBe(0);
     expect(later.neonTrails.visibleCount).toBe(0);
+    await expectNativeVignette(page, true, 2);
     const screenshotPath = "output/playwright/neon-reduced-motion.png";
     await page.screenshot({ path: screenshotPath });
     await testInfo.attach("neon-reduced-motion", { path: screenshotPath, contentType: "image/png" });
+    expect(errors).toEqual([]);
+});
+
+test("native vignette runs only in gameplay while menus, starting choices, pause and results stay clear", async ({ page }, testInfo) => {
+    const errors: string[] = [];
+    page.on("pageerror", error => errors.push(error.message));
+    page.on("console", message => {
+        if (message.type() === "error" && /webgpu|gpuvalidation|shader|validation error/i.test(message.text())) {
+            errors.push(message.text());
+        }
+    });
+    await boot(page);
+    await expectNativeVignette(page, false, 0);
+    await page.screenshot({ path: "output/playwright/neon-native-menu.png" });
+    await page.getByRole("button", { name: "Open settings", exact: true }).click();
+    await expectNativeVignette(page, false, 0);
+    await page.getByRole("button", { name: "Close settings", exact: true }).click();
+    await sectionTrack(page);
+    await expectNativeVignette(page, false, 0);
+    await page.getByRole("button", { name: "Play this track", exact: true }).click();
+    await expect(page.locator('.bs-ui[data-phase="starting"]')).toBeVisible();
+    await expectNativeVignette(page, false, 1);
+    await page.screenshot({ path: "output/playwright/neon-native-starting.png" });
+
+    await page.locator('.bs-start-upgrade [data-upgrade-id="pickup-radius"]').click();
+    await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
+    await expect(page.locator(".bs-start-upgrade")).toBeVisible();
+    expect((await snapshot(page)).position).toBeLessThan(0);
+    await expectNativeVignette(page, false, 1);
+    await chooseStartingUpgrade(page);
+    expect((await snapshot(page)).position).toBeLessThan(0);
+    await expectNativeVignette(page, false, 1);
+
+    await page.waitForFunction(() =>
+        (window as unknown as InspectedWindow).__beatshooter.snapshot().position > .1);
+    await expectNativeVignette(page, true, 2);
+    expect((await snapshot(page)).neon.status).toBe("ready");
+    const gameplayPath = "output/playwright/neon-native-gameplay.png";
+    await page.screenshot({ path: gameplayPath });
+    await testInfo.attach("native-vignette-gameplay", { path: gameplayPath, contentType: "image/png" });
+    // The section still uses the existing chromatic effect. Pausing holds its
+    // musical envelope while the independent native vignette leaves the menu.
+    await page.waitForFunction(() =>
+        (window as unknown as InspectedWindow).__beatshooter.snapshot().neon.frame.chromatic > .3,
+    undefined, { polling: "raf", timeout: 6000 });
+    await pause(page);
+    await expectNativeVignette(page, false, 1);
+    const held = await snapshot(page);
+    expect(held.neon.frame.chromatic).toBeGreaterThan(0);
+    await page.getByRole("button", { name: "Settings", exact: true }).click();
+    await page.waitForTimeout(200);
+    await expectNativeVignette(page, false, 1);
+    expect((await snapshot(page)).position).toBe(held.position);
+    expect((await snapshot(page)).neon.frame.chromatic).toBe(held.neon.frame.chromatic);
+    await page.getByRole("button", { name: "Close settings", exact: true }).click();
+    await page.screenshot({ path: "output/playwright/neon-native-paused.png" });
+    await page.getByRole("button", { name: "Resume session", exact: true }).click();
+    await expectNativeVignette(page, true, 2);
+    await expect(page.locator('[data-screen="results"]')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('[data-value="result-title"]')).toHaveText("Track complete");
+    await expectNativeVignette(page, false, 0);
+    await page.screenshot({ path: "output/playwright/neon-native-results.png" });
+    await page.getByRole("button", { name: "Back to sessions" }).click();
+    await expect(page.locator('.bs-ui[data-phase="menu"]')).toBeVisible();
+    await expectNativeVignette(page, false, 0);
+    expect((await snapshot(page)).neon.error).toBeUndefined();
     expect(errors).toEqual([]);
 });
 

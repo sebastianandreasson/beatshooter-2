@@ -11,6 +11,17 @@ unchanged. The screen explains the later side panel, shortcuts and queue.
 Failed audio startup retains the selected perk and exposes a start retry; it
 cannot award the perk twice.
 
+Each new run, restart, and dojo reset draws a fresh browser-random seed for
+the upgrade stream. Offers contain three distinct options and stay fixed until
+selected; later level-up offers continue that run's stream. Spawn and damage
+randomness stay independent. The session regression reproduces the old repeated
+starting set, then verifies new runs with controlled entropy. The browser fixture
+controls entropy only in tests so combat scenarios remain reproducible.
+
+Random-offer verification: 18 session/upgrade unit tests and four browser checks
+passed, covering menu starts, restart, stable pending choices, starting-card
+selection at desktop/phone widths, and dash/pause/retry.
+
 Level-ups display three enlarged cards on the right while the session stays in
 `playing`. Neither earning nor selecting an upgrade calls the audio transport,
 changes simulation speed, grants protection, clears movement, or cancels dash.

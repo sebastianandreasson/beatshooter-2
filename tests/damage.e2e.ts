@@ -1,5 +1,5 @@
 import { chooseStartingUpgrade } from "./starting-upgrade";
-import { expect, test, type Page } from "playwright/test";
+import { expect, test, type Page } from "./fixtures";
 
 type Point = { x: number; z: number };
 interface Enemy extends Point {
@@ -184,7 +184,7 @@ test("enemy health bars, beat-timed hit and kill numbers, and player damage stat
         // the shared musical accent instead of starting an independent timer.
         expect(hit.progress).toBe(0);
         expect(hit.rise).toBe(0);
-        expect(hit.scale).toBe(1);
+        expect(hit.scale).toBe(0.55);
     }
     const enemy = damaged.state.enemies.find(enemy => enemy.id === hit.targetId)!;
     const bar = damaged.bars.find(bar => bar.enemyId === enemy.id)!;

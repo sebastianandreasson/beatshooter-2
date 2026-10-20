@@ -5,7 +5,7 @@
     "": {
       "name": "beatshooter-2",
       "dependencies": {
-        "@dylanebert/shallot": "0.10.0",
+        "@dylanebert/shallot": "0.10.1-next.2",
         "@jgorset/beat-this": "1.0.0",
         "onnxruntime-web": "1.23.2",
         "typegpu": "0.12.8",
@@ -36,7 +36,7 @@
 
     "@babel/types": ["@babel/types@7.29.8", "", { "dependencies": { "@babel/helper-string-parser": "^7.29.7", "@babel/helper-validator-identifier": "^7.29.7" } }, "sha512-Vj1jF3cPfxg7OAfoI7QnVKLoILlm2JF9pnVHrX8qx7AHMiYWT+NDAA7jChlNgRS4WTLc/fD1lXLmPixluj+3Gg=="],
 
-    "@dylanebert/shallot": ["@dylanebert/shallot@0.10.0", "", { "dependencies": { "@types/node": "^26.6.3", "@webgpu/types": "^0.1.74", "unplugin-typegpu": "~0.12.6" }, "peerDependencies": { "playwright": "^1.63.0", "typegpu": "~0.12.8", "vite": "^8.0.0", "webgpu": "^0.6.2" }, "optionalPeers": ["playwright", "webgpu"], "bin": { "shallot": "bin/shallot.ts" } }, "sha512-eP7I/f4rTEGF+eLsO5KFLjbSj6qcP8KRJuF2N6xqxav1qPkOZTkaTUvKlEIQ0VnXCig1yTWUSyIhXZyIUPf8lA=="],
+    "@dylanebert/shallot": ["@dylanebert/shallot@0.10.1-next.2", "", { "dependencies": { "@types/node": "^26.6.5", "@webgpu/types": "^0.1.74", "unplugin-typegpu": "~0.12.6" }, "peerDependencies": { "playwright": "^1.64.1", "typegpu": "~0.12.8", "vite": "^8.0.0", "webgpu": "^0.6.2" }, "optionalPeers": ["playwright", "webgpu"], "bin": { "shallot": "bin/shallot.ts" } }, "sha512-H7BBiDb7Ezqo1R7uoVsqhrbcwcN7KdB4DeUkSqbnU8TAqrg/+DYspUdDWMxXW8hNaA9rjPgOJYzO5LJdHsoOSA=="],
 
     "@jgorset/beat-this": ["@jgorset/beat-this@1.0.0", "", { "dependencies": { "fft.js": "4.0.4", "onnxruntime-web": "1.23.2" } }, "sha512-d4iZqL1e5IxwO2uBhe1XeHMzjn5dIeStJHg8lywnXMK8K7f8obczsvJTC7X6x373X1CEmyiZF2y13geeSDJwcA=="],
 

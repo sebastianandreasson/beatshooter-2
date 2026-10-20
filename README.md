@@ -1,6 +1,6 @@
 # Beatshooter 2
 
-A single-player, top-down music shooter built directly with Shallot 0.10.0.
+A single-player, top-down music shooter built directly with Shallot 0.10.1-next.2.
 Move around the arena, aim with the pointer, and let your weapon fire on the
 music's beats. Survive the track or practice in the dojo.
 
@@ -12,7 +12,7 @@ headphone/display latency check. Deployment is outside this scope.
 ## Play and develop
 
 Use **Bun 1.4.3 or newer** and a desktop browser with WebGPU on localhost or HTTPS.
-The engine remains pinned to `@dylanebert/shallot@0.10.0`.
+The engine is pinned to `@dylanebert/shallot@0.10.1-next.2`.
 
 ```sh
 bun --version
@@ -38,9 +38,15 @@ Bun 1.4.3+ before running these commands.
 
 Choose **Neon Circuit**, the original 72-second, 120 BPM demo; enter the dojo at
 20–300 BPM; or import a local audio file. Each run first offers a full-screen **Start of run
-upgrade** choice. Choose one free upgrade before the music starts; then four
+upgrade** choice. Each new run or restart rolls three random, distinct options.
+Choose one free upgrade before the music starts; then four
 count-in clicks lead into play. Kills award **100 points** and each survived beat awards **2 points**.
 Enemy waves grow by musical bars, with a normal-play cap of 100 enemies.
+Each section after the first increases enemy health by **10%**, compounded from
+the original health and rounded to whole HP. Live enemies keep approximately
+their current health percentage; arriving and future enemies receive the same
+scaling. Repeated section labels still count as new sections. The dojo and
+tracks without section data keep baseline health.
 Contact and projectile damage share a 0.9-second invulnerability window. Zero health ends a run;
 reaching the end of the audio completes it. Retry and menu navigation work
 without reloading.
@@ -55,8 +61,9 @@ the matching section boundaries.
 Player shots start at **13–17 damage**, with a **12% chance of a 2× critical hit**.
 Every enemy has a compact health bar. Hits, including killing blows, show their
 rolled damage; critical numbers are larger and gold. Numbers appear immediately
-at rest, then pop, rise, and fade over one beat starting on the next authored
-beat. Hits exactly on a beat begin that motion immediately. Changing tempo,
+at 55% size, then pop to 145% (160% for critical hits) on the next authored beat.
+They settle to a readable size, briefly hold their position, and rise/fade over
+that beat. Hits exactly on a beat pop immediately. Changing tempo,
 slowdown, and pause affect the animation with the music. Off/reduced-motion
 settings keep the information visible with stationary fades.
 
@@ -75,6 +82,15 @@ Waves mix three enemy types, introduced over the first three bars:
   three barrels turn 30° each accented bar start and fire three shots 120° apart.
 - **Amber rangers** approach to about six arena units, then fire one straight
   shot aimed at the player's position on each accented bar start while in range.
+
+Chasers and approaching rangers move in distinct beat bursts: a fast start,
+deceleration over the first 55% of the interval, then a full stop until the
+next beat. Ordinary tempos preserve average pursuit speed; slow songs cap
+each stride's distance. Movement follows accepted audio timestamps, including
+tempo changes, and never repeats a burst during detection gaps or extra physics
+ticks. Knockback still responds immediately to hits.
+See the [beat pulse verification](docs/beat-pulse-verification.md) for timing and
+playthrough checks.
 
 Enemies arrive in narrow beams on the main beat, spinning, descending and
 growing from zero scale over the interval to the next authored beat. Floor
@@ -116,13 +132,39 @@ its effect immediately.
 | **Power** | +3 to both ends of the damage range; initially 13–17 → 16–20 |
 | **Vitality** | +20 maximum health and restore 20 current health |
 | **Regeneration** | +2 health restored every 5 seconds of song time, on the next authored beat |
-| **Split Shot** | +1 projectile per normal firing beat, up to 7 |
+| **Split Shot** | +1 projectile per normal firing beat, up to 7; −10 percentage points of all weapon damage per rank |
 | **Downbeat Barrage** | Unlock a 6-projectile outward ring on the accented main beat; subsequent selections add 2, up to 24 |
 | **Critical Chance** | +5 percentage points, initially 12% → 17%, up to 100% |
 | **Critical Damage** | +0.25× critical multiplier, initially 2× → 2.25× |
-| **Ricochet** | +1 bounce per projectile, up to 5 |
+| **Ricochet** | +1 bounce per projectile, up to 5; each bounce retains 70% of the previous damage |
 | **Pickup Radius** | +25% of the base XP attraction radius, up to 300% total (8 ranks) |
 | **Dash Distance** | +0.6 distance per dash, initially 3.6 → 4.2, up to 7.2 (6 ranks) |
+| **Wall Bounce** · rare | Shots rebound from one wall without losing damage; the next wall stops them |
+| **Homing Shots** · rare | Gently steer toward the closest enemy ahead, up to 30° per second and 30° total |
+| **Regenerative Shield** · rare | Block one hit, then recharge after 25 seconds of song time |
+
+Each starting or level-up offer has a **12% chance** of replacing one normal
+card with an available special, chosen equally. At most one special appears
+per offer. These gold **Rare · Unique** cards have one tier and disappear from
+the pool once acquired; restart clears them with the other upgrades.
+
+Wall Bounce reflects at the actual arena boundary, including corners, and
+sweeps the remaining travel for enemy hits. It preserves speed and damage,
+refreshes enough lifetime to cross the arena, and spends no enemy ricochets.
+The normal Ricochet upgrade can still trigger after an enemy hit; it cannot
+restore the spent wall rebound. Homing acquires living, unhit enemies ahead
+within 14 arena units, preserves speed, and has a total steering budget so it
+cannot make a U-turn or orbit a target. Both specials apply to newly fired
+fan and barrage shots; hostile fire remains unchanged.
+
+The shield starts charged and absorbs either contact or projectile damage.
+Blocking grants the existing brief hit immunity, so simultaneous impacts
+cannot immediately take hull health. Later damage does not restart its
+25-second recharge. Its timer follows raw song position, including pause and
+slowdown, independently of detected beats and visual calibration. A thin
+outline shows the available charge and the HUD shows **Ready** or the remaining
+seconds. The outline gently follows the beat; comfort settings keep it steady.
+See [special upgrade verification](docs/special-upgrades-verification.md).
 
 Card values are color-coded: offense in red, health in green, and utility in
 purple. Titles and surrounding prose stay neutral. Pickup Radius increases
@@ -132,10 +174,19 @@ Dash Distance extends the burst without changing its beat window or duration.
 Split Shot widens the normal shot into a symmetric fan around the aim: 12°
 more total spread per added projectile, capped at 60°. Barrage fires a full
 ring in addition to that fan, only on actual accented bar starts, using the
-same main beat as dash and enemy attacks. Ricochets stop at their impact point,
+same main beat as dash and enemy attacks. Split Shot's global damage factor is
+90%, 80%, 70%, 60%, 50%, then 40% at ranks 1–6. It applies to the fan, barrage
+and critical hits, and combines with Power before the final damage rounding.
+Existing shots retain their fired damage when a new upgrade is selected.
+Ricochets stop at their impact point,
 then launch toward the nearest enemy they have not already hit on the next
-beat. Each projectile can bounce at most once per authored beat. All shots
+beat. Bounce damage follows 70%, 49%, 34.3%, 24.01%, and 16.807% of the
+projectile's original fired damage; each impact rounds to a whole number
+without carrying rounding error into later bounces.
+Each projectile can bounce at most once per authored beat. All shots
 retain the existing projectile budget.
+See the [balance verification](docs/balance-verification.md) for the scaling
+rules and checks.
 
 Regeneration starts five song seconds after acquiring it. Each heal lands on
 the first authored beat at or after its due time, then starts the next
@@ -159,6 +210,11 @@ or replace the first earned level-up.
 See [XP verification](docs/experience-verification.md) for the gem system and
 [upgrade verification](docs/upgrades-verification.md) for the selection flow.
 
+The HUD uses larger health and score values, readable XP and timing labels, and
+14 px control hints. Narrow screens wrap controls and move XP below the top
+row; upgrade cards scroll within the space between the top HUD and beat panel.
+Menu, settings, and results text follows the same readable sizing.
+
 The larger beat indicator sits at the bottom center. The eligible beat's diamond
 gains an outline and **Dash ready** appears during a ±150 ms window around any
 beat. Press **Space** in that window to dash. Each bar allows one dash, usable
@@ -171,6 +227,14 @@ the burst affects the next dash.
 Automatic tracks use their actual detected beats and chart bar markers, including
 changing meter and inferred bars when downbeats are unavailable. Visual calibration
 remains cosmetic: dash input is judged against the current audio clock.
+
+The player ship is a silver-and-blue triangular fighter with swept wings, a raised
+cockpit, and twin rear engines. Amber engines signal the actual dash window;
+they glow faint cool blue between windows, dim after use, and show a tiny blue
+exhaust tip during a dash. Readiness stays steady without a breathing flare, and
+engine colors remain below the bloom threshold. Exhaust follows the music clock
+and holds when paused. Reduced-effects settings retain the colored engine lights
+without plumes.
 
 Local files never upload. Selecting a file automatically runs Beat This! locally
 with WebGPU. It detects individual beats and bar starts, including changing tempo.
@@ -185,8 +249,8 @@ Analysis also runs **LinkSeg** locally to estimate intro, verse, chorus, bridge,
 instrumental, outro and silence sections. The compact bottom progress bar colors
 each section and shows the playhead. The import preview adds current/next labels
 and a legend to the same section map. Section predictions
-also drive the arena transitions below; enemy schedules, beat timing and
-collision rules remain unchanged. If section analysis fails, detected beats
+also drive the arena transitions below and the section health scaling; enemy
+schedules, beat timing and collision rules remain unchanged. If section analysis fails, detected beats
 are still playable. See the [LinkSeg evaluation](docs/section-analysis.md)
 for measured performance, predictions and remaining listening review.
 
@@ -203,12 +267,11 @@ These are preferred themes: when the next theme repeats or is too similar,
 the arena chooses a contrasting palette. Every consecutive section gets a
 distinct color, including repeated labels; replaying uses the same choices.
 
-Behind the arena, **960 small, bright stars** travel steadily outward across
-three depth layers (480 with Low graphics). Their baseline is **5× faster**
-than the original starfield. Each section shockwave smoothly accelerates them
-to **25× that faster baseline** and back, stretching them into long hyperspeed
-streaks. Travel accumulates
-continuously, so returning to normal speed never jumps the stars backward.
+Behind the arena, **960 small, bright stars** surge outward on each beat across
+three depth layers (480 with Low graphics), settling between beats. They travel
+2.5 units per beat, averaging five units/second at 120 BPM. Each section
+shockwave adds up to 120 units/second and stretches them into long hyperspeed
+streaks. Integrated travel keeps the stars moving forward when the boost ends.
 The starfield follows the music clock through pause and slowdown, while the
 camera keeps its normal orientation and player follow.
 
@@ -276,14 +339,18 @@ The neon presentation uses dark ship/enemy faces with luminous geometric edges,
 thin glowing arena rails, bright projectile cores and blue XP gems. Selective
 HDR bloom adds soft halos around the bright geometry while preserving its sharp
 edges. Projectile trails grow over a short fraction of the local beat and stop
-with the music. A subtle vignette frames the arena; section transitions briefly
-add subpixel color separation near the screen edges. The DOM HUD remains crisp.
+with the music. Shallot's native vignette subtly frames active gameplay, switching
+off for menus, the starting upgrade/count-in, pause/settings, and results.
+Section transitions briefly add subpixel color separation near the screen edges
+through the existing chromatic shader; this prerelease does not yet include the
+native chromatic aberration effect. The DOM HUD remains crisp.
 
 Bloom intensity follows the shared musical pulses and section envelope.
 **Calm** softens the glow and shortens trails; **Off** bypasses postprocessing and
 hides trails. Reduced flashes and OS reduced motion keep a gentle, steady glow
 without trails or color separation. Low graphics uses smaller bloom targets,
-three passes instead of four, and up to 64 trails instead of 192. Pools and GPU
+three bloom passes instead of four, and up to 64 trails instead of 192.
+The native vignette adds one pass during gameplay. Pools and GPU
 targets are reused through play and retry. See
 [neon visual verification](docs/neon-visuals-verification.md).
 
@@ -307,6 +374,11 @@ flowing aurora ribbons and particles, expanding geometric echoes, and morphing
 wireframes behind the arena. Intro, verse, chorus, bridge and outro arrangements
 crossfade between different combinations. Actual audio energy controls their
 strength, so a section label alone never forces a large accent.
+Spectrum accents, laser sweeps, aurora travel, particles, geometry and stars
+share the beat's surge-and-settle timing. Floor light and bloom brighten on the
+same beat, with stronger contrast between the accent and the space after it.
+Calm softens the motion. Audio features shape intensity and color; the authored
+beat timestamps control the rhythm.
 
 Analysis measures loudness/bass, 16 FFT bands, mids/highs, transients, and sustained
 energy rises/falls at 20 Hz. Uploaded tracks share their analysis worker; the demo

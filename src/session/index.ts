@@ -22,7 +22,9 @@ import { createAnalyzedChart } from "../analysis/chart";
 import type { BeatAnalysis } from "../analysis/types";
 import { publishVisualEvents, VisualEvents } from "../music-visuals/events";
 import { DashState } from "../dash/state";
-import { chooseUpgrade, prepareUpgradeChoices } from "../upgrades";
+import { chooseUpgrade, createUpgradeState, prepareUpgradeChoices } from "../upgrades";
+import { advanceSectionDifficulty } from "../combat/difficulty";
+import { shieldReady } from "../combat/specials";
 
 export type Phase = "menu" | "loading" | "starting" | "playing" | "paused" | "results";
 export const isRunningPhase = (phase: Phase) => phase === "playing";
@@ -34,6 +36,7 @@ interface SessionData {
     transport?: MusicTransport; loader?: TrackLoader; preferences: Preferences;
     combat: CombatState; enemyBodies: Map<number, number>; pending: ScheduledBeat[];
     generation: number; loadToken: number; position: number; visualPosition: number;
+    enemyMotionPosition: number;
     completePending: boolean; loadingLostFocus: boolean; error?: string; pauseReason?: string; result?: "complete" | "defeat";
     ui?: ReturnType<typeof mountUI>; diagnostics: boolean; shotClip: number; hitClip: number;
     preview: boolean; previewLoading: boolean; previewLoaded?: LoadedTrack; previewUntil: number; fps: number;
@@ -46,6 +49,7 @@ export const Session: Resource<SessionData> = {
         phase: "menu", selection: { mode: "demo" }, track: DEMO_TRACK,
         preferences: loadPreferences(), combat: createCombat(2026), enemyBodies: new Map(),
         pending: [], generation: 0, loadToken: 0, position: 0, visualPosition: 0,
+        enemyMotionPosition: -Infinity,
         completePending: false, loadingLostFocus: false, diagnostics: false, shotClip: -1, hitClip: -1,
         preview: false, previewLoading: false, previewUntil: 0, fps: 60,
         startBusy: false,
@@ -69,6 +73,7 @@ function clearSession(world: World): void {
     stopEffects(world);
     session.combat = createCombat(2026);
     session.position = session.visualPosition = 0;
+    session.enemyMotionPosition = -Infinity;
     session.generation++;
     const dash = world.resource(DashState);
     dash.controller.reset();
@@ -241,6 +246,8 @@ export async function startSession(world: World, selection: Selection): Promise<
         }
         // The free level-one choice is separate from XP-earned levels. Keep the
         // transport stopped so the first beat and count-in wait for the player.
+        // Seed offers once per new run, independently of the combat random stream.
+        session.combat.upgrades = createUpgradeState(crypto.getRandomValues(new Uint32Array(1))[0]!);
         session.combat.upgrades.pending = 1;
         prepareUpgradeChoices(session.combat);
         session.phase = "starting";
@@ -456,6 +463,10 @@ export function renderUI(world: World): void {
         level: s.combat.experience.level, xp: s.combat.experience.xp,
         requiredXp: s.combat.experience.requiredXp, totalXp: s.combat.experience.totalXp,
         maxHealth: s.combat.playerStats.effective.maxHealth, position: s.position,
+        shield: s.combat.playerStats.effective.regenerativeShield > 0 ? {
+            ready: shieldReady(s.combat, s.position),
+            remaining: Math.max(0, s.combat.shieldRechargeAt - s.position),
+        } : undefined,
         generation: s.generation, beats: s.track.beats,
         structure: s.loaded?.structure,
         previewPosition: s.preview ? s.transport?.position : 0,
@@ -508,6 +519,7 @@ export const PrepareCombat: System = {
     update(world) {
         const s = world.resource(Session), p = world.resource(PlayerState);
         if (!isRunningPhase(s.phase)) return;
+        advanceSectionDifficulty(s.combat, (s.loaded?.structure ?? s.track.structure)?.sections, s.position);
         for (const beat of s.pending.splice(0)) {
             const events = onCombatBeat(s.combat, {
                 index: beat.index, barIndex: beat.bar, isDownbeat: beat.downbeat,
@@ -519,7 +531,10 @@ export const PrepareCombat: System = {
         }
         for (const enemy of s.combat.enemies) {
             let eid = s.enemyBodies.get(enemy.id);
-            const velocity = enemyVelocity(enemy, p.position, s.combat);
+            // Raw transport time keeps movement on audible beats, independent
+            // of visual calibration, frame rate and effects preferences.
+            const velocity = enemyVelocity(enemy, p.position, s.combat,
+                s.position, world.time.deltaTime, s.enemyMotionPosition);
             if (eid === undefined) {
                 eid = world.create();
                 s.enemyBodies.set(enemy.id, eid);
@@ -532,6 +547,8 @@ export const PrepareCombat: System = {
             }
             setLinearVelocity(world, eid, { x: velocity.x, y: 0, z: velocity.z });
         }
+        // Extra fixed ticks at a held audio observation cannot replay the stride.
+        s.enemyMotionPosition = s.position;
     },
 };
 
@@ -544,7 +561,7 @@ export const ResolveCombat: System = {
         const pose = world.storage(GlobalTransform).translation;
         for (const [id, eid] of s.enemyBodies) positions.set(id, { x: pose.x.get(eid), z: pose.z.get(eid) });
         const player = world.resource(PlayerState);
-        const result = advanceCombat(s.combat, world.time.deltaTime, player.position, positions, player.previous);
+        const result = advanceCombat(s.combat, world.time.deltaTime, player.position, positions, player.previous, s.position);
         publishVisualEvents(world, result.events, s.position, s.visualPosition, s.generation);
         const live = new Set(s.combat.enemies.map(enemy => enemy.id));
         for (const [id, eid] of s.enemyBodies) {

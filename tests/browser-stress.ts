@@ -1,4 +1,5 @@
 import { chooseStartingUpgrade } from "./starting-upgrade";
+import { installUpgradeEntropy } from "./upgrade-entropy";
 /**
  * Explicit rendering/physics benchmark; not discovered as a unit/browser test.
  * Serve an existing production build first; this script never rebuilds it.
@@ -48,6 +49,7 @@ const browser = await chromium.launch({
 try {
     const context = await browser.newContext({ viewport, deviceScaleFactor: 1 });
     const page = await context.newPage();
+    await installUpgradeEntropy(page);
     const pageErrors: string[] = [];
     page.on("pageerror", error => pageErrors.push(error.message));
     await page.goto(url.href, { waitUntil: "domcontentloaded", timeout: 60_000 });

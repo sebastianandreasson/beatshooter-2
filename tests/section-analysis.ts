@@ -1,4 +1,5 @@
 import { chooseStartingUpgrade } from "./starting-upgrade";
+import { installUpgradeEntropy } from "./upgrade-entropy";
 /** Local-only LinkSeg evaluation. Run a production preview separately, then:
  * bun tests/section-analysis.ts http://127.0.0.1:4187
  * Existing private test audio is read locally; no audio is uploaded.
@@ -26,6 +27,7 @@ const inputs = ["public/tracks/neon-circuit.wav", ...(await readdir("local-audio
     .filter(file => /\.(mp3|wav|m4a|flac|ogg)$/i.test(file)).sort().map(file => `local-audio/${file}`)];
 const browser = await chromium.launch({ ...BROWSER_CONFIG.use.launchOptions, channel: BROWSER_CONFIG.use.channel });
 const page = await browser.newPage({ viewport: { width: 1440, height: 960 } });
+await installUpgradeEntropy(page);
 const errors: string[] = [], unexpectedRequests: string[] = [];
 page.on("pageerror", error => errors.push(error.message));
 page.on("request", request => {

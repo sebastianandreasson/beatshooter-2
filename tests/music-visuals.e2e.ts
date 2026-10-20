@@ -1,5 +1,5 @@
 import { chooseStartingUpgrade } from "./starting-upgrade";
-import { expect, test, type Page } from "playwright/test";
+import { expect, test, type Page } from "./fixtures";
 import type { MusicFloorInput } from "../src/music-visuals/floor";
 import type { MusicalFrame } from "../src/rhythm/visual";
 

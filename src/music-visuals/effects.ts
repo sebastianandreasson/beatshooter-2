@@ -111,7 +111,7 @@ function feedbackProgress(timeline: MusicalTimeline, item: MusicalFeedback, age:
 }
 
 /**
- * Hits confirm immediately at rest. The next actual beat starts the pop/rise,
+ * Hits confirm immediately in small text. The next actual beat starts the pop,
  * and the following beat ends it, so offbeat impacts share the music's accents.
  * Progress describes that one-beat exit; it stays zero during the initial hold.
  */
@@ -123,13 +123,17 @@ export function damageNumberPose(
     const hold = born.beatPhase < 1e-9 ? 0 : 1 - born.beatPhase;
     const progress = Math.max(0, Math.min(1,
         born.beatIndex < 0 ? age.seconds / 1.5 : age.beats - hold));
-    const moving = motion && born.active && age.beats + 1e-9 >= hold;
-    const settle = Math.min(1, progress * 4);
-    const fade = Math.max(0, (progress - 0.45) / 0.55);
+    const canPop = motion && born.active;
+    const moving = canPop && age.beats + 1e-9 >= hold;
+    const settle = Math.max(0, Math.min(1, (progress - 0.04) / 0.22));
+    const riseProgress = Math.max(0, Math.min(1, (progress - 0.18) / 0.82));
+    const fade = Math.max(0, (progress - 0.65) / 0.35);
+    const readable = item.critical ? 1.12 : 1.08;
+    const peak = item.critical ? 1.6 : 1.45;
     return {
         progress,
-        rise: moving ? (1 - (1 - progress) ** 2) * 1.15 : 0,
-        scale: moving ? 1 + (item.critical ? 0.2 : 0.12) * (1 - settle) ** 2 : 1,
+        rise: moving ? (1 - (1 - riseProgress) ** 2) * 1.15 : 0,
+        scale: moving ? readable + (peak - readable) * (1 - settle) ** 3 : canPop ? 0.55 : 1,
         opacity: (1 - fade * fade * (3 - 2 * fade)) * age.strength,
     };
 }

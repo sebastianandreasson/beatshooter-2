@@ -39,6 +39,27 @@ It retains actual bar sizes, wraps unusual meters, and adds no independent
 animation or large brightness flash. The beat fill follows the existing visual
 clock; the readiness outline/label follow actual input eligibility.
 
+## Ship and engine readiness verification
+
+The player uses a procedural triangular fighter with swept silver/blue wings,
+a raised cockpit, cyan edges, and twin rear engines. Its sphere collider and
+movement rules are unchanged. Engine colors follow actual dash eligibility:
+muted amber when ready, faint cool blue between windows, dim after use, and soft
+blue during the burst. Exhaust is deliberately tiny: the ready tip is 0.07 units
+long and the dash tip peaks at 0.18 (about 90% shorter than the original effect).
+Ready tips stay steady, and engine colors stay below bloom's soft knee.
+Exhaust envelopes use song time, hold during pause, and disappear
+under Off/reduced-motion/reduced-flash settings while readiness plates remain.
+
+- Targeted player, dash, upgrade, and real physics tests: 52 passed, 2,702 assertions.
+- Four production browser checks passed: ship aiming and engine states, real
+  keyboard dashing, pause/reset, Off and reduced effects, and existing dash input
+  regressions. No page, WebGPU, or shader errors.
+- Type checking passed across 380 files.
+- Visually reviewed `output/playwright/player-ship-{arena,ready,boost,used,off}.png`:
+  the silhouette, twin amber readiness lights, and subtle blue dash tips remain
+  distinguishable at gameplay scale.
+
 ## Wider timing window verification
 
 Timing tolerance increased from ±100 ms to ±150 ms. The readiness indicator

@@ -9,6 +9,7 @@ import { PresentSectionEffects, SampleSectionEffects } from "../section-effects"
 import { isArenaPhase, Session } from "../session";
 import type { TrackManifest } from "../tracks";
 import { STAR_BASE_SPEED, StarfieldTimeline } from "./motion";
+import { beatMotionCoordinate, beatVelocity } from "../rhythm/pulse";
 import { createStarSeeds, LOW_DETAIL_STAR_COUNT, sampleStarPose, type StarPose, type StarSeed } from "./pose";
 
 export const Starfield: Resource<{
@@ -52,10 +53,15 @@ export const SampleStarfield: System = {
         }
         const frame = state.timeline.sample(session.position);
         const gain = session.preferences.settings.effectsIntensity === "calm" ? 0.18 : 1;
-        const base = Number.isFinite(session.position) ? Math.max(0, session.position) * STAR_BASE_SPEED : 0;
-        state.distance = base + (frame.distance - base) * gain;
+        const oldBase = Number.isFinite(session.position) ? Math.max(0, session.position) * STAR_BASE_SPEED : 0;
+        const music = visuals.timeline.sample(session.position);
+        const pulseAmount = session.preferences.settings.effectsIntensity === "calm" ? 0.35 : 1;
+        const base = beatMotionCoordinate(music, pulseAmount) * 2.5;
+        const baseSpeed = music.active ? 2.5 / music.beatDuration
+            * (1 + (beatVelocity(music.beatPhase) - 1) * pulseAmount) : 0;
+        state.distance = base + (frame.distance - oldBase) * gain;
         state.boost = frame.boost * gain;
-        state.speed = STAR_BASE_SPEED + (frame.speed - STAR_BASE_SPEED) * gain;
+        state.speed = baseSpeed + (frame.speed - STAR_BASE_SPEED) * gain;
     },
 };
 

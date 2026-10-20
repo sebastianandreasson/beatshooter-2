@@ -213,15 +213,20 @@ describe("musical damage numbers", () => {
                 const feedback = director.feedback[0]!;
                 for (const position of [birth, beatDuration * 0.999]) {
                     expect(damageNumberPose(director.timeline, feedback, position, true))
-                        .toEqual({ progress: 0, rise: 0, scale: 1, opacity: 1 });
+                        .toEqual({ progress: 0, rise: 0, scale: 0.55, opacity: 1 });
                 }
                 const accent = damageNumberPose(director.timeline, feedback, beatDuration, true);
                 expect(accent.progress).toBeCloseTo(0);
                 expect(accent.rise).toBeCloseTo(0);
-                expect(accent.scale).toBeCloseTo(1.12);
+                expect(accent.scale).toBeCloseTo(1.45);
+                const held = damageNumberPose(director.timeline, feedback, beatDuration * 1.15, true);
+                expect(held.rise).toBe(0);
+                expect(held.scale).toBeGreaterThan(1.08);
                 const midway = damageNumberPose(director.timeline, feedback, beatDuration * 1.5, true);
                 expect(midway.progress).toBeCloseTo(0.5);
                 expect(midway.rise).toBeGreaterThan(0);
+                expect(midway.scale).toBe(1.08);
+                expect(midway.opacity).toBe(1);
                 const almostExpired = beatDuration * 1.999;
                 director.step(almostExpired, false);
                 expect(director.feedback).toHaveLength(1);
@@ -237,7 +242,7 @@ describe("musical damage numbers", () => {
             const beatDuration = 60 / bpm, chart = timeline(bpm);
             const feedback: MusicalFeedback = { ...event(1), birth: beatDuration };
             expect(damageNumberPose(chart, feedback, beatDuration, true))
-                .toEqual({ progress: 0, rise: 0, scale: 1.12, opacity: 1 });
+                .toEqual({ progress: 0, rise: 0, scale: 1.45, opacity: 1 });
             expect(damageNumberPose(chart, feedback, beatDuration * 1.5, true).progress).toBeCloseTo(0.5);
             expect(feedbackAge(chart, feedback, beatDuration * 2)).toBeCloseTo(1);
             expect(damageNumberPose(chart, feedback, beatDuration * 2, true).opacity).toBe(0);
@@ -250,9 +255,9 @@ describe("musical damage numbers", () => {
             .map((beat, index) => ({ ...beat, time: times[index]! })));
         const feedback: MusicalFeedback = { ...event(1, { critical: true }), birth: 0.25 };
         const impact = damageNumberPose(chart, feedback, 0.25, true);
-        expect(impact).toEqual({ progress: 0, rise: 0, scale: 1, opacity: 1 });
+        expect(impact).toEqual({ progress: 0, rise: 0, scale: 0.55, opacity: 1 });
         expect(damageNumberPose(chart, feedback, 0.499, true)).toEqual(impact);
-        expect(damageNumberPose(chart, feedback, 0.5, true).scale).toBe(1.2);
+        expect(damageNumberPose(chart, feedback, 0.5, true).scale).toBe(1.6);
         const laterHit = { ...feedback, birth: 0.47 };
         for (const position of [0.5, 0.725, 0.95, 1.2, 1.4]) {
             const first = damageNumberPose(chart, feedback, position, true);
@@ -272,7 +277,7 @@ describe("musical damage numbers", () => {
         expect(expired.rise).toBe(1.15);
         const afterAccent = { ...feedback, birth: 0.51 };
         expect(damageNumberPose(chart, afterAccent, 1.399, true).rise).toBe(0);
-        expect(damageNumberPose(chart, afterAccent, 1.4, true).scale).toBe(1.2);
+        expect(damageNumberPose(chart, afterAccent, 1.4, true).scale).toBe(1.6);
         expect(damageNumberPose(chart, afterAccent, 1.7, true).progress).toBeCloseTo(0.5);
         expect(damageNumberPose(chart, afterAccent, 2, true).opacity).toBe(0);
     });

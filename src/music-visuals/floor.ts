@@ -123,7 +123,8 @@ const shadeFloor = tgpu.fn([FloorParameters, d.vec2f], d.vec4f)((p, point) => {
     // One low-frequency diagonal light band travels one full period per four beats.
     const bandPhase = (point.x + point.y) * 0.16 - beat * 1.57079632679;
     const broadBand = std.pow(0.5 + 0.5 * std.sin(bandPhase), 3);
-    color = std.add(color, std.mul(palette, broadBand * (0.045 + p.response.x * 0.035) * active * quiet));
+    color = std.add(color, std.mul(palette, broadBand * (0.045 + p.response.x * 0.035)
+        * (0.6 + p.pulse.x * 0.9) * active * quiet));
 
     // The ring traverses the arena over the current actual bar, then fades before resetting.
     const radius = phase * 27;
@@ -138,7 +139,7 @@ const shadeFloor = tgpu.fn([FloorParameters, d.vec2f], d.vec4f)((p, point) => {
     const rimPhase = angle - phase * 6.28318530718;
     const rimLight = std.pow(0.5 + 0.5 * std.cos(rimPhase * 2), 6);
     const rim = std.smoothstep(16.7, 17.6, edge) * inside;
-    color = std.add(color, std.mul(palette, rim * (0.025 + rimLight * 0.25 * active * ordinaryRings)));
+    color = std.add(color, std.mul(palette, rim * (0.025 + (rimLight * 0.2 + p.pulse.x * 0.16) * active * ordinaryRings)));
 
     // High detail adds a quiet warped grid; the first grid always stays fixed.
     const warp = d.vec2f(

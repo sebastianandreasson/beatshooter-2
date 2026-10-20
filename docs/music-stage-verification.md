@@ -9,8 +9,8 @@ Implemented 2026-10-20 in the existing Shallot 0.10.0 project.
 - Four outward laser fans change formation smoothly over beats. Bass accents
   and spectral transients brighten their soft cores; mids extend the rays.
 - Two curling aurora ribbons carry small moving particles. Mids widen the
-  ribbons, highs lengthen the particles, and integrated track energy controls
-  travel without jumps when instantaneous energy changes.
+  ribbons and highs lengthen the particles. Travel now advances with the shared
+  beat envelope; changing instantaneous energy cannot move the timeline.
 - Three expanding, rotating geometric echoes fade before recycling. They echo
   only the decorative backdrop, never actors, projectiles, or UI.
 - Two wireframes morph among square, hexagon, octagon, and dodecagon forms.
@@ -45,6 +45,11 @@ loads remain rejected; optional DSP failure leaves the track playable.
 
 All poses are sampled from absolute music position. Pause freezes the layer;
 seek and retry reconstruct it without stale particles or event queues.
+Travel surges over the first 55% of each beat, then holds. Spectrum accents,
+laser formations, aurora travel, particles and geometric echoes use that same
+timing. Hidden pool slots reset their complete pose, so seeking reconstructs
+even invisible geometry deterministically. See the
+[beat pulse verification](beat-pulse-verification.md) for the subsequent timing pass.
 Calm reduces brightness. Low reduces lasers, ribbon segments, particles, and
 wireframe/echo copies. Off hides the stage. Reduced flashes and OS reduced motion
 retain a stationary spectrum border and hide traveling effects.
