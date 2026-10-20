@@ -24,9 +24,13 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.4.3"
-      - run: bun install
+      - run: bun install --frozen-lockfile
+      - name: type checking
+        run: bun check
       - name: cheap tier
         run: bun test --path-ignore-patterns '**/*.gpu.test.ts'
+      - name: fixed physics integration
+        run: bun test ./tests/player.node.ts
 
   browser:
     runs-on: ${{ matrix.os }}
@@ -47,7 +51,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y mesa-vulkan-drivers
-      - run: bun install
+      - run: bun install --frozen-lockfile
       - name: Install Playwright Chromium
         run: bunx playwright install chromium
       - name: browser tier

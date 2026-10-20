@@ -1,0 +1,410 @@
+import {
+    Body, BodyType, Camera, component, GlobalTransform, MeshInstance, MeshMaterial,
+    Resolution, setLinearVelocity, Sound, StandardPhysicsPlugin, StepPhysicsSystem,
+    Transform, type Plugin, type Resource, type System, type World,
+} from "@dylanebert/shallot";
+import { AudioOutput, play, registerClip } from "@dylanebert/shallot/audio";
+import { Shape, ShapeKind } from "@dylanebert/shallot/physics";
+import { Arena } from "../arena";
+import { advanceCombat, createCombat, onCombatBeat, type CombatState } from "../combat";
+import { enemyVelocity } from "../enemies";
+import { PLANAR_LOCKS, PlayerState, resetPlayer, SnapshotPlayer } from "../player";
+import { MusicTransport, type ScheduledBeat } from "../rhythm/transport";
+import { beatAtPosition } from "../rhythm/timeline";
+import {
+    loadPreferences, resetPreferences, savePreferences, updateBest, validateSettings,
+    type Preferences, type Settings,
+} from "../settings";
+import { createPracticeTrack, DEMO_TRACK, TrackLoader, type LoadedTrack, type TrackManifest } from "../tracks";
+import { mountUI, type UIView } from "../ui";
+
+export type Phase = "menu" | "loading" | "playing" | "paused" | "results";
+export type Selection = { mode: "demo" } | { mode: "dojo"; bpm: number } | { mode: "local"; file: File; bpm: number; offset: number };
+export const SessionEntity = component("Beatshooter/SessionEntity", {});
+interface SessionData {
+    phase: Phase; selection: Selection; track: TrackManifest; loaded?: LoadedTrack;
+    transport?: MusicTransport; loader?: TrackLoader; preferences: Preferences;
+    combat: CombatState; enemyBodies: Map<number, number>; pending: ScheduledBeat[];
+    generation: number; loadToken: number; position: number; visualPosition: number;
+    completePending: boolean; loadingLostFocus: boolean; error?: string; pauseReason?: string; result?: "complete" | "defeat";
+    ui?: ReturnType<typeof mountUI>; diagnostics: boolean; shotClip: number; hitClip: number;
+    preview: boolean; previewLoading: boolean; previewLoaded?: LoadedTrack; previewUntil: number; fps: number;
+}
+export const Session: Resource<SessionData> = {
+    create: () => ({
+        phase: "menu", selection: { mode: "demo" }, track: DEMO_TRACK,
+        preferences: loadPreferences(), combat: createCombat(2026), enemyBodies: new Map(),
+        pending: [], generation: 0, loadToken: 0, position: 0, visualPosition: 0,
+        completePending: false, loadingLostFocus: false, diagnostics: false, shotClip: -1, hitClip: -1,
+        preview: false, previewLoading: false, previewUntil: 0, fps: 60,
+    }),
+};
+
+function stopEffects(world: World): void {
+    for (const eid of [...world.query([Sound])]) world.destroy(eid);
+}
+
+function clearSession(world: World): void {
+    const session = world.resource(Session);
+    session.transport?.stop();
+    session.pending.length = 0;
+    session.completePending = false;
+    session.enemyBodies.clear();
+    for (const eid of [...world.query([SessionEntity])]) world.destroy(eid);
+    stopEffects(world);
+    session.combat = createCombat(2026);
+    session.position = session.visualPosition = 0;
+    session.generation++;
+    resetPlayer(world);
+}
+
+function audio(world: World): { transport: MusicTransport; loader: TrackLoader; context: AudioContext } {
+    const session = world.resource(Session), output = world.resource(AudioOutput);
+    if (!output.context || !output.bus) {
+        throw new Error("Audio output is unavailable. Enable sound in your browser and reload this page.");
+    }
+    session.transport ??= new MusicTransport(output.context, output.bus);
+    session.loader ??= new TrackLoader(output.context);
+    applySettings(world);
+    return { transport: session.transport, loader: session.loader, context: output.context };
+}
+
+export function applySettings(world: World, patch?: Partial<Settings>): void {
+    const session = world.resource(Session);
+    if (patch) {
+        session.preferences.settings = validateSettings({ ...session.preferences.settings, ...patch });
+        savePreferences(session.preferences);
+    }
+    const settings = session.preferences.settings;
+    session.transport?.setVolumes({ master: settings.masterVolume, music: settings.musicVolume, effects: settings.effectsVolume });
+    session.transport?.setVisualOffset(settings.timingOffsetMs);
+    const camera = world.resource(Arena).camera;
+    if (camera >= 0) {
+        world.storage(Camera).antialias.set(camera, settings.graphics === "high" ? 1 : 0);
+        if (settings.graphics === "low") {
+            if (!world.has(camera, Resolution)) world.add(camera, Resolution, { height: 540 });
+        } else if (world.has(camera, Resolution)) world.remove(camera, Resolution);
+    }
+    renderUI(world);
+}
+
+export function stopPreview(world: World): void {
+    const session = world.resource(Session);
+    if (session.previewLoading) {
+        session.loadToken++;
+        session.loader?.cancel();
+        session.previewLoading = false;
+    }
+    if (!session.preview) return;
+    session.preview = false;
+    session.transport?.stop();
+    session.previewLoaded?.dispose();
+    session.previewLoaded = undefined;
+}
+
+export async function startSession(world: World, selection: Selection): Promise<void> {
+    const session = world.resource(Session);
+    stopPreview(world);
+    const token = ++session.loadToken;
+    clearSession(world);
+    session.loader?.cancel();
+    session.loaded?.dispose();
+    session.loaded = undefined;
+    session.selection = selection;
+    session.phase = "loading";
+    session.loadingLostFocus = false;
+    session.error = undefined;
+    session.result = undefined;
+    world.resource(PlayerState).enabled = false;
+    world.pause();
+    renderUI(world);
+    try {
+        const { transport, loader, context } = audio(world);
+        // Called before the first await, preserving the explicit button/key gesture.
+        await context.resume();
+        if (token !== session.loadToken) return;
+        const loaded = selection.mode === "demo" ? await loader.load(DEMO_TRACK)
+            : selection.mode === "local" ? await loader.loadLocal(selection.file, selection.bpm, selection.offset)
+            : undefined;
+        if (token !== session.loadToken) { loaded?.dispose(); return; }
+        session.loaded = loaded;
+        session.track = loaded?.manifest ?? createPracticeTrack(selection.mode === "dojo" ? selection.bpm : 120);
+        if (selection.mode === "local") {
+            session.preferences.lastLocal = { name: selection.file.name, bpm: selection.bpm, offset: selection.offset };
+            savePreferences(session.preferences);
+        }
+        await transport.start({ ...session.track, buffer: loaded?.buffer, metronome: selection.mode === "dojo" });
+        if (token !== session.loadToken) { transport.stop(); return; }
+        session.position = transport.position;
+        session.visualPosition = transport.visualPosition;
+        session.phase = "playing";
+        world.resource(PlayerState).enabled = true;
+        world.resume();
+        if (session.loadingLostFocus || document.hidden) pauseSession(world, "Window lost focus");
+    } catch (error) {
+        if (token !== session.loadToken) return;
+        session.transport?.stop();
+        session.loaded?.dispose();
+        session.loaded = undefined;
+        session.phase = "menu";
+        session.error = error instanceof Error ? error.message : "The track could not be loaded. Please choose it again.";
+    }
+    renderUI(world);
+}
+
+export function pauseSession(world: World, reason = "Paused by you"): void {
+    const session = world.resource(Session);
+    if (session.phase !== "playing") return;
+    session.transport?.pause(reason === "Window lost focus" ? "hidden" : "user");
+    session.phase = "paused";
+    session.pauseReason = reason;
+    session.pending.length = 0;
+    world.resource(PlayerState).enabled = false;
+    world.resource(PlayerState).keys.clear();
+    stopEffects(world);
+    world.pause();
+    renderUI(world);
+}
+
+export async function resumeSession(world: World): Promise<void> {
+    const session = world.resource(Session);
+    if (session.phase !== "paused") return;
+    const token = session.loadToken;
+    try {
+        const { context, transport } = audio(world);
+        await context.resume();
+        if (token !== session.loadToken || session.phase !== "paused") return;
+        await transport.resume();
+        if (token !== session.loadToken || session.phase !== "paused") return;
+        session.phase = "playing";
+        session.error = undefined;
+        world.resource(PlayerState).enabled = true;
+        world.resume();
+    } catch (error) {
+        if (token !== session.loadToken || session.phase !== "paused") return;
+        session.error = error instanceof Error ? error.message : "Allow audio, then try Resume again.";
+    }
+    renderUI(world);
+}
+
+export function quitSession(world: World): void {
+    const session = world.resource(Session);
+    session.loadToken++;
+    session.loader?.cancel();
+    stopPreview(world);
+    clearSession(world);
+    session.loaded?.dispose();
+    session.loaded = undefined;
+    session.selection = { mode: "demo" };
+    session.track = DEMO_TRACK;
+    session.phase = "menu";
+    session.error = undefined;
+    world.resource(PlayerState).enabled = false;
+    world.pause();
+    renderUI(world);
+}
+
+function finishSession(world: World, result: "complete" | "defeat"): void {
+    const session = world.resource(Session);
+    if (session.phase !== "playing") return;
+    session.transport?.stop();
+    session.pending.length = 0;
+    session.result = result;
+    session.phase = "results";
+    session.preferences = updateBest(session.preferences, session.track.id, session.combat.score);
+    savePreferences(session.preferences);
+    world.resource(PlayerState).enabled = false;
+    stopEffects(world);
+    world.pause();
+    renderUI(world);
+}
+
+async function previewLocal(world: World, file: File, bpm: number, offset: number): Promise<void> {
+    const session = world.resource(Session);
+    if (session.phase !== "menu") return;
+    stopPreview(world);
+    const token = ++session.loadToken;
+    session.previewLoading = true;
+    session.error = undefined;
+    try {
+        const { context, loader, transport } = audio(world);
+        await context.resume();
+        if (token !== session.loadToken) return;
+        const loaded = await loader.loadLocal(file, bpm, offset);
+        if (token !== session.loadToken) { loaded.dispose(); return; }
+        session.previewLoading = false;
+        session.previewLoaded = loaded;
+        session.preview = true;
+        await transport.start({ ...loaded.manifest, buffer: loaded.buffer, metronome: true, countInBeats: 0 });
+        session.previewUntil = Math.min(12, loaded.manifest.duration);
+    } catch (error) {
+        if (token !== session.loadToken) return;
+        session.previewLoading = false;
+        stopPreview(world);
+        session.error = error instanceof Error ? error.message : "Preview failed; please reselect the file.";
+    }
+    renderUI(world);
+}
+
+export function mountGameUI(container: HTMLElement, world: World): () => void {
+    const session = world.resource(Session);
+    session.ui = mountUI({
+        startDemo: () => void startSession(world, { mode: "demo" }),
+        startDojo: bpm => void startSession(world, { mode: "dojo", bpm }),
+        startLocal: (file, bpm, offset) => void startSession(world, { mode: "local", file, bpm, offset }),
+        previewLocal: (file, bpm, offset) => void previewLocal(world, file, bpm, offset),
+        stopPreview: () => { ++session.loadToken; session.loader?.cancel(); stopPreview(world); },
+        pause: () => pauseSession(world),
+        resume: () => void resumeSession(world),
+        retry: () => void startSession(world, session.selection),
+        quit: () => quitSession(world),
+        resetDojo: () => void startSession(world, session.selection),
+        updateSettings: patch => applySettings(world, patch),
+        resetSettings: () => { session.preferences = resetPreferences(); applySettings(world); },
+    }, container);
+    renderUI(world);
+    return () => { session.ui?.dispose(); session.ui = undefined; };
+}
+
+export function renderUI(world: World): void {
+    const s = world.resource(Session);
+    if (!s.ui) return;
+    const view: UIView = {
+        phase: s.phase, mode: s.selection.mode, settings: s.preferences.settings,
+        title: s.track.title, credit: s.track.artist, duration: s.track.duration, bpm: s.track.bpm,
+        score: s.combat.score, kills: s.combat.kills, health: s.combat.health,
+        maxHealth: s.combat.tuning.playerHealth, position: s.position,
+        beat: beatAtPosition(s.track.beats, s.visualPosition)?.index ?? -1,
+        bar: Math.max(0, s.combat.lastBarIndex), result: s.result,
+        bestScore: s.preferences.bestScores[s.track.id] ?? 0,
+        error: s.error, pauseReason: s.pauseReason,
+        previewing: s.preview || s.previewLoading, lastLocal: s.preferences.lastLocal,
+        demo: { title: DEMO_TRACK.title, credit: DEMO_TRACK.artist, bpm: DEMO_TRACK.bpm, duration: DEMO_TRACK.duration, bestScore: s.preferences.bestScores[DEMO_TRACK.id] ?? 0 },
+        diagnostics: s.diagnostics
+            ? `${Math.round(s.fps)} FPS · ${s.combat.enemies.length} enemies · ${s.combat.projectiles.length} shots · ${s.combat.effects.length} effects · tick ${world.time.fixedTick}`
+            : undefined,
+    };
+    s.ui.render(view);
+}
+
+export const ObserveMusic: System = {
+    name: "Beatshooter/ObserveMusic", group: "setup",
+    update(world) {
+        const s = world.resource(Session);
+        if (!s.transport || (s.phase !== "playing" && !s.preview)) return;
+        const observation = s.transport.observe();
+        if (s.preview) {
+            if (observation.completed || observation.pausedReason || observation.position >= s.previewUntil) stopPreview(world);
+            return;
+        }
+        if (observation.pausedReason) {
+            pauseSession(world, observation.pausedReason === "stall" ? "Playback paused after a long frame. Resume when ready." : "Audio was suspended. Resume to continue.");
+            return;
+        }
+        s.position = observation.position;
+        s.visualPosition = observation.visualPosition;
+        s.pending.push(...observation.beats);
+        s.completePending ||= observation.completed;
+    },
+};
+
+export const PrepareCombat: System = {
+    name: "Beatshooter/PrepareCombat", group: "fixed",
+    before: StandardPhysicsPlugin.systems?.filter(system => system.group === "fixed"),
+    update(world) {
+        const s = world.resource(Session), p = world.resource(PlayerState);
+        if (s.phase !== "playing") return;
+        for (const beat of s.pending.splice(0)) {
+            onCombatBeat(s.combat, { index: beat.index, barIndex: beat.bar, isDownbeat: beat.downbeat }, p.position, p.aim);
+            const settings = s.preferences.settings;
+            play(world, s.shotClip, { volume: settings.masterVolume * settings.effectsVolume * 0.35 });
+        }
+        for (const enemy of s.combat.enemies) {
+            let eid = s.enemyBodies.get(enemy.id);
+            const velocity = enemyVelocity(enemy, p.position, s.combat);
+            if (eid === undefined) {
+                eid = world.create();
+                s.enemyBodies.set(enemy.id, eid);
+                world.add(eid, SessionEntity);
+                world.add(eid, Transform, { translation: [enemy.x, 0.55, enemy.z], rotation: [0, Math.sin(Math.PI / 8), 0, Math.cos(Math.PI / 8)] });
+                world.add(eid, Body, { type: BodyType.Dynamic, motionLocks: PLANAR_LOCKS, enableSleep: 0, gravityScale: 0, linearVelocity: [velocity.x, 0, velocity.z] });
+                world.add(eid, Shape, { kind: ShapeKind.Sphere, radius: enemy.radius, friction: 0, filterCategoryLow: 2, filterMaskLow: 7, filterCategoryHigh: 0, filterMaskHigh: 0 });
+                world.add(eid, MeshInstance);
+                world.add(eid, MeshMaterial, world.resource(Arena).materials.enemy);
+            }
+            setLinearVelocity(world, eid, { x: velocity.x, y: 0, z: velocity.z });
+        }
+    },
+};
+
+export const ResolveCombat: System = {
+    name: "Beatshooter/ResolveCombat", group: "fixed", after: [StepPhysicsSystem, SnapshotPlayer],
+    update(world) {
+        const s = world.resource(Session);
+        if (s.phase !== "playing" || s.position < 0) return;
+        const positions = new Map<number, { x: number; z: number }>();
+        const pose = world.storage(GlobalTransform).translation;
+        for (const [id, eid] of s.enemyBodies) positions.set(id, { x: pose.x.get(eid), z: pose.z.get(eid) });
+        const result = advanceCombat(s.combat, world.time.deltaTime, world.resource(PlayerState).position, positions);
+        const live = new Set(s.combat.enemies.map(enemy => enemy.id));
+        for (const [id, eid] of s.enemyBodies) {
+            if (!live.has(id)) { world.destroy(eid); s.enemyBodies.delete(id); }
+        }
+        if (result.killedIds.length || result.playerDamaged) {
+            const settings = s.preferences.settings;
+            play(world, s.hitClip, { volume: settings.masterVolume * settings.effectsVolume * 0.5 });
+        }
+        if (result.defeated) finishSession(world, "defeat");
+        else if (s.completePending) finishSession(world, "complete");
+    },
+};
+
+export const SessionPlugin: Plugin = {
+    name: "Beatshooter/Session", deterministic: false, recovery: "stateless",
+    components: [SessionEntity],
+    initialize(world) {
+        const s = world.resource(Session);
+        const pcm = (frequency: number) => {
+            const data = new Float32Array(4800);
+            for (let i = 0; i < data.length; i++) data[i] = Math.sin(i / 48000 * Math.PI * 2 * frequency * (1 - i / data.length * 0.5)) * Math.exp(-i / 750) * 0.35;
+            return data;
+        };
+        s.shotClip = registerClip(world, pcm(800), 48000, "Original pulse shot");
+        s.hitClip = registerClip(world, pcm(180), 48000, "Original impact");
+        world.pause();
+        if (typeof window !== "undefined") {
+            const loseFocus = () => {
+                if (s.phase === "loading") s.loadingLostFocus = true;
+                pauseSession(world, "Window lost focus");
+                stopPreview(world);
+            };
+            window.addEventListener("blur", loseFocus, { signal: world.signal });
+            document.addEventListener("visibilitychange", () => {
+                if (document.hidden) loseFocus();
+            }, { signal: world.signal });
+            window.addEventListener("keydown", event => {
+                if ((event.target as HTMLElement)?.matches("input,select,textarea") || event.repeat) return;
+                if (event.code === "Escape") {
+                    if (s.phase === "playing") pauseSession(world);
+                    else if (s.phase === "paused") void resumeSession(world);
+                } else if (event.code === "KeyR" && s.selection.mode === "dojo" && (s.phase === "playing" || s.phase === "paused")) {
+                    void startSession(world, s.selection);
+                } else if (event.code === "F3") { event.preventDefault(); s.diagnostics = !s.diagnostics; renderUI(world); }
+            }, { signal: world.signal });
+        }
+        world.onDispose(() => {
+            s.loadToken++;
+            s.transport?.dispose();
+            s.loader?.dispose();
+            s.ui?.dispose();
+        });
+    },
+    systems: [ObserveMusic, PrepareCombat, ResolveCombat, {
+        name: "Beatshooter/HUD", group: "simulation",
+        update(world) {
+            const s = world.resource(Session);
+            if (world.time.rawDeltaTime > 0) s.fps += (1 / world.time.rawDeltaTime - s.fps) * 0.04;
+            renderUI(world);
+        },
+    }],
+};

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="Neon Circuit: mint triangular ship inside concentric orange circuits">
+  <rect width="400" height="400" fill="#0b1019"/>
+  <g fill="none" stroke="#243445">
+    <path d="M0 80h400M0 160h400M0 240h400M0 320h400M80 0v400M160 0v400M240 0v400M320 0v400"/>
+  </g>
+  <g fill="none" stroke="#ff8066" stroke-width="3">
+    <circle cx="200" cy="184" r="132" opacity=".25"/>
+    <path d="M200 52a132 132 0 0 1 132 132M200 316A132 132 0 0 1 68 184"/>
+    <circle cx="200" cy="184" r="93" opacity=".55"/>
+  </g>
+  <path d="m200 105 53 122-53-25-53 25Z" fill="#a4f6d6"/>
+  <path d="m200 218 0 34" stroke="#a4f6d6" stroke-width="4"/>
+  <text x="200" y="355" text-anchor="middle" fill="#eef8f6" font-family="monospace" font-size="24" letter-spacing="4">NEON CIRCUIT</text>
+</svg>

@@ -12,5 +12,7 @@ only. Do not copy its application code, dependencies, credentials, or assets.
 
 Use Bun 1.4.3 or newer and the pinned engine version in `package.json`.
 Keep new plugins in `src/<plugin>/index.ts` and follow the installed
-`bunx shallot --skill` workflow. The welcome scene is the current baseline;
-planned gameplay is not implemented yet.
+`bunx shallot --skill` workflow. The playable M0–M6 implementation is the current
+baseline; the unused welcome scene remains an upstream regression fixture.
+See `docs/release-smoke.md` for acceptance evidence and remaining human audio
+latency sign-off. Deployment is outside this implementation's scope.

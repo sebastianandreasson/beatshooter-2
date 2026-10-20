@@ -1,0 +1,1024 @@
+{
+  "schemaVersion": 1,
+  "id": "neon-circuit",
+  "title": "Neon Circuit",
+  "artist": "Beatshooter 2 \u00b7 original synthesis",
+  "audioUrl": "./tracks/neon-circuit.wav",
+  "artwork": "./tracks/neon-circuit.svg",
+  "duration": 72,
+  "bpm": 120,
+  "firstBeatOffset": 0,
+  "beatsPerBar": 4,
+  "source": "Original deterministic synthesizer composed for Beatshooter 2; source: src/tracks/generate-demo.py",
+  "license": "CC0-1.0",
+  "beats": [
+    {
+      "time": 0.0,
+      "index": 0,
+      "bar": 0,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 0.5,
+      "index": 1,
+      "bar": 0,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 1.0,
+      "index": 2,
+      "bar": 0,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 1.5,
+      "index": 3,
+      "bar": 0,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 2.0,
+      "index": 4,
+      "bar": 1,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 2.5,
+      "index": 5,
+      "bar": 1,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 3.0,
+      "index": 6,
+      "bar": 1,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 3.5,
+      "index": 7,
+      "bar": 1,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 4.0,
+      "index": 8,
+      "bar": 2,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 4.5,
+      "index": 9,
+      "bar": 2,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 5.0,
+      "index": 10,
+      "bar": 2,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 5.5,
+      "index": 11,
+      "bar": 2,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 6.0,
+      "index": 12,
+      "bar": 3,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 6.5,
+      "index": 13,
+      "bar": 3,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 7.0,
+      "index": 14,
+      "bar": 3,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 7.5,
+      "index": 15,
+      "bar": 3,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 8.0,
+      "index": 16,
+      "bar": 4,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 8.5,
+      "index": 17,
+      "bar": 4,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 9.0,
+      "index": 18,
+      "bar": 4,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 9.5,
+      "index": 19,
+      "bar": 4,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 10.0,
+      "index": 20,
+      "bar": 5,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 10.5,
+      "index": 21,
+      "bar": 5,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 11.0,
+      "index": 22,
+      "bar": 5,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 11.5,
+      "index": 23,
+      "bar": 5,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 12.0,
+      "index": 24,
+      "bar": 6,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 12.5,
+      "index": 25,
+      "bar": 6,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 13.0,
+      "index": 26,
+      "bar": 6,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 13.5,
+      "index": 27,
+      "bar": 6,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 14.0,
+      "index": 28,
+      "bar": 7,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 14.5,
+      "index": 29,
+      "bar": 7,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 15.0,
+      "index": 30,
+      "bar": 7,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 15.5,
+      "index": 31,
+      "bar": 7,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 16.0,
+      "index": 32,
+      "bar": 8,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 16.5,
+      "index": 33,
+      "bar": 8,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 17.0,
+      "index": 34,
+      "bar": 8,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 17.5,
+      "index": 35,
+      "bar": 8,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 18.0,
+      "index": 36,
+      "bar": 9,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 18.5,
+      "index": 37,
+      "bar": 9,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 19.0,
+      "index": 38,
+      "bar": 9,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 19.5,
+      "index": 39,
+      "bar": 9,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 20.0,
+      "index": 40,
+      "bar": 10,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 20.5,
+      "index": 41,
+      "bar": 10,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 21.0,
+      "index": 42,
+      "bar": 10,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 21.5,
+      "index": 43,
+      "bar": 10,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 22.0,
+      "index": 44,
+      "bar": 11,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 22.5,
+      "index": 45,
+      "bar": 11,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 23.0,
+      "index": 46,
+      "bar": 11,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 23.5,
+      "index": 47,
+      "bar": 11,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 24.0,
+      "index": 48,
+      "bar": 12,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 24.5,
+      "index": 49,
+      "bar": 12,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 25.0,
+      "index": 50,
+      "bar": 12,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 25.5,
+      "index": 51,
+      "bar": 12,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 26.0,
+      "index": 52,
+      "bar": 13,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 26.5,
+      "index": 53,
+      "bar": 13,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 27.0,
+      "index": 54,
+      "bar": 13,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 27.5,
+      "index": 55,
+      "bar": 13,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 28.0,
+      "index": 56,
+      "bar": 14,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 28.5,
+      "index": 57,
+      "bar": 14,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 29.0,
+      "index": 58,
+      "bar": 14,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 29.5,
+      "index": 59,
+      "bar": 14,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 30.0,
+      "index": 60,
+      "bar": 15,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 30.5,
+      "index": 61,
+      "bar": 15,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 31.0,
+      "index": 62,
+      "bar": 15,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 31.5,
+      "index": 63,
+      "bar": 15,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 32.0,
+      "index": 64,
+      "bar": 16,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 32.5,
+      "index": 65,
+      "bar": 16,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 33.0,
+      "index": 66,
+      "bar": 16,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 33.5,
+      "index": 67,
+      "bar": 16,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 34.0,
+      "index": 68,
+      "bar": 17,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 34.5,
+      "index": 69,
+      "bar": 17,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 35.0,
+      "index": 70,
+      "bar": 17,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 35.5,
+      "index": 71,
+      "bar": 17,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 36.0,
+      "index": 72,
+      "bar": 18,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 36.5,
+      "index": 73,
+      "bar": 18,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 37.0,
+      "index": 74,
+      "bar": 18,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 37.5,
+      "index": 75,
+      "bar": 18,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 38.0,
+      "index": 76,
+      "bar": 19,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 38.5,
+      "index": 77,
+      "bar": 19,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 39.0,
+      "index": 78,
+      "bar": 19,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 39.5,
+      "index": 79,
+      "bar": 19,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 40.0,
+      "index": 80,
+      "bar": 20,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 40.5,
+      "index": 81,
+      "bar": 20,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 41.0,
+      "index": 82,
+      "bar": 20,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 41.5,
+      "index": 83,
+      "bar": 20,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 42.0,
+      "index": 84,
+      "bar": 21,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 42.5,
+      "index": 85,
+      "bar": 21,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 43.0,
+      "index": 86,
+      "bar": 21,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 43.5,
+      "index": 87,
+      "bar": 21,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 44.0,
+      "index": 88,
+      "bar": 22,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 44.5,
+      "index": 89,
+      "bar": 22,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 45.0,
+      "index": 90,
+      "bar": 22,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 45.5,
+      "index": 91,
+      "bar": 22,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 46.0,
+      "index": 92,
+      "bar": 23,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 46.5,
+      "index": 93,
+      "bar": 23,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 47.0,
+      "index": 94,
+      "bar": 23,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 47.5,
+      "index": 95,
+      "bar": 23,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 48.0,
+      "index": 96,
+      "bar": 24,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 48.5,
+      "index": 97,
+      "bar": 24,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 49.0,
+      "index": 98,
+      "bar": 24,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 49.5,
+      "index": 99,
+      "bar": 24,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 50.0,
+      "index": 100,
+      "bar": 25,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 50.5,
+      "index": 101,
+      "bar": 25,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 51.0,
+      "index": 102,
+      "bar": 25,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 51.5,
+      "index": 103,
+      "bar": 25,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 52.0,
+      "index": 104,
+      "bar": 26,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 52.5,
+      "index": 105,
+      "bar": 26,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 53.0,
+      "index": 106,
+      "bar": 26,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 53.5,
+      "index": 107,
+      "bar": 26,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 54.0,
+      "index": 108,
+      "bar": 27,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 54.5,
+      "index": 109,
+      "bar": 27,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 55.0,
+      "index": 110,
+      "bar": 27,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 55.5,
+      "index": 111,
+      "bar": 27,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 56.0,
+      "index": 112,
+      "bar": 28,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 56.5,
+      "index": 113,
+      "bar": 28,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 57.0,
+      "index": 114,
+      "bar": 28,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 57.5,
+      "index": 115,
+      "bar": 28,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 58.0,
+      "index": 116,
+      "bar": 29,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 58.5,
+      "index": 117,
+      "bar": 29,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 59.0,
+      "index": 118,
+      "bar": 29,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 59.5,
+      "index": 119,
+      "bar": 29,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 60.0,
+      "index": 120,
+      "bar": 30,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 60.5,
+      "index": 121,
+      "bar": 30,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 61.0,
+      "index": 122,
+      "bar": 30,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 61.5,
+      "index": 123,
+      "bar": 30,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 62.0,
+      "index": 124,
+      "bar": 31,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 62.5,
+      "index": 125,
+      "bar": 31,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 63.0,
+      "index": 126,
+      "bar": 31,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 63.5,
+      "index": 127,
+      "bar": 31,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 64.0,
+      "index": 128,
+      "bar": 32,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 64.5,
+      "index": 129,
+      "bar": 32,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 65.0,
+      "index": 130,
+      "bar": 32,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 65.5,
+      "index": 131,
+      "bar": 32,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 66.0,
+      "index": 132,
+      "bar": 33,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 66.5,
+      "index": 133,
+      "bar": 33,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 67.0,
+      "index": 134,
+      "bar": 33,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 67.5,
+      "index": 135,
+      "bar": 33,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 68.0,
+      "index": 136,
+      "bar": 34,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 68.5,
+      "index": 137,
+      "bar": 34,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 69.0,
+      "index": 138,
+      "bar": 34,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 69.5,
+      "index": 139,
+      "bar": 34,
+      "beatInBar": 3,
+      "downbeat": false
+    },
+    {
+      "time": 70.0,
+      "index": 140,
+      "bar": 35,
+      "beatInBar": 0,
+      "downbeat": true
+    },
+    {
+      "time": 70.5,
+      "index": 141,
+      "bar": 35,
+      "beatInBar": 1,
+      "downbeat": false
+    },
+    {
+      "time": 71.0,
+      "index": 142,
+      "bar": 35,
+      "beatInBar": 2,
+      "downbeat": false
+    },
+    {
+      "time": 71.5,
+      "index": 143,
+      "bar": 35,
+      "beatInBar": 3,
+      "downbeat": false
+    }
+  ]
+}

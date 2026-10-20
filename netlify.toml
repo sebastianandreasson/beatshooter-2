@@ -1,0 +1,9 @@
+# Optional static-host configuration. This file does not deploy the project.
+[build]
+  command = "bun install --frozen-lockfile && bun run build"
+  publish = "dist"
+
+[build.environment]
+  BUN_VERSION = "1.4.3"
+
+# Vite copies public/_headers to dist/_headers, where the host reads it.

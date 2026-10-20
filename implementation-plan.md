@@ -1,7 +1,36 @@
 # Beatshooter 2 implementation plan
 
-Status: **foundation complete; gameplay implementation not started**.
+Status: **M0–M6 implemented and automated acceptance passed. Human audio-latency sign-off remains.**
 Prepared 2026-10-20 against `@dylanebert/shallot@0.10.0`.
+
+## Implementation record — 2026-10-20
+
+The original brief and acceptance criteria below are retained for traceability.
+They describe the scope that has now been implemented, rather than unstarted
+work. No code, dependencies, credentials, or assets were imported from the old
+Beatshooter application.
+
+| Milestone | Implementation | Verification |
+| --- | --- | --- |
+| M0 | Pinned engine/Bun, starter error handling, lockfile and expanded CI retained | Original startup tests and welcome baseline retained |
+| M1 | `arena`, `player`: planar physics, acceleration/damping, walls, camera follow, projected pointer reticle, reset, optional diagnostics | Pure movement tests, real Shallot solver test, browser movement/reset/resize projection |
+| M2 | `rhythm`, `tracks`: clock-derived transport, count-in, authored timeline, pause/resume/seek/restart/end, generated metronome, original 72-second demo, gains and visual calibration | Fake-clock lifecycle/drift tests; real Chromium AudioContext/analyser and shipped audio decode tests. Human output-device latency check remains pending |
+| M3 | `combat`, `enemies`: beat fire, seeded safe spawns, capped pressure, swept nearest eligible hits, crits/knockback/expiry, contact damage and invulnerability | Deterministic combat tests including tunneling/filtering/one-hit, live browser combat and defeat |
+| M4 | `session`, `ui`: health/score/kills/progress, pause, results, retry/menu, adjustable dojo, complete ownership cleanup | Ten consecutive browser retries, frozen pause/focus behavior, local-track completion, demo defeat and full 72-second demo win (6,088 points / 58 kills / 55 health) |
+| M5 | Track cards, local import and metronome preview, cancellation/error recovery, validated versioned settings/bests/local metadata | Browser decode/invalid-input/missing-file/cancellation/supersession, reload/corruption/reset; local files remain session-only |
+| M6 | Graphite/mint/coral style, distinct ship/enemies, hit flashes/damage numbers, reduced effects/low graphics, original assets, static-host headers and release documentation | 26 browser acceptance checks, 52 unit tests, real-physics integration, type check and build pass. Full renderer/physics stress meets 200-enemy/500-projectile target at 60 FPS on M1 Max; desktop/mobile visual and DPR 2 checks pass |
+
+Score rules are **100 per kill + 2 per survived beat**. Normal play caps enemies
+at 100, projectiles at 500, and feedback at 100. Practice's generated timeline
+lasts six hours and can be reset. Visual timing offsets only move the displayed
+beat: positive milliseconds advance it, negative values delay it; they do not
+change audio or combat timing.
+
+See [README.md](README.md) for controls/setup and
+[docs/release-smoke.md](docs/release-smoke.md) for measured results and the
+remaining human listening sign-off. Automated audio signal/scheduling checks
+cannot establish perceived speaker/headphone latency. Deployment remains a
+separate task, as specified in M6.
 
 ## 1. Remake brief
 

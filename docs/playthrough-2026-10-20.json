@@ -1,0 +1,160 @@
+{
+  "recordedAt": "2026-10-20T09:46:45.237578+00:00",
+  "test": "tests/demo-playthrough.e2e.ts: the full 72-second demo can be won through normal movement and aiming",
+  "environment": {
+    "browser": "Chromium 156.0.8078.4",
+    "os": "macOS Darwin 24.6.0 arm64",
+    "cpu": "Apple M1 Max",
+    "memoryGiB": 64,
+    "bun": "1.4.3",
+    "engine": "@dylanebert/shallot 0.10.0",
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    },
+    "devicePixelRatio": 1
+  },
+  "controller": {
+    "input": "Real browser keyboard and pointer events only",
+    "inspection": "Read-only player/enemy positions and viewport projection",
+    "route": [
+      {
+        "x": 8,
+        "z": 0
+      },
+      {
+        "x": 8,
+        "z": 8
+      },
+      {
+        "x": -8,
+        "z": 8
+      },
+      {
+        "x": -8,
+        "z": -8
+      },
+      {
+        "x": 8,
+        "z": -8
+      }
+    ],
+    "nominalUpdateMilliseconds": 100
+  },
+  "result": {
+    "track": "neon-circuit",
+    "outcome": "complete",
+    "trackPositionSeconds": 72,
+    "score": 6088,
+    "kills": 58,
+    "health": 55,
+    "pendingBeatCommands": 0,
+    "activeSoundEntities": 0,
+    "unexpectedPageErrors": 0,
+    "returnToMenuOwnedEntities": 0
+  },
+  "checkpoints": [
+    {
+      "position": 0.06140589569161037,
+      "health": 100,
+      "score": 2,
+      "kills": 0,
+      "time": 0.06666666666666667,
+      "enemies": 1,
+      "projectiles": 1,
+      "effects": 0,
+      "player": {
+        "x": 8.266663551330566,
+        "z": 8.018893241882324
+      }
+    },
+    {
+      "position": 12.042902494331067,
+      "health": 100,
+      "score": 650,
+      "kills": 6,
+      "time": 12.050000000000178,
+      "enemies": 1,
+      "projectiles": 2,
+      "effects": 0,
+      "player": {
+        "x": -7.98659610748291,
+        "z": -5.472153186798096
+      }
+    },
+    {
+      "position": 24.041814058956916,
+      "health": 100,
+      "score": 1298,
+      "kills": 12,
+      "time": 24.049999999999915,
+      "enemies": 2,
+      "projectiles": 1,
+      "effects": 0,
+      "player": {
+        "x": 7.999998569488525,
+        "z": 3.3388304710388184
+      }
+    },
+    {
+      "position": 36.040725623582766,
+      "health": 100,
+      "score": 2446,
+      "kills": 23,
+      "time": 36.04999999999924,
+      "enemies": 3,
+      "projectiles": 1,
+      "effects": 1,
+      "player": {
+        "x": -7.775160789489746,
+        "z": -1.0989608764648438
+      }
+    },
+    {
+      "position": 48.10929705215419,
+      "health": 100,
+      "score": 3694,
+      "kills": 35,
+      "time": 48.11666666666522,
+      "enemies": 4,
+      "projectiles": 1,
+      "effects": 2,
+      "player": {
+        "x": 7.958176612854004,
+        "z": -1.3546314239501953
+      }
+    },
+    {
+      "position": 60.0269387755102,
+      "health": 100,
+      "score": 4942,
+      "kills": 47,
+      "time": 60.03333333333121,
+      "enemies": 10,
+      "projectiles": 1,
+      "effects": 1,
+      "player": {
+        "x": -8.181771278381348,
+        "z": 4.867447853088379
+      }
+    },
+    {
+      "position": 72,
+      "health": 55,
+      "score": 6088,
+      "kills": 58,
+      "time": 72.01666666666387,
+      "enemies": 14,
+      "projectiles": 0,
+      "effects": 1,
+      "player": {
+        "x": 3.683469295501709,
+        "z": -8.047283172607422
+      }
+    }
+  ],
+  "limitations": [
+    "Automated real-time gameplay and audio scheduling; no claim of human listening or perceived device latency.",
+    "This run measures completion behavior, not renderer frame performance."
+  ]
+}

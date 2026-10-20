@@ -4,6 +4,9 @@ import type { PlaywrightTestConfig } from "playwright/test";
 export const config = {
     testDir: ".",
     ...BROWSER_CONFIG,
+    // Audio clocks and GPU frame pacing are witnesses; competing browser workers
+    // would measure host contention instead of an individual game session.
+    workers: 1,
     use: {
         ...BROWSER_CONFIG.use,
         baseURL: "http://127.0.0.1:4175",
