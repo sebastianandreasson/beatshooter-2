@@ -118,6 +118,7 @@ test("analysis transfers separate mono PCM and terminates its worker after compl
     expect(worker.request?.pcm.length).toBe(22_050);
     expect(worker.transfers).toEqual([worker.request!.pcm.buffer]);
     expect(worker.request?.modelUrl).toBe("http://localhost:4174/models/beat-this.onnx");
+    expect(worker.request?.sectionModelUrl).toBe("http://localhost:4174/models/linkseg-7c.onnx");
     worker.receive({ type: "result", result: {
         schemaVersion: 1, analyzerVersion: "fixture", duration: 1,
         beats: [0.2, 0.7], downbeats: [0.2], elapsedMs: 1, backend: "webgpu",

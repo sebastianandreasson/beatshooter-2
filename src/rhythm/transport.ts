@@ -1,7 +1,7 @@
 import { BeatCursor, type Beat, validateTempo, validateTimeline } from "./timeline";
 
 export type TransportState = "stopped" | "playing" | "paused" | "completed";
-export type PauseReason = "user" | "hidden" | "suspended" | "stall";
+export type PauseReason = "user" | "hidden" | "suspended" | "stall" | "upgrade";
 
 export interface TransportTrack {
     duration: number;
@@ -25,6 +25,8 @@ export interface TransportObservation {
     /** True on exactly one observation per completed playthrough. */
     completed: boolean;
     pausedReason?: PauseReason;
+    /** One observation only: the slowdown reached its exact musical boundary. */
+    slowedToPause?: boolean;
 }
 
 export interface Volumes {
@@ -35,7 +37,15 @@ export interface Volumes {
 
 const LEAD_IN = 0.04;
 const LOOK_AHEAD = 0.18;
+const SLOWDOWN_FINAL_RATE = 0.12;
 export const STALL_THRESHOLD_SECONDS = 0.5;
+
+interface Slowdown {
+    startContextTime: number;
+    startPosition: number;
+    targetPosition: number;
+    duration: number;
+}
 
 /**
  * Music clock over the public Shallot AudioOutput context/bus. This class owns
@@ -47,10 +57,12 @@ export class MusicTransport {
     readonly masterGain: GainNode;
     readonly musicGain: GainNode;
     readonly effectsGain: GainNode;
+    /** Transition envelope is independent of the user's music-volume setting. */
+    readonly transitionGain: GainNode;
     private track: TransportTrack | null = null;
     private cursor = new BeatCursor([]);
     private source: AudioBufferSourceNode | null = null;
-    private clicks = new Map<OscillatorNode, GainNode>();
+    private clicks = new Map<OscillatorNode, { gain: GainNode; time: number }>();
     private anchorContextTime = 0;
     private anchorPosition = 0;
     private heldPosition = 0;
@@ -63,6 +75,7 @@ export class MusicTransport {
     private disposed = false;
     private currentState: TransportState = "stopped";
     private reason: PauseReason | undefined;
+    private slowdown: Slowdown | null = null;
 
     constructor(
         context: AudioContext,
@@ -72,8 +85,10 @@ export class MusicTransport {
         this.masterGain = context.createGain();
         this.musicGain = context.createGain();
         this.effectsGain = context.createGain();
+        this.transitionGain = context.createGain();
         this.masterGain.connect(destination);
-        this.musicGain.connect(this.masterGain);
+        this.musicGain.connect(this.transitionGain);
+        this.transitionGain.connect(this.masterGain);
         this.effectsGain.connect(this.masterGain);
     }
 
@@ -83,9 +98,90 @@ export class MusicTransport {
 
     get position(): number {
         if (this.currentState !== "playing") return this.heldPosition;
+        return this.positionAtContextTime(this.context.currentTime);
+    }
+
+    /** Instantaneous music speed, also used to drive the game's time scale. */
+    get playbackRate(): number {
+        if (this.currentState !== "playing") return 0;
+        if (!this.slowdown) return 1;
+        const elapsed = Math.max(0, this.context.currentTime - this.slowdown.startContextTime);
+        if (this.context.currentTime >= this.slowdown.startContextTime + this.slowdown.duration) return 0;
+        return 1 - (1 - SLOWDOWN_FINAL_RATE) * elapsed / this.slowdown.duration;
+    }
+
+    get slowing(): boolean {
+        return this.currentState === "playing" && this.slowdown !== null;
+    }
+
+    get slowdownTarget(): number | undefined {
+        return this.slowdown?.targetPosition;
+    }
+
+    /** Musical-distance progress, so card movement follows the slowing track. */
+    get slowdownProgress(): number {
+        if (!this.slowdown) return 0;
+        return Math.max(0, Math.min(1,
+            (this.position - this.slowdown.startPosition) /
+            (this.slowdown.targetPosition - this.slowdown.startPosition),
+        ));
+    }
+
+    /**
+     * Slow to a future authored boundary, then pause there. Linear playback-rate
+     * automation has a quadratic playhead; use that same integral for gameplay,
+     * visuals and metronome scheduling rather than a frame-delta approximation.
+     */
+    beginSlowdown(stopPosition: number): boolean {
+        this.assertUsable();
+        const startPosition = this.position;
+        if (!this.track || this.currentState !== "playing" || this.slowdown ||
+            this.context.state !== "running" || startPosition < 0 ||
+            this.context.currentTime < this.anchorContextTime ||
+            !Number.isFinite(stopPosition) || stopPosition <= startPosition + 1e-6 ||
+            stopPosition > this.track.duration) return false;
+        const now = this.context.currentTime;
+        const duration = 2 * (stopPosition - startPosition) / (1 + SLOWDOWN_FINAL_RATE);
+        this.slowdown = {
+            startContextTime: now,
+            startPosition,
+            targetPosition: stopPosition,
+            duration,
+        };
+        const end = now + duration;
+        if (this.source) {
+            this.source.playbackRate.cancelScheduledValues(now);
+            this.source.playbackRate.setValueAtTime(1, now);
+            this.source.playbackRate.linearRampToValueAtTime(SLOWDOWN_FINAL_RATE, end);
+            this.source.stop(end);
+        }
+        this.transitionGain.gain.cancelScheduledValues(now);
+        this.transitionGain.gain.setValueAtTime(1, now);
+        this.transitionGain.gain.setValueAtTime(1, now + duration * 0.75);
+        this.transitionGain.gain.linearRampToValueAtTime(0, end);
+        // Replace only future clicks. Already audible click tails can finish;
+        // the cursor starts strictly after this position to avoid duplicates.
+        this.cancelFutureClicks(now);
+        this.timelineClickCursor = this.track.beats.findIndex(
+            (beat) => beat.time > startPosition + 1e-8,
+        );
+        if (this.timelineClickCursor < 0) this.timelineClickCursor = this.track.beats.length;
+        this.scheduleClicks();
+        return true;
+    }
+
+    private positionAtContextTime(time: number): number {
+        if (this.slowdown && time >= this.slowdown.startContextTime) {
+            if (time >= this.slowdown.startContextTime + this.slowdown.duration) {
+                return this.slowdown.targetPosition;
+            }
+            const elapsed = Math.min(this.slowdown.duration, time - this.slowdown.startContextTime);
+            return this.slowdown.startPosition + elapsed -
+                (1 - SLOWDOWN_FINAL_RATE) * elapsed * elapsed / (2 * this.slowdown.duration);
+        }
         return Math.min(
             this.track?.duration ?? 0,
-            this.anchorPosition + Math.max(0, this.context.currentTime - this.anchorContextTime),
+            this.anchorPosition + Math.max(0, time - this.anchorContextTime),
         );
     }
 
@@ -151,7 +247,8 @@ export class MusicTransport {
         this.reason = reason;
     }
 
-    async resume(): Promise<void> {
+    /** Immediate resumes keep upgrade selection and fixed gameplay on one clock. */
+    async resume(options: { immediate?: boolean } = {}): Promise<void> {
         this.assertUsable();
         if (this.currentState !== "paused" || !this.track) return;
         const pendingTrack = this.track;
@@ -166,7 +263,7 @@ export class MusicTransport {
         if (this.context.state !== "running") {
             throw new Error("Audio could not start. Allow sound, then press Resume again.");
         }
-        this.schedule(this.heldPosition);
+        this.schedule(this.heldPosition, options.immediate ? 0 : LEAD_IN);
     }
 
     seek(position: number): void {
@@ -213,21 +310,29 @@ export class MusicTransport {
             ? [] : this.cursor.cross(position);
         const beats = crossed.map((beat) => ({
             ...beat,
-            scheduledTime: this.anchorContextTime + beat.time - this.anchorPosition,
+            scheduledTime: this.contextTimeAtPosition(beat.time),
         }));
         let completed = false;
+        let slowedToPause = false;
         if (position >= this.track.duration && !this.completionDelivered) {
             this.completionDelivered = true;
             completed = true;
             this.heldPosition = this.track.duration;
             this.stopNodes();
             this.currentState = "completed";
+        } else if (this.slowdown && position >= this.slowdown.targetPosition) {
+            this.heldPosition = this.slowdown.targetPosition;
+            this.stopNodes(true);
+            this.currentState = "paused";
+            this.reason = "upgrade";
+            slowedToPause = true;
         }
         return {
             position,
             visualPosition: position + this.visualOffset,
             beats,
             completed,
+            ...(slowedToPause ? { pausedReason: this.reason, slowedToPause } : {}),
         };
     }
 
@@ -254,13 +359,15 @@ export class MusicTransport {
         this.track = null;
         this.masterGain.disconnect();
         this.musicGain.disconnect();
+        this.transitionGain.disconnect();
         this.effectsGain.disconnect();
         this.disposed = true;
     }
 
-    private schedule(position: number): void {
+    private schedule(position: number, leadIn = LEAD_IN): void {
         if (!this.track) return;
-        this.anchorContextTime = this.context.currentTime + LEAD_IN;
+        this.resetSlowdown();
+        this.anchorContextTime = this.context.currentTime + leadIn;
         this.anchorPosition = position;
         this.heldPosition = position;
         this.lastObservationTime = this.context.currentTime;
@@ -292,10 +399,10 @@ export class MusicTransport {
     private scheduleClicks(): void {
         if (!this.track) return;
         const interval = 60 / this.track.bpm;
-        const horizon = this.position + LOOK_AHEAD;
+        const horizon = this.positionAtContextTime(this.context.currentTime + LOOK_AHEAD);
         while (this.clickCursor < 0 && this.clickCursor * interval <= horizon) {
             const clickTime = this.clickCursor * interval;
-            const scheduled = this.anchorContextTime + clickTime - this.anchorPosition;
+            const scheduled = this.contextTimeAtPosition(clickTime);
             // Never turn delayed metronome clicks into an audible burst.
             if (scheduled >= this.context.currentTime - 0.01) {
                 this.click(scheduled, this.clickCursor % (this.track.beatsPerBar ?? 4) === 0);
@@ -306,9 +413,23 @@ export class MusicTransport {
         while (this.timelineClickCursor < this.track.beats.length &&
             this.track.beats[this.timelineClickCursor]!.time <= horizon) {
             const beat = this.track.beats[this.timelineClickCursor++]!;
-            const scheduled = this.anchorContextTime + beat.time - this.anchorPosition;
+            const scheduled = this.contextTimeAtPosition(beat.time);
             if (scheduled >= this.context.currentTime - 0.01) this.click(scheduled, beat.downbeat);
         }
+    }
+
+    private contextTimeAtPosition(position: number): number {
+        if (!this.slowdown || position <= this.slowdown.startPosition) {
+            return this.anchorContextTime + position - this.anchorPosition;
+        }
+        const delta = Math.min(
+            position - this.slowdown.startPosition,
+            this.slowdown.targetPosition - this.slowdown.startPosition,
+        );
+        const deceleration = (1 - SLOWDOWN_FINAL_RATE) / this.slowdown.duration;
+        // Stable quadratic inverse: avoids cancellation for a nearby beat.
+        const elapsed = 2 * delta / (1 + Math.sqrt(Math.max(0, 1 - 2 * deceleration * delta)));
+        return this.slowdown.startContextTime + elapsed;
     }
 
     private click(time: number, downbeat: boolean): void {
@@ -321,7 +442,7 @@ export class MusicTransport {
         gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.055);
         oscillator.connect(gain);
         gain.connect(this.effectsGain);
-        this.clicks.set(oscillator, gain);
+        this.clicks.set(oscillator, { gain, time });
         oscillator.onended = () => {
             oscillator.disconnect();
             gain.disconnect();
@@ -331,18 +452,35 @@ export class MusicTransport {
         oscillator.stop(time + 0.06);
     }
 
-    private stopNodes(): void {
+    private cancelFutureClicks(now: number): void {
+        for (const [oscillator, { gain, time }] of this.clicks) {
+            if (time <= now + 1e-8) continue;
+            try { oscillator.stop(); } catch { /* Already ended. */ }
+            oscillator.disconnect();
+            gain.disconnect();
+            this.clicks.delete(oscillator);
+        }
+    }
+
+    private resetSlowdown(): void {
+        this.slowdown = null;
+        this.transitionGain.gain.cancelScheduledValues(this.context.currentTime);
+        this.transitionGain.gain.setValueAtTime(1, this.context.currentTime);
+    }
+
+    private stopNodes(preserveSlowdown = false): void {
         if (this.source) {
             try { this.source.stop(); } catch { /* Already ended. */ }
             this.source.disconnect();
             this.source = null;
         }
-        for (const [oscillator, gain] of this.clicks) {
+        for (const [oscillator, { gain }] of this.clicks) {
             try { oscillator.stop(); } catch { /* Already ended. */ }
             oscillator.disconnect();
             gain.disconnect();
         }
         this.clicks.clear();
+        if (!preserveSlowdown) this.resetSlowdown();
     }
 
     private assertUsable(): void {

@@ -1,7 +1,7 @@
 /**
  * Explicit rendering/physics benchmark; not discovered as a unit/browser test.
  * Serve an existing production build first; this script never rebuilds it.
- * Run: bun tests/browser-stress.ts [http://127.0.0.1:4175] [--headed]
+ * Run: bun tests/browser-stress.ts [http://127.0.0.1:4175] [--headed] [--upgraded]
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import { arch, cpus, platform, release, totalmem } from "node:os";
@@ -13,8 +13,14 @@ interface StressSnapshot {
     position: number;
     audioState?: string;
     combat: { health: number; enemies: number; projectiles: number; effects: number };
+    enemyHealthbars: number;
     entityCount: number;
     sounds: number;
+    projectiles: { waitingForBounce: boolean; hitEnemyIds: number[] }[];
+    playerStats: {
+        effective: { projectileCount: number; barrageCount: number; bounces: number };
+        metrics: { shotsFired: number; hits: number; totalDamageDealt: number };
+    };
 }
 type StressWindow = Window & { __beatshooter?: { snapshot(): StressSnapshot } };
 
@@ -28,6 +34,9 @@ const origin = Bun.argv.slice(2).find(argument => !argument.startsWith("--")) ??
 const url = new URL(origin);
 url.searchParams.set("test", "1");
 url.searchParams.set("stress", "1");
+const upgraded = Bun.argv.includes("--upgraded") || url.searchParams.get("upgradeStress") === "1";
+if (upgraded) url.searchParams.set("upgradeStress", "1");
+const artifactName = upgraded ? "stress-upgraded" : "stress";
 const round = (number: number) => Math.round(number * 1000) / 1000;
 const browser = await chromium.launch({
     ...BROWSER_CONFIG.use.launchOptions,
@@ -65,12 +74,19 @@ try {
     });
     const measurement = await page.evaluate((frames) => new Promise<{
         intervals: number[];
-        counts: { enemies: number[]; projectiles: number[]; effects: number[]; entities: number[] };
+        counts: {
+            enemies: number[]; healthbars: number[]; projectiles: number[];
+            waitingForBounce: number[]; hitMultipleEnemies: number[]; effects: number[]; entities: number[];
+        };
         phases: string[];
         final: StressSnapshot;
     }>((resolve) => {
         const intervals: number[] = [];
-        const counts = { enemies: [] as number[], projectiles: [] as number[], effects: [] as number[], entities: [] as number[] };
+        const counts = {
+            enemies: [] as number[], healthbars: [] as number[], projectiles: [] as number[],
+            waitingForBounce: [] as number[], hitMultipleEnemies: [] as number[],
+            effects: [] as number[], entities: [] as number[],
+        };
         const phases = new Set<string>();
         let previous: number | undefined;
         const frame = (time: number) => {
@@ -78,7 +94,10 @@ try {
             if (previous !== undefined) {
                 intervals.push(time - previous);
                 counts.enemies.push(snapshot.combat.enemies);
+                counts.healthbars.push(snapshot.enemyHealthbars);
                 counts.projectiles.push(snapshot.combat.projectiles);
+                counts.waitingForBounce.push(snapshot.projectiles.filter(shot => shot.waitingForBounce).length);
+                counts.hitMultipleEnemies.push(snapshot.projectiles.filter(shot => shot.hitEnemyIds.length > 1).length);
                 counts.effects.push(snapshot.combat.effects);
                 counts.entities.push(snapshot.entityCount);
                 phases.add(snapshot.phase);
@@ -101,17 +120,32 @@ try {
         Math.min(...measurement.counts.projectiles) < 1) {
         throw new Error("The expected 200-enemy/500-projectile refill fixture was not active.");
     }
+    if (measurement.counts.healthbars.some((count, index) => count !== measurement.counts.enemies[index])) {
+        throw new Error("The stress fixture must render one health bar per live enemy.");
+    }
+    if (upgraded) {
+        const stats = measurement.final.playerStats.effective;
+        if (stats.projectileCount !== 7 || stats.barrageCount !== 24 || stats.bounces !== 5
+            || Math.max(...measurement.counts.waitingForBounce) < 1
+            || Math.max(...measurement.counts.hitMultipleEnemies) < 1) {
+            throw new Error("The upgraded fixture must exercise maximum stats and real beat-gated ricochets.");
+        }
+    }
 
     await mkdir("output/playwright", { recursive: true });
-    const screenshot = "output/playwright/stress.png";
+    const screenshot = `output/playwright/${artifactName}.png`;
     await page.screenshot({ path: screenshot });
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "Return to menu", exact: true }).click();
     await page.waitForFunction(() => {
         const snapshot = (window as StressWindow).__beatshooter!.snapshot();
-        return snapshot.phase === "menu" && snapshot.entityCount === 0 && snapshot.sounds === 0;
+        // DOM ownership clears in the following presentation pass, after the
+        // synchronous session/entity teardown triggered by the menu button.
+        return snapshot.phase === "menu" && snapshot.entityCount === 0
+            && snapshot.enemyHealthbars === 0 && snapshot.sounds === 0;
     });
     const cleanup = await page.evaluate(() => (window as StressWindow).__beatshooter!.snapshot());
+    if (cleanup.enemyHealthbars !== 0) throw new Error("Enemy health bars survived session cleanup.");
     if (pageErrors.length) throw new Error(`Browser errors: ${pageErrors.join("; ")}`);
 
     const sorted = [...measurement.intervals].sort((a, b) => a - b);
@@ -130,10 +164,13 @@ try {
             mode: headed ? "headed" : "headless", ...environment,
         },
         scenario: {
+            mode: upgraded ? "upgraded" : "baseline",
             url: url.href, viewport, warmupMilliseconds: WARMUP_MS, measuredFrames: FRAMES,
             refillBeforeEachFixedStep: { enemies: 200, projectiles: 500 },
+            playerStats: measurement.final.playerStats.effective,
+            playerDamageMetrics: measurement.final.playerStats.metrics,
             scope: "Real Shallot physics/rendering/audio and combat; read-only snapshot each animation frame.",
-            note: "Counts are observed after collision/expiry and can be lower than the per-step refill target. Frame intervals include display pacing and snapshot overhead.",
+            note: "Counts are observed after collision/expiry and can be lower than the per-step refill target. Frame intervals include display pacing and snapshot overhead. The fixture refills individual projectiles independently of beat-fired fans and barrages, so it measures sustained density rather than a normal-play firing rate.",
         },
         frameIntervalsMilliseconds: {
             mean: round(mean), p50: round(percentile(0.5)), p95: round(percentile(0.95)),
@@ -148,14 +185,17 @@ try {
         },
         observedCounts: {
             enemies: range(measurement.counts.enemies),
+            healthbars: range(measurement.counts.healthbars),
             projectiles: range(measurement.counts.projectiles),
+            waitingForBounce: range(measurement.counts.waitingForBounce),
+            hitMultipleEnemies: range(measurement.counts.hitMultipleEnemies),
             effects: range(measurement.counts.effects),
             sessionEntities: range(measurement.counts.entities),
         },
-        cleanup: { phase: cleanup.phase, sessionEntities: cleanup.entityCount, sounds: cleanup.sounds },
+        cleanup: { phase: cleanup.phase, sessionEntities: cleanup.entityCount, healthbars: cleanup.enemyHealthbars, sounds: cleanup.sounds },
         screenshot,
     };
-    await writeFile("output/playwright/stress.json", JSON.stringify(report, null, 2) + "\n");
+    await writeFile(`output/playwright/${artifactName}.json`, JSON.stringify(report, null, 2) + "\n");
     console.log(JSON.stringify(report, null, 2));
 } finally {
     await browser.close();

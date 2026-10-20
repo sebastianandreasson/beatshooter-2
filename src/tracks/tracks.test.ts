@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createPracticeTrack, DEMO_TRACK, localTrackId, TrackLoader, validateManifest } from "./index";
 import { calculateEnergy } from "../analysis/energy";
+import type { SectionAnalysis } from "../analysis/sections";
 
 describe("track manifests", () => {
     test("bundled audio manifest matches its WAV header and declared beat data", async () => {
@@ -70,12 +71,18 @@ describe("local file loading", () => {
             beats: [0.2, 0.7, 1.19, 1.68, 2.16, 2.64, 3.11, 3.58, 4.04, 4.5],
             downbeats: [0.7, 2.64, 4.5], elapsedMs: 1, backend: "webgpu" as const,
             energy: calculateEnergy(new Float32Array(5 * 22_050)),
+            structure: {
+                version: 1, analyzerVersion: "fixture", duration: 5, elapsedMs: 1, backend: "webgpu",
+                sections: [{ start: 0, end: 5, label: "intro" }],
+            } satisfies SectionAnalysis,
         };
         const loaded = await loader.loadLocal(file, 120, 0, analysis);
         expect(loaded.manifest.beats.map(beat => beat.time)).toEqual(analysis.beats);
         expect(loaded.manifest.beats[0]!.downbeat).toBe(false);
         expect(loaded.energy).toEqual(analysis.energy);
         expect(loaded.energy?.loudness).not.toBe(analysis.energy.loudness);
+        expect(loaded.structure).toEqual(analysis.structure);
+        expect(loaded.structure?.sections[0]).not.toBe(analysis.structure.sections[0]);
         expect(loaded.manifest.id).toMatch(/^analyzed-/);
         expect(loaded.manifest.id.length).toBeLessThanOrEqual(128);
         const retry = await loader.loadLocal(file, 80, 0.3, analysis);
@@ -85,6 +92,11 @@ describe("local file loading", () => {
         });
         expect(noEnergy.energy).toBeUndefined();
         expect(noEnergy.manifest.id).toBe(loaded.manifest.id);
+        const noSections = await loader.loadLocal(file, 120, 0, {
+            ...analysis, structure: { ...analysis.structure, duration: 6 },
+        });
+        expect(noSections.structure).toBeUndefined();
+        expect(noSections.manifest.id).toBe(loaded.manifest.id);
         const changed = await loader.loadLocal(file, 120, 0, {
             ...analysis, beats: analysis.beats.map(time => time + 0.01),
             downbeats: analysis.downbeats.map(time => time + 0.01),

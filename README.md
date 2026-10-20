@@ -30,40 +30,184 @@ Bun 1.4.3+ before running these commands.
 | WASD / arrow keys | Move; diagonals are normalized |
 | Pointer | Aim at the reticle |
 | Musical beat | Fire automatically |
-| Escape | Pause / resume |
-| R in dojo | Reset position, movement, enemies, score, and metronome |
+| Space near the accented first beat | Dash in the movement direction, or aim direction when stationary |
+| Escape | Pause / resume outside upgrade selection |
+| 1 / 2 / 3, or click a card | Choose a level-up upgrade |
+| R in dojo | Reset the run and metronome |
 | F3 | Toggle development diagnostics; off by default |
 
 Choose **Neon Circuit**, the original 72-second, 120 BPM demo; enter the dojo at
 20–300 BPM; or import a local audio file. Each run starts with four count-in
 clicks. Kills award **100 points** and each survived beat awards **2 points**.
 Enemy waves grow by musical bars, with a normal-play cap of 100 enemies.
-Contact damage has a 0.9-second invulnerability window. Zero health ends a run;
+Contact and projectile damage share a 0.9-second invulnerability window. Zero health ends a run;
 reaching the end of the audio completes it. Retry and menu navigation work
 without reloading.
 
-Local files never upload. Select a file and click **Analyze beats** to run the
-experimental Beat This! model locally with WebGPU. It detects individual beats
-and bar starts, including changing tempo. Preview with the metronome before
-playing; **Detected beats** uses that exact timeline. **Manual BPM** remains
-available for a steady tempo and first-beat offset.
+Player shots start at **13–17 damage**, with a **12% chance of a 2× critical hit**.
+Every enemy has a compact health bar. Hits, including killing blows, show their
+rolled damage; critical numbers are larger and gold. Numbers appear immediately
+at rest, then pop, rise, and fade over one beat starting on the next authored
+beat. Hits exactly on a beat begin that motion immediately. Changing tempo,
+slowdown, and pause affect the animation with the music. Off/reduced-motion
+settings keep the information visible with stationary fades.
+
+Each run owns `combat.playerStats`: base/effective combat stats, named stat
+modifiers, and counters for shots, hits, critical hits, and actual damage dealt.
+Upgrades use named modifiers without editing the hit loop. Damage, critical
+results, and available bounces are captured when a shot fires; existing shots
+keep those values, and overkill is excluded from damage totals. See the
+[original damage system record](docs/damage-verification.md) and the current
+[upgrade verification record](docs/upgrades-verification.md).
+
+Waves mix three enemy types, introduced over the first three bars:
+
+- **Coral chasers** pursue the player and deal contact damage.
+- **Violet spinners** spawn at random safe positions inside the arena. Their
+  three barrels turn 30° each accented bar start and fire three shots 120° apart.
+- **Amber rangers** approach to about six arena units, then fire one straight
+  shot aimed at the player's position on each accented bar start while in range.
+
+Enemies arrive in narrow beams on the main beat, spinning, descending and
+growing from zero scale over the interval to the next authored beat. Floor
+markers show their arrival positions. They become live only when the animation
+finishes: before then they cannot move, attack, collide, take hits or show
+health bars. Pending arrivals count toward the enemy cap. No new arrival starts
+on the final beat or across a detection gap longer than 3.05 seconds.
+Pause and slowdown hold or stretch the animation with the music.
+Off/reduced-motion settings retain the footprint and growth while removing
+the beam, spin and vertical travel. See
+[spawn and pacing verification](docs/spawn-pacing-verification.md).
+
+New shooters wait one bar before attacking. Their coral diamond projectiles
+travel more slowly than the player's mint shots and never home. All enemy fire
+uses the same accented first beat as the dash, including detected tracks with
+changing meter; ordinary beats and unaccented inferred boundaries do not fire.
+The normal enemy/bullet budgets also apply to these attacks. See
+[enemy verification](docs/enemy-types-verification.md) for the behavior checks.
+
+Every enemy drops a **blue XP gem worth 10 experience**. Gems stay on the floor
+until collected; move within 3.5 arena units to pull them toward your ship.
+Once attracted, they keep following you until picked up, including after a dash.
+The blue bar at the top shows your level and progress toward the next one.
+You start at level 1; level 2 needs 36 XP, then each next requirement grows by
+18 XP. Excess XP carries over, and the results screen shows your final level
+and total collected XP. Each run starts fresh.
+
+Level-ups produce blue-and-gold rising particles and expanding rings timed to
+a nearby musical subdivision. Comfort settings soften or disable the
+celebration while keeping gems and the XP bar visible. Each new level also
+offers **three upgrade cards; choose one** by clicking or pressing **1, 2, or 3**.
+Music and gameplay briefly slow together as the cards enter, then stop at a
+subdivision of the actual local beat. The transition spans 100–140 ms of music,
+about **180–250 ms in real time**; slower tempos use finer subdivisions.
+The player is protected and movement/dash input is cleared during this
+transition. Card entrances use music position, including
+the slowdown; reduced-motion settings use stationary fades. Missing detections
+and the song tail use a short bounded fade rather than inventing beats.
+
+| Upgrade | Effect per selection |
+| --- | --- |
+| **Power** | +3 to both ends of the damage range; initially 13–17 → 16–20 |
+| **Vitality** | +20 maximum health and restore 20 current health |
+| **Regeneration** | +2 health restored every 5 seconds of song time, on the next authored beat |
+| **Split Shot** | +1 projectile per normal firing beat, up to 7 |
+| **Downbeat Barrage** | Unlock a 6-projectile outward ring on the accented main beat; subsequent selections add 2, up to 24 |
+| **Critical Chance** | +5 percentage points, initially 12% → 17%, up to 100% |
+| **Critical Damage** | +0.25× critical multiplier, initially 2× → 2.25× |
+| **Ricochet** | +1 bounce per projectile, up to 5 |
+
+Split Shot widens the normal shot into a symmetric fan around the aim: 12°
+more total spread per added projectile, capped at 60°. Barrage fires a full
+ring in addition to that fan, only on actual accented bar starts, using the
+same main beat as dash and enemy attacks. Ricochets stop at their impact point,
+then launch toward the nearest enemy they have not already hit on the next
+beat. Each projectile can bounce at most once per authored beat. All shots
+retain the existing projectile budget.
+
+Regeneration starts five song seconds after acquiring it. Each heal lands on
+the first authored beat at or after its due time, then starts the next
+five-second interval. Slowdown stretches that interval in real time, pause
+stops it, and missing beats never release a backlog of heals.
+
+Choices stay fixed while the menu is open. Several levels earned together
+queue one choice per level; music stays paused until every choice is made.
+Escape cannot skip a selection, and repeated keys/double clicks cannot select
+twice. If audio cannot resume after a choice, the upgrade remains applied and
+**Resume upgraded run** retries playback without granting it again. Returning
+to the menu remains available. Upgrades, choices, and stats reset with the run.
+See [XP verification](docs/experience-verification.md) for the gem system and
+[upgrade verification](docs/upgrades-verification.md) for the selection flow.
+
+The larger beat indicator sits at the bottom center. Its first diamond gains
+an outline and **Dash ready** appears during a ±100 ms window around an
+accented bar start. Press **Space** once in that window to dash; holding the
+key or pressing off-beat never queues a later dash. Each downbeat allows one
+dash. The burst follows local beat timing, stays on the play plane and respects
+walls/enemy collisions. It does not grant extra damage immunity.
+Automatic tracks use their actual detected downbeats, including changing meter;
+unaccented inferred bar boundaries do not grant dashes. Visual calibration
+remains cosmetic: dash input is judged against the current audio clock.
+
+Local files never upload. Selecting a file automatically runs Beat This! locally
+with WebGPU. It detects individual beats and bar starts, including changing tempo.
+Detected timing is selected automatically. Preview with the metronome or play
+once analysis finishes. **Timing** contains the optional **Manual BPM** control
+and first-beat offset. Displayed BPM is rounded; detected timestamps retain their
+full precision.
 The preview section selector offers 12 seconds from the start, middle or end,
 or the full track. Higher clicks mark bar starts.
 
+Analysis also runs **LinkSeg** locally to estimate intro, verse, chorus, bridge,
+instrumental, outro and silence sections. The bottom music player spans the
+screen and colors each predicted section, with a playhead, current/next labels
+and a legend. The import preview shows the same section map. Section predictions
+also drive the arena transitions below; enemy schedules, beat timing and
+collision rules remain unchanged. If section analysis fails, detected beats
+are still playable. See the [LinkSeg evaluation](docs/section-analysis.md)
+for measured performance, predictions and remaining listening review.
+
+In **Standard** effects mode, entering a new detected section flips the visual
+floor and grid through one complete turn about the map's Z axis, then settles
+them flat beneath the fight. Expanding portal frames, a spiral grid and broad
+light waves accompany the floor. The camera keeps its normal orientation and
+zoom, while the player, enemies, projectiles and perimeter walls stay steady.
+The floor, perimeter and background smoothly change theme to match the section
+timeline: blue for intro, green for verse, gold for chorus, violet for bridge,
+cyan for instrumental, rose for outro and dark slate for silence.
+
+Transitions start at the exact predicted boundary on the raw music clock,
+independent of visual calibration. They normally span four actual beat
+intervals, following tempo changes; slow tracks use fewer beats to keep the
+turn within 3.5 song seconds. Each turn finishes before the next section or
+an unusable beat interval. Fragments shorter than 0.65 song seconds and
+boundaries inside detection gaps use a short color fade. Pause and slowdown
+freeze or stretch the effect with the music. The first section establishes its
+colors during count-in without an entrance effect.
+
+The floor flip is cosmetic: movement, dash directions, pointer aiming and
+collision rules keep their normal behavior. **Calm** replaces the full floor
+turn with a small sway; **Off**, reduced flashes and reduced motion retain only the
+section palette changes. No sections are invented for demo, dojo or manual-BPM
+tracks without analysis. Every predicted span boundary is honored, including
+adjacent spans with the same label; the model's estimates still need listening
+review. See [section-effects verification](docs/section-effects-verification.md).
+
 `bun run setup:audio` downloads and verifies the pinned 83 MB model and copies
-the matching 25.5 MB ONNX runtime from installed dependencies. These generated
-binaries are gitignored and served from the same origin as the game. Analysis
-does not run until requested. A worker handles inference and is terminated on
+the matching 25.5 MB ONNX runtime from installed dependencies. The same command
+prepares the verified 1.57 MB LinkSeg model. These generated binaries are
+gitignored and served from the same origin as the game. Selecting a local file
+starts analysis. A worker handles inference and is terminated on
 completion or cancellation. One decoded local file is reused for analysis,
 preview, play and retry; replacing it releases the cached buffer. Analysis
-results are session-only. Detection can be wrong; warnings flag irregular
-timing, and unavailable bar starts use explicitly labeled groups of four beats.
+results are session-only. Analysis warning text is omitted from the interface.
+When bar starts are unavailable, timing falls back to groups of four beats.
 
 Files are limited to 100 MB, six hours, and a post-decode 256 MiB PCM budget
 (about 11 minutes at 48 kHz stereo). A local file must be reselected after
 reload; only its name/tempo/offset, preferences, and best scores are saved.
 Detected-chart scores use a file-content hash plus versioned chart identity.
-Dojo has a six-hour metronome horizon and can be reset at any time.
+Dojo has a six-hour metronome horizon; press R during play or pause to reset it.
 
 Settings include master/music/effects gain, graphics detail, reduced flashes,
 visual effects intensity, and visual timing offset. **Positive milliseconds advance the visual pulse;
@@ -72,24 +216,26 @@ Focus loss, hidden tabs, suspended audio, and long stalls pause the session and
 require explicit resume. A load that finishes after focus loss also waits paused.
 
 The arena's floor patterns, bar ripples, perimeter lights, death shards and
-damage-number envelopes follow the same music clock. Floor geometry, collision
-boundaries and aiming remain stable. Deaths and scores resolve immediately;
+damage-number envelopes follow the same music clock. Section transitions rotate
+only the decorative floor and grid beneath combat; the play plane, collision
+boundaries, camera orientation and aiming remain stable. Deaths and scores resolve immediately;
 larger death accents wait at most 100 ms for a nearby sixteenth-note subdivision.
 When no suitable subdivision exists, a small local dissolve confirms the kill.
 Long detection gaps settle the decoration without inventing extra beats.
 
-In **Settings → Visual effects**, choose **Standard** for the full restrained
-effect set, **Calm** for softer motion, or **Off** for a static arena and essential
-feedback. Graphics detail controls rendering cost independently. **Reduced
-flashes** and the device's **reduced-motion** preference disable travelling
-decoration and keep small local fades. Automatic local-track analysis also
+In **Settings → Visual effects**, choose **Standard** for the full effect set,
+including section floor flips, **Calm** for softer motion, or **Off** for a stationary
+arena with essential feedback and section color changes. Graphics detail
+controls rendering cost independently. **Reduced flashes** and the device's
+**reduced-motion** preference disable travelling decoration and floor flips
+while keeping small local fades. Automatic local-track analysis also
 computes optional 20 Hz loudness/bass curves in its existing worker; these
 modulate detail without triggering beats. Demo, dojo and manual-BPM tracks use
 a neutral energy response.
 
-The visual implementation passes production browser checks and the dense
-60 FPS stress fixture on the recorded M1 Max. All four local test tracks pass
-energy integration without changing detected timestamps. Human listening and
+The earlier floor and particle implementation passed production browser checks
+and the dense 60 FPS stress fixture on the recorded M1 Max. All four local test
+tracks pass energy integration without changing detected timestamps. Human listening and
 comfort review remains open. See the
 [visual implementation record](docs/music-visuals-plan.md) and
 [verification record](docs/music-visuals-verification.md). The earlier M0–M6
@@ -123,6 +269,9 @@ bun ./tests/stress.ts
 bun run preview --port 4175 --strictPort
 bun ./tests/browser-stress.ts http://127.0.0.1:4175
 
+# Same dense fixture with maximum projectile and ricochet upgrades
+bun ./tests/browser-stress.ts http://127.0.0.1:4175 --upgraded
+
 # Off/Standard visual comparison with dense, repeatable death bursts
 bun tests/music-visuals-benchmark.ts http://127.0.0.1:4175
 
@@ -131,7 +280,9 @@ bun tests/audio-analysis.ts http://127.0.0.1:4175
 ```
 
 The explicit `?stress=1` fixture replenishes 200 enemies and 500 projectiles
-before each fixed step and disables contact damage for measurement. It is never
+before each fixed step and disables contact damage for measurement. It raises
+the first level requirement to 1,000,000 XP solely to keep profiling
+uninterrupted; real XP drops and pickup remain active. This fixture is never
 active in normal play. Adding `&visualStress=1` emits 16 cosmetic kill events
 per beat to exercise the particle caps. `?test=1` installs a read-only browser inspection API.
 See the release document for measured hardware, counts, and frame intervals.
@@ -142,11 +293,16 @@ See the release document for measured hardware, counts, and frame intervals.
 | --- | --- |
 | `src/app/`, `src/stress/` | Shallot plugin composition and opt-in inspection/stress fixture |
 | `src/arena/`, `src/player/` | Arena, collision walls, fixed movement, camera projection |
+| `src/dash/` | Downbeat input windows, single-use dash state and music-timed movement targets |
 | `src/rhythm/` | Authored timelines, shared musical visual sampling, and Web Audio transport through public `AudioOutput` |
 | `src/analysis/` | Local Beat This! worker, preprocessing, chart validation, bar mapping and optional energy curves |
-| `src/combat/`, `src/enemies/` | Seeded waves, pursuit, swept nearest hits, damage and scoring |
-| `src/session/` | Menu/loading/play/pause/results, audio/entity/listener ownership |
+| `src/combat/`, `src/enemies/` | Seeded waves, arrival reservations and activation, pursuit, swept nearest hits, damage and scoring |
+| `src/enemy-spawn/` | Music-timed beam, spin and growth previews without physics or combat participation |
+| `src/player-stats/`, `src/upgrades/` | Per-run stats/modifiers, damage accounting, upgrade catalog, seeded three-card offers and queued choices |
+| `src/experience/` | Persistent XP drops, swept attraction/collection, run levels and musical gem presentation |
+| `src/session/` | Menu/loading/play/pause/upgrade/results, synchronized slowdown and selection, audio/entity/listener ownership |
 | `src/music-visuals/` | Floor shader, bounded musical effect queues, pooled shards/rings and comfort controls |
+| `src/section-effects/` | Detected-section timing, dark palettes, decorative floor/grid flips and reusable portal frames |
 | `src/presentation/` | Shared combat materials, steady damage tint and music-timed damage numbers |
 | `src/tracks/`, `public/tracks/` | Validated manifests, local decoding, original demo and generator |
 | `src/ui/`, `src/settings/` | Responsive DOM interface and validated versioned preferences |
@@ -163,7 +319,7 @@ use injected beat commands rather than claiming identical live replays.
 This is a fresh implementation. No application code, dependencies, credentials,
 or assets were copied from `../beatshooter`. The demo music, artwork, icon, and
 sound effects are original; see [asset credits](public/tracks/CREDITS.md).
-There is no Spotify integration, loot system or multiplayer. Automatic analysis
+There is no Spotify integration, equipment system or multiplayer. Automatic analysis
 is a local prototype; see [analysis notes](docs/beat-this-prototype.md) and
 [model/runtime credits](public/models/README.md).
 

@@ -20,7 +20,7 @@ function freezePositions(state: CombatState): ReadonlyMap<number, Vec2> {
 
 describe("swept projectile collision", () => {
     test("a fast shot hits a target between its endpoints", () => {
-        const state = createCombat(11, { damageMin: 10, damageMax: 10, criticalChance: 0 });
+        const state = createCombat(11, {}, { damageMin: 10, damageMax: 10, criticalChance: 0 });
         const enemy = target(state, 7);
         fireProjectile(state, origin, right);
         advanceCombat(state, 0.5, origin, freezePositions(state));
@@ -32,7 +32,7 @@ describe("swept projectile collision", () => {
     });
 
     test("only the nearest eligible target takes damage, regardless of array order", () => {
-        const state = createCombat(2, { damageMin: 10, damageMax: 10, criticalChance: 0 });
+        const state = createCombat(2, {}, { damageMin: 10, damageMax: 10, criticalChance: 0 });
         const far = target(state, 9);
         const near = target(state, 4);
         fireProjectile(state, origin, right);
@@ -42,7 +42,7 @@ describe("swept projectile collision", () => {
     });
 
     test("the collision mask ignores friendly entities and the shooter", () => {
-        const state = createCombat(2, { damageMin: 10, damageMax: 10, criticalChance: 0 });
+        const state = createCombat(2, {}, { damageMin: 10, damageMax: 10, criticalChance: 0 });
         const friendly = target(state, 3);
         friendly.collisionGroup = 1;
         const shooter = target(state, 5);
@@ -73,7 +73,7 @@ describe("swept projectile collision", () => {
     });
 
     test("dead targets cannot absorb another projectile and kills score only once", () => {
-        const state = createCombat(2, { damageMin: 30, damageMax: 30, criticalChance: 0 });
+        const state = createCombat(2, {}, { damageMin: 30, damageMax: 30, criticalChance: 0 });
         const near = target(state, 4);
         const far = target(state, 8);
         fireProjectile(state, origin, right);
@@ -89,7 +89,7 @@ describe("swept projectile collision", () => {
 
 describe("damage, feedback, and defeat", () => {
     test("step events retain every impact even when the legacy feedback buffer is disabled", () => {
-        const state = createCombat(2, { effectCap: 0, damageMin: 30, damageMax: 30, criticalChance: 0 });
+        const state = createCombat(2, { effectCap: 0 }, { damageMin: 30, damageMax: 30, criticalChance: 0 });
         target(state, 4);
         target(state, 8);
         fireProjectile(state, origin, right);
@@ -105,7 +105,7 @@ describe("damage, feedback, and defeat", () => {
     });
 
     test("critical damage, knockback, and feedback have bounded lifetimes", () => {
-        const state = createCombat(1, {
+        const state = createCombat(1, {}, {
             damageMin: 5, damageMax: 5, criticalChance: 1, criticalMultiplier: 2,
         });
         const enemy = target(state, 4);
@@ -161,8 +161,8 @@ describe("damage, feedback, and defeat", () => {
 
     test("projectiles and damage feedback obey their configured caps", () => {
         const state = createCombat(1, {
-            projectileCap: 2, effectCap: 1, enemyHealth: 100, criticalChance: 0,
-        });
+            projectileCap: 2, effectCap: 1, enemyHealth: 100,
+        }, { criticalChance: 0 });
         target(state, 4);
         fireProjectile(state, origin, right);
         fireProjectile(state, origin, right);
@@ -180,10 +180,13 @@ describe("musical combat commands", () => {
         for (let bar = 0; bar < 20; bar++) {
             spawnOnBeat(state, { index: bar * 4, barIndex: bar }, player);
         }
-        expect(state.enemies).toHaveLength(10);
-        for (const enemy of state.enemies) {
+        expect(state.enemies).toHaveLength(0);
+        expect(state.pendingSpawns).toHaveLength(10);
+        for (const { enemy } of state.pendingSpawns) {
             expect(Math.hypot(enemy.x - player.x, enemy.z - player.z)).toBeGreaterThanOrEqual(7);
-            expect(Math.max(Math.abs(enemy.x), Math.abs(enemy.z))).toBeGreaterThanOrEqual(15);
+            if (enemy.kind !== "spinner") {
+                expect(Math.max(Math.abs(enemy.x), Math.abs(enemy.z))).toBeGreaterThanOrEqual(15);
+            }
             expect(Math.max(Math.abs(enemy.x), Math.abs(enemy.z))).toBeLessThanOrEqual(17);
         }
     });
@@ -193,11 +196,13 @@ describe("musical combat commands", () => {
         onCombatBeat(state, { index: 0, barIndex: 0 }, origin, right);
         onCombatBeat(state, { index: 0, barIndex: 0 }, origin, right);
         expect(state.projectiles).toHaveLength(1);
-        expect(state.enemies).toHaveLength(1);
+        expect(state.enemies).toHaveLength(0);
+        expect(state.pendingSpawns).toHaveLength(1);
         expect(state.score).toBe(2);
         onCombatBeat(state, { index: 1, barIndex: 0 }, origin, right);
         expect(state.projectiles).toHaveLength(2);
         expect(state.enemies).toHaveLength(1);
+        expect(state.pendingSpawns).toHaveLength(0);
         expect(state.score).toBe(4);
     });
 
@@ -243,7 +248,7 @@ describe("musical combat commands", () => {
     });
 
     test("invalid tuning is rejected at the session boundary", () => {
-        expect(() => createCombat(1, { damageMin: 20, damageMax: 10 })).toThrow();
+        expect(() => createCombat(1, {}, { damageMin: 20, damageMax: 10 })).toThrow();
         expect(() => createCombat(1, { enemyCap: NaN })).toThrow();
         expect(() => createCombat(1, { fireEveryBeats: 0 })).toThrow();
     });

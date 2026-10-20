@@ -3,6 +3,7 @@ import { generateTimeline, type Beat, validateTempo, validateTimeline } from "..
 import { createAnalyzedChart } from "../analysis/chart";
 import type { BeatAnalysis, EnergyCurve } from "../analysis/types";
 import { validateEnergyCurve } from "../analysis/energy";
+import { validateSections, type SectionAnalysis } from "../analysis/sections";
 
 export interface TrackManifest {
     schemaVersion: 1;
@@ -82,6 +83,7 @@ export interface LoadedTrack {
     manifest: TrackManifest;
     buffer: AudioBuffer;
     energy?: EnergyCurve;
+    structure?: SectionAnalysis;
     /** Releases this import's object URL; safe to call more than once. */
     dispose(): void;
 }
@@ -199,6 +201,7 @@ export class TrackLoader {
             });
             const loaded = this.own(manifest, buffer, objectUrl,
                 validateEnergyCurve(analysis?.energy, buffer.duration));
+            loaded.structure = validateSections(analysis?.structure, buffer.duration);
             objectUrl = undefined;
             return loaded;
         } catch (error) {

@@ -5,17 +5,31 @@ import {
 } from "@dylanebert/shallot";
 import { Shape } from "@dylanebert/shallot/physics";
 import type { MaterialHandle } from "@dylanebert/shallot/standard/rendering";
+import type { Enemy } from "../enemies";
 
 export const ARENA_HALF = 18;
+type ArenaMaterials = Record<
+    "floor" | "line" | "wall" | "player" | "enemy" | "spinner" | "ranger" |
+    "shot" | "hostileShot" | "white" | "hit",
+    MaterialHandle
+>;
 export const Arena: Resource<{
     camera: number; reticle: number[]; floor: number; lines: number[];
-    materials: Record<"floor" | "line" | "wall" | "player" | "enemy" | "shot" | "white" | "hit", MaterialHandle>;
+    materials: ArenaMaterials;
+    /** Rest positions of the nonphysical floor and grid; walls stay fixed. */
+    mapVisuals: Map<number, [number, number, number]>;
 }> = {
     create: () => ({
-        camera: -1, reticle: [], floor: -1, lines: [],
-        materials: {} as Record<"floor" | "line" | "wall" | "player" | "enemy" | "shot" | "white" | "hit", MaterialHandle>,
+        camera: -1, reticle: [], floor: -1, lines: [], mapVisuals: new Map(),
+        materials: {} as ArenaMaterials,
     }),
 };
+
+/** Damage tints must restore each archetype's normal appearance. */
+export function enemyMaterial(arena: { materials: ArenaMaterials }, kind: Enemy["kind"]): MaterialHandle {
+    return kind === "spinner" ? arena.materials.spinner
+        : kind === "ranger" ? arena.materials.ranger : arena.materials.enemy;
+}
 
 export function box(world: World, material: MaterialHandle, position: [number, number, number], scale: [number, number, number]): number {
     const eid = world.create();
@@ -38,7 +52,10 @@ export const ArenaPlugin: Plugin = {
             wall: material([0.07, 0.19, 0.21, 1]),
             player: material([0.12, 0.95, 0.75, 1]),
             enemy: material([0.95, 0.16, 0.12, 1]),
+            spinner: material([0.58, 0.32, 0.95, 1]),
+            ranger: material([0.95, 0.64, 0.15, 1]),
             shot: material([0.55, 1, 0.85, 1], true),
+            hostileShot: material([1, 0.3, 0.4, 1], true),
             white: material([0.9, 1, 0.96, 1], true),
             hit: material([1, 0.56, 0.15, 1], true),
         };
@@ -58,6 +75,9 @@ export const ArenaPlugin: Plugin = {
         for (let i = -18; i <= 18; i += 3) {
             arena.lines.push(box(world, arena.materials.line, [i, -0.135, 0], [0.035, 0.025, 36]));
             arena.lines.push(box(world, arena.materials.line, [0, -0.135, i], [36, 0.025, 0.035]));
+        }
+        for (const eid of [arena.floor, ...arena.lines]) {
+            arena.mapVisuals.set(eid, [...world.get(eid, Transform)!.translation]);
         }
         for (const [x, z, sx, sz] of [[-18.5, 0, 1, 38], [18.5, 0, 1, 38], [0, -18.5, 38, 1], [0, 18.5, 38, 1]]) {
             const wall = box(world, arena.materials.wall, [x!, 0.2, z!], [sx!, 0.8, sz!]);

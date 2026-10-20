@@ -144,10 +144,10 @@ test("cancelling a delayed demo load cannot later start its audio or gameplay", 
     }
 });
 
-test("a newer local selection supersedes a delayed calibration read without reviving it", async ({ page }) => {
+test("a newer local selection supersedes a delayed analysis read without reviving it", async ({ page }) => {
     const errors = captureErrors(page);
     // Delay file I/O, not gameplay or audio clocks. The UI stays interactive
-    // during calibration loading, so another actual file selection can supersede it.
+    // during analysis loading, so another actual file selection can supersede it.
     await page.addInitScript(() => {
         const nativeRead = File.prototype.arrayBuffer;
         File.prototype.arrayBuffer = async function () {
@@ -167,17 +167,17 @@ test("a newer local selection supersedes a delayed calibration read without revi
     await page.locator("#bs-audio-file").setInputFiles({
         name: "slow-selection.wav", mimeType: "audio/wav", buffer: wav(5),
     });
-    await page.getByRole("button", { name: "Preview with metronome" }).click();
     await page.waitForFunction(() => (window as DelayedFileWindow).__slowFileRequested);
     await page.locator("#bs-audio-file").setInputFiles({
         name: "new-selection.wav", mimeType: "audio/wav", buffer: wav(1.2),
     });
+    await page.getByRole("button", { name: "Cancel analysis", exact: true }).click();
     await page.getByRole("button", { name: "Play this track" }).click();
     await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
     await expect(page.locator('[data-value="track-title"]')).toHaveText("new-selection");
     await page.evaluate(() => (window as DelayedFileWindow).__releaseSlowFile!());
     await expect(page.locator('[data-screen="results"]')).toBeVisible({ timeout: 12_000 });
-    await expect(page.locator('[data-value="result-title"]')).toHaveText("You held your ground.");
+    await expect(page.locator('[data-value="result-title"]')).toHaveText("Track complete");
     const result = await page.evaluate(() => (window as WitnessWindow).__beatshooter!.snapshot());
     expect(result.position).toBeCloseTo(1.2, 1);
     expect(result.sounds).toBe(0);

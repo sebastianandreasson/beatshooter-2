@@ -14,7 +14,7 @@ export const VisualEvents: Resource<{ pending: MusicEvent[]; dropped: number }> 
 };
 export const MAX_EVENT_QUEUE = 256;
 export const eventPriority = (kind: CombatEvent["kind"]) =>
-    kind === "player-hit" ? 4 : kind === "kill" ? 3 : kind === "hit" ? 2 : 1;
+    kind === "player-hit" ? 5 : kind === "level-up" ? 4 : kind === "kill" ? 3 : kind === "hit" ? 2 : 1;
 
 /** Called at the fixed-step boundary, without changing any combat state. */
 export function publishVisualEvents(

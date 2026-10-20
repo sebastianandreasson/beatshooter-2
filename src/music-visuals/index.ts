@@ -2,8 +2,9 @@ import { type Plugin, type Resource, type System } from "@dylanebert/shallot";
 import { sampleEnergy } from "../analysis/energy";
 import { PlayerState, PresentPlayer } from "../player";
 import { createMusicalTimeline, type MusicalFrame, type MusicalTimeline } from "../rhythm/visual";
-import { ObserveMusic, Session } from "../session";
+import { isArenaPhase, ObserveMusic, Session } from "../session";
 import type { TrackManifest } from "../tracks";
+import { SectionEffects } from "../section-effects/runtime";
 import { EffectDirector } from "./effects";
 import { VisualEvents } from "./events";
 import { MusicFloorPlugin, updateMusicFloor } from "./floor";
@@ -58,7 +59,7 @@ export const PresentMusicalVisuals: System = {
     update(world) {
         const s = world.resource(Session), v = world.resource(MusicVisuals), player = world.resource(PlayerState);
         const cpuStart = v.profileCpu ? performance.now() : 0;
-        const visible = s.phase === "playing" || s.phase === "paused";
+        const visible = isArenaPhase(s.phase);
         const queue = world.resource(VisualEvents);
         v.director.consume(queue.pending.splice(0), visible && v.intensity > 0);
         v.director.step(s.visualPosition, visible && v.intensity > 0);
@@ -70,6 +71,7 @@ export const PresentMusicalVisuals: System = {
                 s.preferences.settings.graphics === "high", v.motionAllowed, v.intensity);
         }
         const energy = sampleEnergy(s.loaded?.energy, s.visualPosition);
+        const section = world.resource(SectionEffects);
         updateMusicFloor(world, {
             ...v.frame,
             intensity: visible ? v.intensity * v.frame.strength * (s.loaded?.energy ? 0.25 + energy.loudness * 0.75 : 1) : 0,
@@ -77,6 +79,13 @@ export const PresentMusicalVisuals: System = {
             playerX: player.position.x, playerZ: player.position.z,
             motionAllowed: visible && v.motionAllowed,
             highQuality: s.preferences.settings.graphics === "high",
+            section: visible && section.frame.index >= 0 ? {
+                progress: section.frame.progress, strength: section.strength,
+                mapRoll: section.mapRoll, mapDrop: section.mapDrop,
+                floor: [...section.frame.palette.floor],
+                line: [...section.frame.palette.line],
+                accent: [...section.frame.palette.accent],
+            } : undefined,
         });
         if (v.profileCpu) v.visualCpuMs = performance.now() - cpuStart;
     },

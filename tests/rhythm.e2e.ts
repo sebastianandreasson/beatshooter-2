@@ -7,11 +7,14 @@ import type { TrackManifest } from "../src/tracks";
 
 interface RhythmHarness {
     context: AudioContext;
+    analyser: AnalyserNode;
     transport: MusicTransport;
     observed: { index: number; observedTime: number; scheduledTime: number }[];
     last: TransportObservation;
     peak: number;
     completions: number;
+    immediateResume?: boolean;
+    resumeStartedAt?: number;
     error?: string;
     generateTimeline: (duration: number, bpm: number, offset?: number) => Beat[];
 }
@@ -60,7 +63,7 @@ test.beforeEach(async ({ page }) => {
         const transport = new MusicTransport(context, analyser);
         transport.setVolumes({ master: 0.2 });
         const harness: RhythmHarness = {
-            context, transport, generateTimeline, observed: [], peak: 0, completions: 0,
+            context, analyser, transport, generateTimeline, observed: [], peak: 0, completions: 0,
             last: { position: 0, visualPosition: 0, beats: [], completed: false },
         };
         window.rhythmHarness = harness;
@@ -76,7 +79,8 @@ test.beforeEach(async ({ page }) => {
         document.querySelector("#resume")!.addEventListener("click", async () => {
             try {
                 await context.resume();
-                await transport.resume();
+                harness.resumeStartedAt = context.currentTime;
+                await transport.resume({ immediate: harness.immediateResume });
             } catch (error) { harness.error = String(error); }
         });
         const samples = new Float32Array(analyser.fftSize);
@@ -140,6 +144,90 @@ test("real Web Audio metronome has signal and preserves beat ordering across pau
     });
     await expect.poll(() => page.evaluate(() => window.rhythmHarness.observed.length)).toBeGreaterThan(0);
     expect(await page.evaluate(() => window.rhythmHarness.observed[0]!.index)).toBe(0);
+});
+
+test("real music playback slows in pitch, pauses on the selected beat, and resumes without repeated beats", async ({ page }) => {
+    await page.locator("#start").click();
+    await page.evaluate(async () => {
+        const h = window.rhythmHarness;
+        const buffer = h.context.createBuffer(1, h.context.sampleRate * 4, h.context.sampleRate);
+        const samples = buffer.getChannelData(0);
+        for (let i = 0; i < samples.length; i++) {
+            samples[i] = 0.25 * Math.sin(2 * Math.PI * 880 * i / buffer.sampleRate);
+        }
+        h.analyser.fftSize = 4096;
+        h.analyser.smoothingTimeConstant = 0;
+        h.observed.length = 0;
+        await h.transport.start({
+            duration: 4, bpm: 120, beats: h.generateTimeline(4, 120),
+            countInBeats: 0, buffer,
+        });
+    });
+    const frequency = () => page.evaluate(() => {
+        const { analyser, context } = window.rhythmHarness;
+        const bins = new Float32Array(analyser.frequencyBinCount);
+        analyser.getFloatFrequencyData(bins);
+        let peak = 1;
+        for (let i = 2; i < bins.length; i++) if (bins[i]! > bins[peak]!) peak = i;
+        return peak * context.sampleRate / analyser.fftSize;
+    });
+    await expect.poll(frequency).toBeGreaterThan(820);
+    const normalFrequency = await frequency();
+    expect(normalFrequency).toBeLessThan(940);
+    const transition = await page.evaluate(() => {
+        const h = window.rhythmHarness;
+        const startPosition = h.transport.position, startTime = h.context.currentTime;
+        return {
+            accepted: h.transport.beginSlowdown(1.5),
+            stopTime: startTime + 2 * (1.5 - startPosition) / 1.12,
+        };
+    });
+    expect(transition.accepted).toBe(true);
+    await expect.poll(() => page.evaluate(() => window.rhythmHarness.transport.playbackRate)).toBeLessThan(0.65);
+    const slowed = await page.evaluate(() => ({
+        rate: window.rhythmHarness.transport.playbackRate,
+        position: window.rhythmHarness.transport.position,
+        progress: window.rhythmHarness.transport.slowdownProgress,
+    }));
+    const slowedFrequency = await frequency();
+    expect(slowed.rate).toBeGreaterThan(0.2);
+    expect(slowed.progress).toBeGreaterThan(0);
+    expect(slowed.progress).toBeLessThan(1);
+    expect(slowedFrequency).toBeLessThan(normalFrequency * 0.8);
+    expect(Math.abs(slowedFrequency - 880 * slowed.rate)).toBeLessThan(100);
+    await expect.poll(() => page.evaluate(() => window.rhythmHarness.transport.state)).toBe("paused");
+    const paused = await page.evaluate(() => ({
+        position: window.rhythmHarness.transport.position,
+        observed: window.rhythmHarness.observed,
+        reason: window.rhythmHarness.last.pausedReason,
+        rate: window.rhythmHarness.transport.playbackRate,
+    }));
+    expect(paused.position).toBe(1.5);
+    expect(paused.reason).toBe("upgrade");
+    expect(paused.rate).toBe(0);
+    expect(paused.observed.map((beat) => beat.index)).toEqual([0, 1, 2, 3]);
+    expect(paused.observed.at(-1)!.scheduledTime).toBeCloseTo(transition.stopTime, 5);
+    await page.waitForTimeout(200);
+    expect(await page.evaluate(() => window.rhythmHarness.transport.position)).toBe(1.5);
+    await page.evaluate(() => { window.rhythmHarness.immediateResume = true; });
+    await page.locator("#resume").click();
+    await expect.poll(() => page.evaluate(() => {
+        const h = window.rhythmHarness;
+        return h.context.currentTime - h.resumeStartedAt!;
+    })).toBeGreaterThan(0.01);
+    const resumed = await page.evaluate(() => {
+        const h = window.rhythmHarness;
+        return {
+            musicElapsed: h.transport.position - 1.5,
+            audioElapsed: h.context.currentTime - h.resumeStartedAt!,
+        };
+    });
+    // No 40ms silent lead-in may let gameplay advance ahead of the music.
+    expect(resumed.musicElapsed).toBeCloseTo(resumed.audioElapsed, 2);
+    await expect.poll(frequency).toBeGreaterThan(820);
+    await expect.poll(() => page.evaluate(() => window.rhythmHarness.observed.length)).toBeGreaterThan(4);
+    expect(await page.evaluate(() => window.rhythmHarness.observed.map((beat) => beat.index)))
+        .toEqual([0, 1, 2, 3, 4]);
 });
 
 test("bundled WAV decodes in browser and its authored downbeats have audible energy", async ({ page }) => {

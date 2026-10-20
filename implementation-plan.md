@@ -16,6 +16,108 @@ review remains open; see the
 [visual verification record](docs/music-visuals-verification.md).
 The original M0–M6 acceptance below remains historical evidence for that scope.
 
+Follow-up section effects: validated LinkSeg spans now drive cosmetic changes
+across the arena floor. Standard effects combine a full 360° turn of the visual
+floor and grid about the world's Z axis, expanding portal frames, a spiral grid
+and broad floor waves. The decorative floor flips beneath combat and returns
+flat. Floor, perimeter and background colors blend to a dark theme for each of
+the seven section labels. Section changes do not rotate or zoom the camera;
+normal player follow remains intact. Player/enemy/projectile motion stays under
+gameplay control, while perimeter walls and collision geometry stay in place.
+Combat timing, movement, directional dashes and pointer aiming keep their
+original behavior.
+
+Each transition starts at the exact predicted section boundary on the raw
+music clock, independently of visual calibration, and normally spans four
+actual beat intervals. Slow tracks halve that span until it fits within
+3.5 song seconds. Transitions finish at the next section, last available beat,
+or first unusable interval when needed. Fragments under 0.65 song seconds and
+boundaries inside detection gaps use a bounded color fade without a roll.
+Pause and upgrade slowdown freeze or stretch the presentation with the song;
+retry/seek sample the current section directly without queuing old transitions.
+The first section establishes its palette during count-in without an effect.
+
+Calm uses a small decorative floor sway. Off, reduced flashes and OS
+reduced motion retain the palette changes with stationary presentation.
+Graphics detail reduces the portal/floor decoration separately. Tracks without
+section analysis, including the current demo/dojo/manual-BPM paths, keep their
+existing presentation; no section boundaries are synthesized. Adjacent detected
+spans remain distinct even when their labels match. Model predictions remain
+estimates, and listening/comfort review remains open; see the
+[LinkSeg evaluation](docs/section-analysis.md) and
+[section-effects verification](docs/section-effects-verification.md).
+
+Follow-up gameplay: **Space dash** uses a ±100 ms window around authored accented
+bar starts, once per downbeat, in the movement direction (aim when stationary).
+It uses the audio clock for input and movement targets, keeps solver collisions,
+and clears on restart/track replacement. The larger beat/dash indicator is now
+at the bottom center. See [dash verification](docs/dash-verification.md).
+
+Follow-up gameplay: waves now mix chasers, stationary three-way spinners and
+approaching aimed-shot rangers. Spinners rotate 30° per accented bar start;
+both shooters fire only on authored downbeats after a one-bar spawn grace.
+Hostile projectiles use swept player collision, share damage immunity with
+contact hits, and have distinct silhouettes and a bounded budget.
+See [enemy verification](docs/enemy-types-verification.md).
+
+Follow-up arrivals: each main-beat wave first reserves marked positions.
+Narrow beams assemble spinning enemies from zero scale over one authored beat.
+Only the following beat adds them to live combat and physics: previews cannot
+attack, collide, be hit or show health bars. Pending arrivals count toward the
+enemy cap; final beats and detection gaps over 3.05 seconds do not queue them.
+Animation follows uncalibrated music position through slowdown and pause.
+Comfort settings retain a floor footprint and growth without beams, spin or
+vertical travel. See [spawn and pacing verification](docs/spawn-pacing-verification.md).
+
+Follow-up progression: enemies now leave persistent XP gems. Nearby gems
+attract to the player, collected XP advances per-run levels with carry-over,
+and the HUD/results show progress. Requirements now start at 36 XP and rise by
+18 XP per level, a 20% increase; gems remain worth 10 XP.
+Level-up particles use the shared musical timeline and comfort controls.
+The gem/level foundation is recorded in
+[XP verification](docs/experience-verification.md); upgrades now build on it
+as described below.
+
+Follow-up combat: per-run player stats now own the 13–17 damage range, critical
+stats, named additive/multiplicative modifiers, and damage accounting. Projectiles
+capture stats at firing time. Every enemy has a health bar, and every impact
+including kills displays damage immediately at rest. The next authored beat
+starts the number's pop/rise/fade, which lasts one beat; exact-beat hits start
+immediately. Slowdown and pause follow the music clock, with stationary fades
+for reduced-motion settings. See the [original damage record](docs/damage-verification.md)
+and [upgrade verification](docs/upgrades-verification.md) for the updated timing.
+
+Follow-up upgrades: every new level queues a seeded offer of three distinct
+cards, with one selection per level. Music playback and game simulation briefly
+slow together while the cards enter, then stop on a subdivision of the actual
+local beat. The transition advances 100–140 ms of music, approximately
+180–250 ms in real time. Power-of-two subdivisions keep slow tempos equally
+brief; missing detections use a 100 ms music-time fade, shortened at the song
+tail. The transition clears movement/dash input and protects the player.
+Card animation is driven by music position, and pending levels are resolved
+while paused before playback resumes. Click or press 1/2/3 to select; Escape
+cannot skip a choice. Duplicate inputs are guarded, and a failed audio resume
+keeps the applied upgrade and offers a playback retry without awarding it again.
+
+The initial catalog adds +3 to both damage bounds, +20 maximum/current health,
++2 regeneration per five song seconds, +1 normal projectile (cap 7), a six-shot
+main-beat barrage followed by +2 shots per rank (cap 24), +5 percentage points
+of critical chance (cap 100%), +0.25× critical damage, and +1 ricochet (cap 5).
+Upgrades use named per-run stat modifiers and clear on restart. Normal volleys
+spread symmetrically around the aim, growing by 12° per added projectile up
+to a 60° arc. Barrages fire outward only on actual accented bar starts.
+Regeneration waits at least five song seconds between heals and lands on the
+next authored beat without accumulating a gap backlog. Ricochets hold at the
+impact and launch toward a new enemy at most once per beat; each shot keeps
+its original damage, critical result, and bounce allowance.
+
+The explicit stress fixture raises the first XP requirement to 1,000,000 solely
+to prevent selection pauses during profiling; drops and pickups still run.
+The fixture does not change normal progression. Current behavior and catalog
+values are also documented in [README.md](README.md); the original selection
+checks are recorded in [upgrade verification](docs/upgrades-verification.md),
+with the latest changes in [spawn and pacing verification](docs/spawn-pacing-verification.md).
+
 ## Implementation record — 2026-10-20
 
 The original brief and acceptance criteria below are retained for traceability.

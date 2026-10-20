@@ -2,6 +2,7 @@ import { type Plugin } from "@dylanebert/shallot";
 import { fireProjectile } from "../combat";
 import { createEnemy } from "../enemies";
 import { PlayerState } from "../player";
+import { setPlayerStatModifier } from "../player-stats";
 import { PrepareCombat, ResolveCombat, Session } from "../session";
 import { publishVisualEvents } from "../music-visuals/events";
 import type { CombatEvent } from "../combat";
@@ -9,6 +10,12 @@ import { type Resource } from "@dylanebert/shallot";
 
 const BurstStress: Resource<{ generation: number; beat: number }> = {
     create: () => ({ generation: -1, beat: -1 }),
+};
+const StressOptions: Resource<{ upgraded: boolean }> = {
+    create: () => ({
+        upgraded: typeof location !== "undefined" &&
+            new URLSearchParams(location.search).get("upgradeStress") === "1",
+    }),
 };
 
 /** Explicit ?stress=1 fixture; exercises the same physics/render/combat systems as play. */
@@ -20,10 +27,20 @@ export const StressPlugin: Plugin = {
             const s = world.resource(Session);
             if (s.phase !== "playing") return;
             const state = s.combat;
+            if (world.resource(StressOptions).upgraded
+                && !Object.hasOwn(state.playerStats.modifiers, "fixture:upgraded-stress")) {
+                setPlayerStatModifier(state.playerStats, "fixture:upgraded-stress", {
+                    add: { projectileCount: 6, barrageCount: 24, bounces: 5 },
+                });
+            }
             state.tuning.enemyCap = 200;
             state.tuning.projectileCap = 500;
             state.tuning.contactDamage = 0;
             state.tuning.enemyHealth = 1000;
+            // Measure uninterrupted rendering/combat. Real XP drops and pickups
+            // remain active, but this explicit fixture cannot open a choice modal.
+            state.experience.tuning.initialRequirement = 1_000_000;
+            if (state.experience.level === 1) state.experience.requiredXp = 1_000_000;
             while (state.enemies.length < 200) {
                 const index = state.enemies.length;
                 state.enemies.push(createEnemy(state.nextId++, {

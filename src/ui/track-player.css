@@ -1,0 +1,33 @@
+/* The music player spans the viewport; the beat/dash widget stays centered above it. */
+.bs-hud-bottom { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; padding-bottom: 12px; }
+.bs-hud-bottom .bs-hud-beat { max-width: calc(100% - 28px); }
+.bs-run-progress.bs-track-player { display: block; width: 100%; }
+.bs-track-player { min-width: 0; color: #b5ccbf; font: 10px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; background: #091619df; padding: 10px 0 8px; border-top: 1px solid #aecdbb20; }
+.bs-player-meta, .bs-player-footer { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 0 24px; }
+.bs-player-meta { margin-bottom: 8px; }
+.bs-player-section { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #eff5f1; }
+.bs-player-section::before, .bs-player-legend span::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 2px; background: var(--section-color); flex: 0 0 auto; }
+.bs-player-time { white-space: nowrap; color: #c2d2c9; font-variant-numeric: tabular-nums; }
+.bs-player-rail { --song-progress: 0%; height: 28px; position: relative; background: #95b9a51c; overflow: hidden; }
+.bs-player-sections { position: absolute; inset: 0; }
+.bs-player-band { position: absolute; top: 0; bottom: 0; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; padding: 6px 5px; border-right: 1px solid #06121788; color: #09191a; font-size: 10px; font-weight: 600; pointer-events: auto; }
+.bs-player-unplayed { position: absolute; inset: 0 0 0 var(--song-progress); background: #06101755; pointer-events: none; }
+.bs-player-cursor { position: absolute; left: clamp(0px, var(--song-progress), calc(100% - 2px)); top: 0; bottom: 0; width: 2px; background: #f4fff9; box-shadow: 0 0 5px #07100f; pointer-events: none; }
+.bs-player-fill { width: var(--song-progress); height: 100%; background: #9ce6c6; opacity: .7; }
+.bs-player-analyzed .bs-player-fill { display: none; }
+.bs-track-player .bs-player-rail progress { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; }
+.bs-player-footer { margin-top: 6px; color: #819d8e; font-size: 8px; letter-spacing: .5px; }
+.bs-player-next { text-align: right; letter-spacing: 0; color: #b3c5ba; }
+.bs-player-legend { display: flex; justify-content: center; flex-wrap: wrap; gap: 5px 16px; padding: 7px 16px 0; color: #b0c4b8; font-size: 9px; }
+.bs-player-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.bs-section-preview { margin-top: 16px; border: 1px solid #aecdbb20; border-radius: 4px; overflow: hidden; }
+.bs-section-preview .bs-player-meta, .bs-section-preview .bs-player-footer { padding-inline: 10px; }
+.bs-section-preview .bs-player-band { color: transparent; }
+.bs-section-preview .bs-player-section { font-size: 11px; }
+.bs-hud-bottom .bs-hud-hint { margin-top: 9px; padding-inline: 14px; }
+@media (max-width: 520px) {
+    .bs-player-meta, .bs-player-footer { padding-inline: 14px; }
+    .bs-player-band { font-size: 8px; padding-inline: 2px; }
+    .bs-player-footer { font-size: 7px; gap: 8px; }
+    .bs-player-legend { gap: 5px 11px; font-size: 8px; }
+}

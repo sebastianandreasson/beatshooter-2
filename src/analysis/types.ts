@@ -20,6 +20,9 @@ export interface BeatAnalysis {
     backend: "webgpu" | "wasm";
     /** Optional decoration only; omitted curves use a neutral visual response. */
     energy?: EnergyCurve;
+    structure?: import("./sections").SectionAnalysis;
+    /** Recoverable section-analysis failure; beat analysis still succeeded. */
+    sectionWarning?: string;
 }
 
 export interface AnalysisProgress {
@@ -38,6 +41,7 @@ export interface AnalysisRequest {
     pcm: Float32Array;
     duration: number;
     modelUrl: string;
+    sectionModelUrl: string;
     wasmPaths: string;
 }
 

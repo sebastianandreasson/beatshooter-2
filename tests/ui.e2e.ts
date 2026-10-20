@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from "playwright/test";
+import { ANALYZER_VERSION } from "../src/analysis/types";
 
 const preferencesKey = "beatshooter.preferences.v1";
 type DelayedPreviewWindow = Window & {
@@ -33,6 +34,28 @@ function wav(duration = 1.2): Buffer {
     bytes.write("data", 36);
     bytes.writeUInt32LE(samples * 2, 40);
     return bytes;
+}
+
+// Keep inference deterministic here; decoding, automatic selection, cancellation,
+// playback and persisted metadata still run through the production application.
+async function fixtureAnalysis(page: Page): Promise<() => number> {
+    let runs = 0;
+    await page.route(/\/(?:assets\/worker-[^/]+\.js|src\/analysis\/worker\.ts)(?:\?.*)?$/, route => {
+        runs++;
+        return route.fulfill({
+            contentType: "application/javascript",
+            headers: { "Cross-Origin-Embedder-Policy": "require-corp" },
+            body: `self.onmessage = ({ data }) => {
+                const beats = Array.from({ length: Math.ceil(data.duration * 137.6 / 60) }, (_, i) => i * 60 / 137.6);
+                self.postMessage({ type: "result", result: {
+                    schemaVersion: 1, analyzerVersion: "${ANALYZER_VERSION}", duration: data.duration,
+                    beats, downbeats: beats.filter((_, i) => i % 4 === 0), elapsedMs: 1, backend: "webgpu",
+                    sectionWarning: "Fixture warning must not be displayed.",
+                } });
+            };`,
+        });
+    });
+    return () => runs;
 }
 
 for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
@@ -99,43 +122,50 @@ test("settings traps focus, makes the menu inert, and restores focus on Escape",
     await expect(page.locator('.bs-ui[data-phase="menu"]')).toBeVisible();
 });
 
-test("local tempo metadata survives reload but the file must be selected again", async ({ page }) => {
+test("uploads analyze automatically, default to detected beats and round only displayed BPM", async ({ page }) => {
+    const runs = await fixtureAnalysis(page);
     await boot(page);
     await page.getByRole("button", { name: "Import local audio", exact: true }).click();
     await page.locator("#bs-audio-file").setInputFiles({
-        name: "My café practice.wav", mimeType: "audio/wav", buffer: wav(),
+        name: "My café practice.wav", mimeType: "audio/wav", buffer: wav(20),
     });
-    await page.locator("#bs-local-bpm").fill("137.5");
-    await page.locator("#bs-local-offset").fill("0.2");
+    await expect(page.locator('.bs-analysis[data-analysis-state="ready"]')).toBeVisible();
+    expect(runs()).toBe(1);
+    await expect(page.locator("#bs-local-grid")).toHaveValue("detected");
+    await expect(page.locator("#bs-local-bpm")).toBeHidden();
+    await expect(page.locator('[data-value="analysis-summary"]')).toContainText("138 BPM");
+    await expect(page.getByText("Fixture warning must not be displayed.")).toHaveCount(0);
     await page.getByRole("button", { name: "Play this track", exact: true }).click();
     await expect(page.locator('.bs-ui[data-phase="playing"]')).toBeVisible();
+    await expect(page.locator('[data-value="bpm"]')).toHaveText("138");
     const saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), preferencesKey);
-    expect(saved.lastLocal).toEqual({ name: "My café practice.wav", bpm: 137.5, offset: 0.2 });
+    expect(saved.lastLocal.name).toBe("My café practice.wav");
+    expect(saved.lastLocal.bpm).toBeCloseTo(137.6, 5);
     expect(saved.lastLocal.file).toBeUndefined();
     expect(saved.lastLocal.url).toBeUndefined();
     await page.reload();
     await expect(page.locator('.bs-ui[data-phase="menu"]')).toBeVisible({ timeout: 45_000 });
     await page.getByRole("button", { name: "Import local audio", exact: true }).click();
-    await expect(page.locator("#bs-local-bpm")).toHaveValue("137.5");
-    await expect(page.locator("#bs-local-offset")).toHaveValue("0.2");
+    await expect(page.locator("#bs-local-bpm")).toHaveValue("138");
     await expect(page.locator('[data-value="local-reselect"]')).toContainText("My café practice.wav");
     expect(await page.locator("#bs-audio-file").evaluate((input: HTMLInputElement) => input.files?.length)).toBe(0);
     await page.getByRole("button", { name: "Play this track", exact: true }).click();
     await expect(page.locator('[data-value="import-error"]')).toContainText("Choose an audio file");
-
-    // Saved defaults are applied once; another menu render must not discard an edit.
-    await page.locator("#bs-local-bpm").fill("142");
-    await page.locator("#bs-local-offset").fill("0.3");
-    await page.keyboard.press("Escape");
-    await page.getByRole("button", { name: "Open settings" }).click();
-    await page.locator("#bs-reduced").check();
-    await page.keyboard.press("Escape");
-    await page.getByRole("button", { name: "Import local audio", exact: true }).click();
-    await expect(page.locator("#bs-local-bpm")).toHaveValue("142");
-    await expect(page.locator("#bs-local-offset")).toHaveValue("0.3");
+    await page.locator("#bs-audio-file").setInputFiles({ name: "first.wav", mimeType: "audio/wav", buffer: wav(18) });
+    await expect(page.locator('.bs-analysis[data-analysis-state="ready"]')).toBeVisible();
+    await page.locator(".bs-timing-options summary").click();
+    await page.locator("#bs-local-grid").selectOption("manual");
+    await expect(page.locator("#bs-local-bpm")).toBeVisible();
+    await page.locator("#bs-audio-file").setInputFiles({ name: "replacement.wav", mimeType: "audio/wav", buffer: wav(16) });
+    await expect(page.locator('.bs-analysis[data-analysis-state="ready"]')).toBeVisible();
+    expect(runs()).toBe(3);
+    await expect(page.locator("#bs-local-grid")).toHaveValue("detected");
+    await expect(page.locator(".bs-timing-options")).not.toHaveAttribute("open");
+    await expect(page.locator('[data-value="analysis-summary"]')).toContainText("0:16");
 });
 
-test("calibration shows Stop while its file is loading and cancellation keeps the menu usable", async ({ page }) => {
+test("automatic analysis can be cancelled while decoding and a new file supersedes the pending read", async ({ page }) => {
+    const runs = await fixtureAnalysis(page);
     await page.addInitScript(() => {
         const read = File.prototype.arrayBuffer;
         File.prototype.arrayBuffer = async function () {
@@ -154,14 +184,19 @@ test("calibration shows Stop while its file is loading and cancellation keeps th
     await page.locator("#bs-audio-file").setInputFiles({
         name: "ui-delayed.wav", mimeType: "audio/wav", buffer: wav(3),
     });
-    await page.getByRole("button", { name: "Preview with metronome", exact: true }).click();
     await page.waitForFunction(() => (window as DelayedPreviewWindow).__uiFileReadStarted);
-    await expect(page.getByRole("button", { name: "Stop calibration preview", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Cancel analysis", exact: true })).toBeVisible();
     // A settings-independent UI update must not reset the loading-state label.
     await page.setViewportSize({ width: 390, height: 844 });
-    await expect(page.getByRole("button", { name: "Stop calibration preview", exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "Stop calibration preview", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Cancel analysis", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Cancel analysis", exact: true }).click();
+    await expect(page.locator('.bs-analysis[data-analysis-state="idle"]')).toBeVisible();
+    await page.locator("#bs-audio-file").setInputFiles({ name: "new.wav", mimeType: "audio/wav", buffer: wav(12) });
+    await expect(page.locator('.bs-analysis[data-analysis-state="ready"]')).toBeVisible();
     await page.evaluate(() => (window as DelayedPreviewWindow).__uiReleaseFileRead!());
+    await expect(page.locator('[data-value="file-name"]')).toHaveText("new.wav");
+    await expect(page.locator('[data-value="analysis-summary"]')).toContainText("0:12");
+    expect(runs()).toBe(1);
     await expect(page.getByRole("button", { name: "Preview with metronome", exact: true })).toBeVisible();
     await expect(page.locator('[data-value="import-error"]')).toBeHidden();
     await page.keyboard.press("Escape");

@@ -2,17 +2,17 @@ import { createHash } from "node:crypto";
 import { copyFile, mkdir, readFile, rename, rm } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
+import { setupLinkSeg } from "./setup-linkseg";
+import { BEAT_MODEL } from "../src/analysis/models";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const destination = resolve(root, "public/models");
-const modelPath = resolve(destination, "beat-this.onnx");
+const modelPath = resolve(destination, BEAT_MODEL.file);
 const modelUrl = "https://github.com/jgorset/beat-this/releases/download/v1.0.0/beat-this.onnx";
-const modelBytes = 83_008_106;
-const modelSha256 = "5d8a94ce99fb33a6b26df6f6d8076decd52b8fd9439e3206d9b8bcdb1c2881bd";
 
 function validModel(bytes: Uint8Array): boolean {
-    return bytes.length === modelBytes &&
-        createHash("sha256").update(bytes).digest("hex") === modelSha256;
+    return bytes.length === BEAT_MODEL.bytes &&
+        createHash("sha256").update(bytes).digest("hex") === BEAT_MODEL.sha256;
 }
 
 await mkdir(destination, { recursive: true });
@@ -62,4 +62,5 @@ await Bun.write(resolve(destination, "FFT-LICENSE.txt"), fftLicense.trim() + "\n
 const runtimeLicense = await fetch("https://raw.githubusercontent.com/microsoft/onnxruntime/v1.23.2/LICENSE");
 if (!runtimeLicense.ok) throw new Error("Could not retrieve the pinned ONNX Runtime license.");
 await Bun.write(resolve(destination, "ONNX-RUNTIME-LICENSE.txt"), await runtimeLicense.text());
+await setupLinkSeg(root, destination);
 console.log("Audio analysis assets ready. Model SHA-256 verified; runtime 1.23.2 copied locally.");

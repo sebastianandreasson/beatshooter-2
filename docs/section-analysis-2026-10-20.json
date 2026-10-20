@@ -1,0 +1,532 @@
+{
+  "recordedAt": "2026-10-20T13:17:32.298Z",
+  "environment": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+    "gpu": "metal-3",
+    "crossOriginIsolated": true,
+    "browser": "156.0.8078.4",
+    "bun": "1.4.3",
+    "cpu": "Apple M1 Max",
+    "platform": "darwin"
+  },
+  "missingSectionModel": "passed; detected beats remain playable",
+  "cancellationAtSectionStage": "passed",
+  "widths": [
+    1440,
+    390
+  ],
+  "unexpectedRequests": [],
+  "pageErrors": [],
+  "results": [
+    {
+      "file": "neon-circuit.wav",
+      "duration": 72,
+      "totalAnalysisMs": 6132.835000008345,
+      "sectionAnalysisMs": 2457.5100000053644,
+      "sections": 6,
+      "labels": [
+        "intro",
+        "chorus",
+        "verse"
+      ],
+      "beatParity": "all beats and downbeats identical",
+      "previewPlayPauseRetry": "passed",
+      "structure": {
+        "version": 1,
+        "analyzerVersion": "linkseg-7c-694d273-8s-v1",
+        "duration": 72,
+        "elapsedMs": 2457.5100000053644,
+        "backend": "webgpu",
+        "sections": [
+          {
+            "start": 0,
+            "end": 8.260498866213151,
+            "label": "intro"
+          },
+          {
+            "start": 8.260498866213151,
+            "end": 30.26140589569161,
+            "label": "chorus"
+          },
+          {
+            "start": 30.26140589569161,
+            "end": 41.74367346938776,
+            "label": "chorus"
+          },
+          {
+            "start": 41.74367346938776,
+            "end": 54.247619047619054,
+            "label": "verse"
+          },
+          {
+            "start": 54.247619047619054,
+            "end": 70.25777777777778,
+            "label": "chorus"
+          },
+          {
+            "start": 70.25777777777778,
+            "end": 72,
+            "label": "chorus"
+          }
+        ]
+      }
+    },
+    {
+      "file": "Hyper Spoiler.mp3",
+      "duration": 272.0391836734694,
+      "totalAnalysisMs": 7918.344999998808,
+      "sectionAnalysisMs": 2869.2249999940395,
+      "sections": 17,
+      "labels": [
+        "intro",
+        "verse",
+        "inst",
+        "bridge",
+        "chorus"
+      ],
+      "beatParity": "all beats and downbeats identical",
+      "previewPlayPauseRetry": "passed",
+      "structure": {
+        "version": 1,
+        "analyzerVersion": "linkseg-7c-694d273-8s-v1",
+        "duration": 272.0391836734694,
+        "elapsedMs": 2869.2249999940395,
+        "backend": "webgpu",
+        "sections": [
+          {
+            "start": 0,
+            "end": 42.36480725623583,
+            "label": "intro"
+          },
+          {
+            "start": 42.36480725623583,
+            "end": 53.03437641723356,
+            "label": "verse"
+          },
+          {
+            "start": 53.03437641723356,
+            "end": 63.7039455782313,
+            "label": "verse"
+          },
+          {
+            "start": 63.7039455782313,
+            "end": 75.04108843537415,
+            "label": "verse"
+          },
+          {
+            "start": 75.04108843537415,
+            "end": 85.70485260770975,
+            "label": "verse"
+          },
+          {
+            "start": 85.70485260770975,
+            "end": 105.70303854875283,
+            "label": "inst"
+          },
+          {
+            "start": 105.70303854875283,
+            "end": 127.7039455782313,
+            "label": "verse"
+          },
+          {
+            "start": 127.7039455782313,
+            "end": 148.87473922902495,
+            "label": "verse"
+          },
+          {
+            "start": 148.87473922902495,
+            "end": 164.5424036281179,
+            "label": "bridge"
+          },
+          {
+            "start": 164.5424036281179,
+            "end": 173.1802267573696,
+            "label": "bridge"
+          },
+          {
+            "start": 173.1802267573696,
+            "end": 183.86140589569163,
+            "label": "verse"
+          },
+          {
+            "start": 183.86140589569163,
+            "end": 194.53678004535146,
+            "label": "inst"
+          },
+          {
+            "start": 194.53678004535146,
+            "end": 205.19473922902495,
+            "label": "inst"
+          },
+          {
+            "start": 205.19473922902495,
+            "end": 215.8643083900227,
+            "label": "chorus"
+          },
+          {
+            "start": 215.8643083900227,
+            "end": 226.53968253968253,
+            "label": "chorus"
+          },
+          {
+            "start": 226.53968253968253,
+            "end": 248.36643990929707,
+            "label": "chorus"
+          },
+          {
+            "start": 248.36643990929707,
+            "end": 272.0391836734694,
+            "label": "verse"
+          }
+        ]
+      }
+    },
+    {
+      "file": "I Can't.mp3",
+      "duration": 188.32,
+      "totalAnalysisMs": 6113.655000001192,
+      "sectionAnalysisMs": 1557.065000012517,
+      "sections": 21,
+      "labels": [
+        "silence",
+        "intro",
+        "verse",
+        "chorus",
+        "inst"
+      ],
+      "beatParity": "all beats and downbeats identical",
+      "previewPlayPauseRetry": "passed",
+      "structure": {
+        "version": 1,
+        "analyzerVersion": "linkseg-7c-694d273-8s-v1",
+        "duration": 188.32,
+        "elapsedMs": 1557.065000012517,
+        "backend": "webgpu",
+        "sections": [
+          {
+            "start": 0,
+            "end": 0.6037188208616779,
+            "label": "silence"
+          },
+          {
+            "start": 0.6037188208616779,
+            "end": 9.427301587301587,
+            "label": "intro"
+          },
+          {
+            "start": 9.427301587301587,
+            "end": 18.84299319727891,
+            "label": "intro"
+          },
+          {
+            "start": 18.84299319727891,
+            "end": 28.839183673469385,
+            "label": "intro"
+          },
+          {
+            "start": 28.839183673469385,
+            "end": 37.6627664399093,
+            "label": "verse"
+          },
+          {
+            "start": 37.6627664399093,
+            "end": 47.072653061224486,
+            "label": "verse"
+          },
+          {
+            "start": 47.072653061224486,
+            "end": 56.49414965986395,
+            "label": "verse"
+          },
+          {
+            "start": 56.49414965986395,
+            "end": 66.49034013605441,
+            "label": "verse"
+          },
+          {
+            "start": 66.49034013605441,
+            "end": 75.31392290249434,
+            "label": "verse"
+          },
+          {
+            "start": 75.31392290249434,
+            "end": 84.72961451247166,
+            "label": "chorus"
+          },
+          {
+            "start": 84.72961451247166,
+            "end": 94.14530612244897,
+            "label": "chorus"
+          },
+          {
+            "start": 94.14530612244897,
+            "end": 104.12408163265306,
+            "label": "chorus"
+          },
+          {
+            "start": 104.12408163265306,
+            "end": 112.9534693877551,
+            "label": "inst"
+          },
+          {
+            "start": 112.9534693877551,
+            "end": 122.37496598639456,
+            "label": "verse"
+          },
+          {
+            "start": 122.37496598639456,
+            "end": 131.78485260770975,
+            "label": "verse"
+          },
+          {
+            "start": 131.78485260770975,
+            "end": 141.78104308390022,
+            "label": "verse"
+          },
+          {
+            "start": 141.78104308390022,
+            "end": 150.60462585034014,
+            "label": "verse"
+          },
+          {
+            "start": 150.60462585034014,
+            "end": 160.02031746031747,
+            "label": "chorus"
+          },
+          {
+            "start": 160.02031746031747,
+            "end": 169.4360090702948,
+            "label": "chorus"
+          },
+          {
+            "start": 169.4360090702948,
+            "end": 179.420589569161,
+            "label": "chorus"
+          },
+          {
+            "start": 179.420589569161,
+            "end": 188.32,
+            "label": "chorus"
+          }
+        ]
+      }
+    },
+    {
+      "file": "Magna Divide.mp3",
+      "duration": 256.1567346938775,
+      "totalAnalysisMs": 7170.494999989867,
+      "sectionAnalysisMs": 2216.199999988079,
+      "sections": 17,
+      "labels": [
+        "intro",
+        "verse",
+        "chorus",
+        "bridge",
+        "outro"
+      ],
+      "beatParity": "all beats and downbeats identical",
+      "previewPlayPauseRetry": "passed",
+      "structure": {
+        "version": 1,
+        "analyzerVersion": "linkseg-7c-694d273-8s-v1",
+        "duration": 256.1567346938775,
+        "elapsedMs": 2216.199999988079,
+        "backend": "webgpu",
+        "sections": [
+          {
+            "start": 0,
+            "end": 4.191201814058957,
+            "label": "intro"
+          },
+          {
+            "start": 4.191201814058957,
+            "end": 21.983492063492065,
+            "label": "verse"
+          },
+          {
+            "start": 21.983492063492065,
+            "end": 39.735147392290244,
+            "label": "verse"
+          },
+          {
+            "start": 39.735147392290244,
+            "end": 56.95854875283447,
+            "label": "verse"
+          },
+          {
+            "start": 56.95854875283447,
+            "end": 74.80308390022677,
+            "label": "verse"
+          },
+          {
+            "start": 74.80308390022677,
+            "end": 93.6344671201814,
+            "label": "verse"
+          },
+          {
+            "start": 93.6344671201814,
+            "end": 111.39773242630386,
+            "label": "chorus"
+          },
+          {
+            "start": 111.39773242630386,
+            "end": 129.18421768707483,
+            "label": "chorus"
+          },
+          {
+            "start": 129.18421768707483,
+            "end": 146.96489795918367,
+            "label": "verse"
+          },
+          {
+            "start": 146.96489795918367,
+            "end": 155.84653061224492,
+            "label": "verse"
+          },
+          {
+            "start": 155.84653061224492,
+            "end": 164.73396825396827,
+            "label": "verse"
+          },
+          {
+            "start": 164.73396825396827,
+            "end": 182.555283446712,
+            "label": "bridge"
+          },
+          {
+            "start": 182.555283446712,
+            "end": 191.45433106575962,
+            "label": "chorus"
+          },
+          {
+            "start": 191.45433106575962,
+            "end": 200.32435374149662,
+            "label": "chorus"
+          },
+          {
+            "start": 200.32435374149662,
+            "end": 217.512925170068,
+            "label": "chorus"
+          },
+          {
+            "start": 217.512925170068,
+            "end": 235.85668934240363,
+            "label": "verse"
+          },
+          {
+            "start": 235.85668934240363,
+            "end": 256.1567346938775,
+            "label": "outro"
+          }
+        ]
+      }
+    },
+    {
+      "file": "Siriusmo Itchy from Enthusiast.mp3",
+      "duration": 212.61061224489796,
+      "totalAnalysisMs": 7252.550000011921,
+      "sectionAnalysisMs": 2294.9749999940395,
+      "sections": 16,
+      "labels": [
+        "silence",
+        "intro",
+        "verse",
+        "bridge",
+        "chorus",
+        "outro"
+      ],
+      "beatParity": "all beats and downbeats identical",
+      "previewPlayPauseRetry": "passed",
+      "structure": {
+        "version": 1,
+        "analyzerVersion": "linkseg-7c-694d273-8s-v1",
+        "duration": 212.61061224489796,
+        "elapsedMs": 2294.9749999940395,
+        "backend": "webgpu",
+        "sections": [
+          {
+            "start": 0,
+            "end": 1.2829024943310658,
+            "label": "silence"
+          },
+          {
+            "start": 1.2829024943310658,
+            "end": 12.625850340136054,
+            "label": "intro"
+          },
+          {
+            "start": 12.625850340136054,
+            "end": 29.442902494331065,
+            "label": "verse"
+          },
+          {
+            "start": 29.442902494331065,
+            "end": 43.98439909297052,
+            "label": "verse"
+          },
+          {
+            "start": 43.98439909297052,
+            "end": 58.08471655328798,
+            "label": "verse"
+          },
+          {
+            "start": 58.08471655328798,
+            "end": 73.08480725623582,
+            "label": "verse"
+          },
+          {
+            "start": 73.08480725623582,
+            "end": 88.54349206349207,
+            "label": "verse"
+          },
+          {
+            "start": 88.54349206349207,
+            "end": 101.71501133786848,
+            "label": "bridge"
+          },
+          {
+            "start": 101.71501133786848,
+            "end": 116.72671201814059,
+            "label": "verse"
+          },
+          {
+            "start": 116.72671201814059,
+            "end": 131.2624036281179,
+            "label": "verse"
+          },
+          {
+            "start": 131.2624036281179,
+            "end": 147.15646258503403,
+            "label": "chorus"
+          },
+          {
+            "start": 147.15646258503403,
+            "end": 161.2393650793651,
+            "label": "bridge"
+          },
+          {
+            "start": 161.2393650793651,
+            "end": 175.80988662131517,
+            "label": "bridge"
+          },
+          {
+            "start": 175.80988662131517,
+            "end": 189.00462585034012,
+            "label": "outro"
+          },
+          {
+            "start": 189.00462585034012,
+            "end": 204.44589569160996,
+            "label": "outro"
+          },
+          {
+            "start": 204.44589569160996,
+            "end": 212.61061224489796,
+            "label": "outro"
+          }
+        ]
+      }
+    }
+  ],
+  "quality": "No human section annotations; this verifies inference, integration and timing preservation, not musical correctness."
+}

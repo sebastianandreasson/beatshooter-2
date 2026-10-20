@@ -15,11 +15,12 @@ export const PlayerState: Resource<{
     body: number; ship: number; nose: number; wings: number[]; enabled: boolean;
     input: Planar; aim: Planar; target: Planar; previous: Planar; position: Planar;
     pointer: { x: number; y: number; active: boolean }; keys: Set<string>;
+    dashVelocity?: Planar; dashTarget?: Planar; wasDashing: boolean;
 }> = { create: () => ({
     body: -1, ship: -1, nose: -1, wings: [], enabled: false,
     input: { x: 0, z: 0 }, aim: { x: 0, z: -1 }, target: { x: 0, z: -4 },
     previous: { x: 0, z: 0 }, position: { x: 0, z: 0 },
-    pointer: { x: 0, y: 0, active: false }, keys: new Set(),
+    pointer: { x: 0, y: 0, active: false }, keys: new Set(), wasDashing: false,
 }) };
 
 export function resetPlayer(world: World): void {
@@ -32,6 +33,15 @@ export function resetPlayer(world: World): void {
     player.target = { x: 0, z: -4 };
     player.input = { x: 0, z: 0 };
     player.keys.clear();
+    player.dashVelocity = undefined;
+    player.dashTarget = undefined;
+    player.wasDashing = false;
+}
+
+export function readMovementInput(keys: ReadonlySet<string>): Planar {
+    const pressed = (a: string, b: string) => Number(keys.has(a) || keys.has(b));
+    return { x: pressed("KeyD", "ArrowRight") - pressed("KeyA", "ArrowLeft"),
+        z: pressed("KeyS", "ArrowDown") - pressed("KeyW", "ArrowUp") };
 }
 
 export function sampleAim(world: World): void {
@@ -51,10 +61,7 @@ export const SamplePlayer: System = {
     name: "Beatshooter/SampleInput", group: "setup",
     update(world) {
         const player = world.resource(PlayerState);
-        const pressed = (a: string, b: string) => Number(player.keys.has(a) || player.keys.has(b));
-        player.input = player.enabled
-            ? { x: pressed("KeyD", "ArrowRight") - pressed("KeyA", "ArrowLeft"), z: pressed("KeyS", "ArrowDown") - pressed("KeyW", "ArrowUp") }
-            : { x: 0, z: 0 };
+        player.input = player.enabled ? readMovementInput(player.keys) : { x: 0, z: 0 };
         sampleAim(world);
     },
 };
@@ -65,7 +72,21 @@ export const MovePlayer: System = {
         const player = world.resource(PlayerState);
         if (!player.enabled) return;
         const velocity = world.storage(GlobalTransform).linearVelocity;
-        const next = movementVelocity({ x: velocity.x.get(player.body), z: velocity.z.get(player.body) }, player.input, world.time.deltaTime);
+        // End the burst cleanly; boosted velocity must not leak into ordinary movement damping.
+        const current = player.wasDashing ? { x: 0, z: 0 }
+            : { x: velocity.x.get(player.body), z: velocity.z.get(player.body) };
+        let next = player.dashVelocity ?? movementVelocity(current, player.input, world.time.deltaTime);
+        if (player.dashVelocity && player.dashTarget) {
+            // Approach an absolute music-time target through the solver. Repeated
+            // fixed ticks at a held audio position cannot add extra dash distance.
+            const translation = world.storage(GlobalTransform).translation;
+            const x = (player.dashTarget.x - translation.x.get(player.body)) / world.time.deltaTime;
+            const z = (player.dashTarget.z - translation.z.get(player.body)) / world.time.deltaTime;
+            const speed = Math.hypot(player.dashVelocity.x, player.dashVelocity.z);
+            const scale = Math.min(1, speed / Math.max(1e-9, Math.hypot(x, z)));
+            next = { x: x * scale, z: z * scale };
+        }
+        player.wasDashing = !!player.dashVelocity;
         setLinearVelocity(world, player.body, { x: next.x, y: 0, z: next.z });
     },
 };

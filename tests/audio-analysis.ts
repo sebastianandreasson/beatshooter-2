@@ -97,11 +97,10 @@ try {
         };
     });
     await page.getByRole("button", { name: "Import local audio" }).click();
-    await page.locator("#bs-audio-file").setInputFiles(resolve("public/tracks/neon-circuit.wav"));
 
     // Missing assets must fail usefully, with manual controls still available.
     await context.route("**/models/beat-this.onnx", route => route.fulfill({ status: 404, body: "Missing test model" }));
-    await page.locator('[data-action="analyze-local"]').click();
+    await page.locator("#bs-audio-file").setInputFiles(resolve("public/tracks/neon-circuit.wav"));
     await page.waitForFunction(() => ["error", "ready"].includes((window as InspectionWindow).__beatshooter!.snapshot().analysis?.state ?? ""),
         undefined, { timeout: 60_000 });
     if ((await snapshot(page)).analysis?.state !== "error") throw new Error("Missing model interception did not fail analysis.");
@@ -126,7 +125,6 @@ try {
         await page.locator("#bs-audio-file").setInputFiles(resolve(path));
         const started = performance.now();
         console.log(`Analyzing ${path}...`);
-        await page.locator('[data-action="analyze-local"]').click();
         await page.waitForFunction(() => ["ready", "error"].includes(
             (window as InspectionWindow).__beatshooter!.snapshot().analysis?.state ?? ""),
             undefined, { timeout: 600_000 });

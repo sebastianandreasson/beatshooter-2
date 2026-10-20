@@ -1,0 +1,130 @@
+/* Menu sizing is independent of the in-game HUD and upgrade presentation. */
+.bs-menu .bs-topbar {
+    justify-content: flex-end;
+    padding: 16px 32px;
+    border: 0;
+}
+.bs-menu-main {
+    width: min(calc(100% - 64px), 1120px);
+    max-width: 1120px;
+    padding: 12px 0 28px;
+}
+.bs-menu .bs-intro { margin-bottom: 32px; }
+.bs-menu .bs-intro h1 {
+    margin: 0;
+    font-size: clamp(60px, 11.6vw, 150px);
+    line-height: .98;
+    font-weight: 700;
+    letter-spacing: -.065em;
+}
+.bs-menu .bs-track-art { height: 166px; }
+.bs-menu .bs-track-body { padding: 24px; }
+.bs-menu .bs-small-card { padding: 22px 24px; }
+.bs-menu .bs-small-card h3, .bs-menu .bs-track-heading h3 {
+    font-size: 26px;
+    margin: 0;
+}
+.bs-menu .bs-credit { font-size: 13px; }
+.bs-menu .bs-track-meta { font-size: 13px; margin: 16px 0 20px; }
+.bs-menu .bs-track-bottom { justify-content: flex-end; font-size: 10px; }
+.bs-menu .bs-card-top { margin-bottom: 10px; }
+.bs-menu .bs-small-icon svg { width: 22px; height: 22px; }
+.bs-menu .bs-button, .bs-modal .bs-button, .bs-cover .bs-button {
+    min-height: 48px;
+    padding: 12px 18px;
+    font-size: 15px;
+}
+.bs-menu .bs-button svg, .bs-modal .bs-button svg, .bs-cover .bs-button svg {
+    width: 20px;
+    height: 20px;
+    flex-basis: 20px;
+}
+.bs-menu .bs-icon-button, .bs-modal .bs-icon-button, .bs-cover .bs-icon-button {
+    width: 46px;
+    height: 46px;
+}
+.bs-menu .bs-dojo-controls { margin-top: 16px; gap: 16px; }
+.bs-menu .bs-dojo-controls > label { font-size: 10px; }
+.bs-menu .bs-number-wrap { min-height: 48px; padding: 10px 12px; }
+.bs-menu .bs-number-wrap input { width: 62px; font-size: 18px; }
+.bs-menu .bs-number-wrap > span { font-size: 11px; }
+.bs-menu .bs-local-card .bs-button { margin-top: 22px; }
+.bs-menu .bs-controls {
+    flex-wrap: wrap;
+    gap: 18px 30px;
+    margin-top: 24px;
+    padding-top: 24px;
+    color: #b2c6bd;
+}
+.bs-menu .bs-controls > div { font-size: 14px; gap: 12px; }
+.bs-menu .bs-controls kbd {
+    min-width: 30px;
+    height: 34px;
+    padding: 0 8px;
+    font-size: 12px;
+}
+.bs-menu .bs-mouse-icon { width: 20px; height: 30px; border-radius: 9px; }
+.bs-menu .bs-mouse-icon::before { height: 8px; left: 8px; top: 5px; }
+.bs-menu .bs-beat-control { font-size: 36px; }
+.bs-modal .bs-dialog { max-width: 560px; padding: 36px; }
+.bs-modal .bs-dialog h2, .bs-cover .bs-dialog h2 { font-size: 32px; }
+.bs-modal .bs-dialog p { font-size: 14px; }
+.bs-modal .bs-text-button, .bs-cover .bs-text-button {
+    min-height: 44px;
+    font-size: 13px;
+}
+.bs-modal .bs-settings-section h3 { font-size: 16px; }
+.bs-modal .bs-slider-label, .bs-modal .bs-select-label, .bs-modal .bs-checkbox-label {
+    font-size: 14px;
+}
+.bs-modal .bs-slider-label output { font-size: 12px; }
+.bs-modal .bs-settings-section input[type="range"] { height: 24px; margin: 8px 0 16px; }
+.bs-modal .bs-setting-help, .bs-modal .bs-checkbox-label small { font-size: 12px; }
+.bs-modal .bs-select-label select { min-height: 44px; font-size: 13px; padding: 10px 12px; }
+.bs-modal .bs-checkbox-label input { width: 22px; height: 22px; }
+.bs-modal .bs-settings-footer > span { font-size: 11px; }
+.bs-modal .bs-file-label { padding: 20px; margin: 24px 0; font-size: 16px; }
+.bs-modal .bs-file-label small { font-size: 11px; }
+.bs-modal .bs-file-label input { font-size: 12px; }
+.bs-modal .bs-file-label input::file-selector-button { min-height: 44px; font-size: 13px; }
+.bs-modal .bs-analysis { margin: 0 0 18px; padding: 16px; }
+.bs-modal .bs-analysis-actions { margin-bottom: 8px; }
+.bs-modal .bs-analysis-status p { margin-top: 0; }
+.bs-modal .bs-analysis-summary { font-size: 13px; }
+.bs-timing-options { margin: 18px 0; border-top: 1px solid var(--bs-line); }
+.bs-timing-options summary { padding: 12px 0; min-height: 44px; font-size: 14px; cursor: pointer; }
+.bs-timing-options summary:focus-visible { outline: 2px solid var(--bs-accent); outline-offset: 3px; }
+.bs-modal .bs-beat-source { margin: 6px 0 16px; }
+.bs-modal .bs-import-fields { margin-bottom: 6px; }
+.bs-modal .bs-import-fields label { font-size: 11px; }
+.bs-modal .bs-import-fields input { min-height: 48px; font-size: 18px; }
+.bs-modal .bs-import-fields small { font-size: 11px; }
+.bs-modal .bs-preview-section { margin-top: 18px; }
+.bs-modal .bs-dialog .bs-local-reselect {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--bs-muted);
+    font-size: 12px;
+}
+@media (max-width: 800px) {
+    .bs-menu-main { width: calc(100% - 48px); padding-top: 12px; }
+    .bs-menu .bs-track-art { height: 100%; min-height: 240px; }
+    .bs-menu .bs-dojo-controls { flex-wrap: wrap; }
+    .bs-menu .bs-controls > div:first-child { width: auto; }
+}
+@media (max-width: 520px) {
+    .bs-menu .bs-topbar { padding: 14px 20px; }
+    .bs-menu-main { width: calc(100% - 40px); padding-top: 12px; }
+    .bs-menu .bs-intro { margin-bottom: 28px; }
+    .bs-menu .bs-intro h1 { font-size: 13vw; }
+    .bs-menu .bs-track-art { height: 140px; min-height: 140px; }
+    .bs-menu .bs-track-body, .bs-menu .bs-small-card { padding: 20px; }
+    .bs-menu .bs-dojo-controls { flex-wrap: nowrap; }
+    .bs-menu .bs-controls { gap: 20px 24px; }
+    .bs-modal .bs-dialog { padding: 28px 22px; }
+    .bs-modal .bs-dialog h2 { font-size: 28px; padding-right: 30px; }
+    .bs-modal .bs-file-label { padding: 16px 12px; }
+    .bs-modal .bs-analysis { padding: 12px; }
+    .bs-modal .bs-settings-footer { flex-wrap: wrap; }
+}

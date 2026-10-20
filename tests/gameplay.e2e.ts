@@ -185,7 +185,7 @@ test("a user-selected WAV completes naturally, retries, saves its result, and re
     await page.getByRole("button", { name: "Play this track" }).click();
     await playing(page);
     await expect(page.locator('[data-screen="results"]')).toBeVisible({ timeout: 12_000 });
-    await expect(page.locator('[data-value="result-title"]')).toHaveText("You held your ground.");
+    await expect(page.locator('[data-value="result-title"]')).toHaveText("Track complete");
     const first = await snapshot(page);
     expect(first.combat.health).toBe(100);
     expect(first.combat.score).toBeGreaterThan(0);
@@ -256,7 +256,7 @@ test("a naturally defeated demo reaches results and returns cleanly to track sel
     await page.getByRole("button", { name: "Enter the arena" }).click();
     await playing(page);
     await expect(page.locator('[data-screen="results"]')).toBeVisible({ timeout: 60_000 });
-    await expect(page.locator('[data-value="result-title"]')).toHaveText("One more beat.");
+    await expect(page.locator('[data-value="result-title"]')).toHaveText("Game over");
     await expect(page.locator(".damage-layer")).toBeHidden();
     await page.screenshot({ path: testInfo.outputPath("defeat-results.png") });
     const result = await snapshot(page);

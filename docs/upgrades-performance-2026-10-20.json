@@ -1,0 +1,331 @@
+{
+  "baseline": {
+    "recordedAt": "2026-10-20T12:56:07.766Z",
+    "machine": {
+      "platform": "darwin",
+      "release": "24.6.0",
+      "architecture": "arm64",
+      "cpu": "Apple M1 Max",
+      "logicalCores": 10,
+      "memoryGiB": 64
+    },
+    "runtime": {
+      "bun": "1.4.3",
+      "browser": "Chromium 156.0.8078.4",
+      "mode": "headless",
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+      "devicePixelRatio": 1,
+      "crossOriginIsolated": true,
+      "gpu": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "0x0000",
+        "description": "Apple M1 Max"
+      }
+    },
+    "scenario": {
+      "mode": "baseline",
+      "url": "http://127.0.0.1:4175/?test=1&stress=1",
+      "viewport": {
+        "width": 1200,
+        "height": 924
+      },
+      "warmupMilliseconds": 3000,
+      "measuredFrames": 600,
+      "refillBeforeEachFixedStep": {
+        "enemies": 200,
+        "projectiles": 500
+      },
+      "playerStats": {
+        "damageMin": 13,
+        "damageMax": 17,
+        "criticalChance": 0.12,
+        "criticalMultiplier": 2,
+        "maxHealth": 100,
+        "healthRegen": 0,
+        "projectileCount": 1,
+        "barrageCount": 0,
+        "bounces": 0
+      },
+      "playerDamageMetrics": {
+        "shotsFired": 22756,
+        "hits": 17658,
+        "criticalHits": 2088,
+        "totalDamageDealt": 293685,
+        "lastHitDamage": 14
+      },
+      "scope": "Real Shallot physics/rendering/audio and combat; read-only snapshot each animation frame.",
+      "note": "Counts are observed after collision/expiry and can be lower than the per-step refill target. Frame intervals include display pacing and snapshot overhead. The fixture refills individual projectiles independently of beat-fired fans and barrages, so it measures sustained density rather than a normal-play firing rate."
+    },
+    "frameIntervalsMilliseconds": {
+      "mean": 16.666,
+      "p50": 16.665,
+      "p95": 16.67,
+      "p99": 16.67,
+      "max": 16.67
+    },
+    "averageFramesPerSecond": 60.002,
+    "target60Fps": {
+      "frameBudgetMilliseconds": 16.667,
+      "timestampToleranceMilliseconds": 0.1,
+      "met": true
+    },
+    "observedCounts": {
+      "enemies": {
+        "min": 197,
+        "max": 200
+      },
+      "healthbars": {
+        "min": 197,
+        "max": 200
+      },
+      "projectiles": {
+        "min": 439,
+        "max": 487
+      },
+      "waitingForBounce": {
+        "min": 0,
+        "max": 0
+      },
+      "hitMultipleEnemies": {
+        "min": 0,
+        "max": 0
+      },
+      "effects": {
+        "min": 100,
+        "max": 100
+      },
+      "sessionEntities": {
+        "min": 681,
+        "max": 852
+      }
+    },
+    "cleanup": {
+      "phase": "menu",
+      "sessionEntities": 0,
+      "healthbars": 0,
+      "sounds": 0
+    },
+    "screenshot": "output/playwright/stress.png"
+  },
+  "upgradedRuns": [
+    {
+      "recordedAt": "2026-10-20T12:56:22.834Z",
+      "machine": {
+        "platform": "darwin",
+        "release": "24.6.0",
+        "architecture": "arm64",
+        "cpu": "Apple M1 Max",
+        "logicalCores": 10,
+        "memoryGiB": 64
+      },
+      "runtime": {
+        "bun": "1.4.3",
+        "browser": "Chromium 156.0.8078.4",
+        "mode": "headless",
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+        "devicePixelRatio": 1,
+        "crossOriginIsolated": true,
+        "gpu": {
+          "vendor": "apple",
+          "architecture": "metal-3",
+          "device": "0x0000",
+          "description": "Apple M1 Max"
+        }
+      },
+      "scenario": {
+        "mode": "upgraded",
+        "url": "http://127.0.0.1:4175/?test=1&stress=1&upgradeStress=1",
+        "viewport": {
+          "width": 1200,
+          "height": 924
+        },
+        "warmupMilliseconds": 3000,
+        "measuredFrames": 600,
+        "refillBeforeEachFixedStep": {
+          "enemies": 200,
+          "projectiles": 500
+        },
+        "playerStats": {
+          "damageMin": 13,
+          "damageMax": 17,
+          "criticalChance": 0.12,
+          "criticalMultiplier": 2,
+          "maxHealth": 100,
+          "healthRegen": 0,
+          "projectileCount": 7,
+          "barrageCount": 24,
+          "bounces": 5
+        },
+        "playerDamageMetrics": {
+          "shotsFired": 2509,
+          "hits": 13454,
+          "criticalHits": 1606,
+          "totalDamageDealt": 223865,
+          "lastHitDamage": 17
+        },
+        "scope": "Real Shallot physics/rendering/audio and combat; read-only snapshot each animation frame.",
+        "note": "Counts are observed after collision/expiry and can be lower than the per-step refill target. Frame intervals include display pacing and snapshot overhead. The fixture refills individual projectiles independently of beat-fired fans and barrages, so it measures sustained density rather than a normal-play firing rate."
+      },
+      "frameIntervalsMilliseconds": {
+        "mean": 17.11,
+        "p50": 16.665,
+        "p95": 16.67,
+        "p99": 16.67,
+        "max": 283.325
+      },
+      "averageFramesPerSecond": 58.444,
+      "target60Fps": {
+        "frameBudgetMilliseconds": 16.667,
+        "timestampToleranceMilliseconds": 0.1,
+        "met": false
+      },
+      "observedCounts": {
+        "enemies": {
+          "min": 191,
+          "max": 200
+        },
+        "healthbars": {
+          "min": 191,
+          "max": 200
+        },
+        "projectiles": {
+          "min": 79,
+          "max": 500
+        },
+        "waitingForBounce": {
+          "min": 0,
+          "max": 500
+        },
+        "hitMultipleEnemies": {
+          "min": 0,
+          "max": 500
+        },
+        "effects": {
+          "min": 100,
+          "max": 100
+        },
+        "sessionEntities": {
+          "min": 279,
+          "max": 711
+        }
+      },
+      "cleanup": {
+        "phase": "menu",
+        "sessionEntities": 0,
+        "healthbars": 0,
+        "sounds": 0
+      },
+      "screenshot": "output/playwright/stress-upgraded.png"
+    },
+    {
+      "recordedAt": "2026-10-20T12:57:18.129Z",
+      "machine": {
+        "platform": "darwin",
+        "release": "24.6.0",
+        "architecture": "arm64",
+        "cpu": "Apple M1 Max",
+        "logicalCores": 10,
+        "memoryGiB": 64
+      },
+      "runtime": {
+        "bun": "1.4.3",
+        "browser": "Chromium 156.0.8078.4",
+        "mode": "headless",
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+        "devicePixelRatio": 1,
+        "crossOriginIsolated": true,
+        "gpu": {
+          "vendor": "apple",
+          "architecture": "metal-3",
+          "device": "0x0000",
+          "description": "Apple M1 Max"
+        }
+      },
+      "scenario": {
+        "mode": "upgraded",
+        "url": "http://127.0.0.1:4175/?test=1&stress=1&upgradeStress=1",
+        "viewport": {
+          "width": 1200,
+          "height": 924
+        },
+        "warmupMilliseconds": 3000,
+        "measuredFrames": 600,
+        "refillBeforeEachFixedStep": {
+          "enemies": 200,
+          "projectiles": 500
+        },
+        "playerStats": {
+          "damageMin": 13,
+          "damageMax": 17,
+          "criticalChance": 0.12,
+          "criticalMultiplier": 2,
+          "maxHealth": 100,
+          "healthRegen": 0,
+          "projectileCount": 7,
+          "barrageCount": 24,
+          "bounces": 5
+        },
+        "playerDamageMetrics": {
+          "shotsFired": 2500,
+          "hits": 13492,
+          "criticalHits": 1616,
+          "totalDamageDealt": 224667,
+          "lastHitDamage": 13
+        },
+        "scope": "Real Shallot physics/rendering/audio and combat; read-only snapshot each animation frame.",
+        "note": "Counts are observed after collision/expiry and can be lower than the per-step refill target. Frame intervals include display pacing and snapshot overhead. The fixture refills individual projectiles independently of beat-fired fans and barrages, so it measures sustained density rather than a normal-play firing rate."
+      },
+      "frameIntervalsMilliseconds": {
+        "mean": 16.666,
+        "p50": 16.665,
+        "p95": 16.67,
+        "p99": 16.67,
+        "max": 16.67
+      },
+      "averageFramesPerSecond": 60.002,
+      "target60Fps": {
+        "frameBudgetMilliseconds": 16.667,
+        "timestampToleranceMilliseconds": 0.1,
+        "met": true
+      },
+      "observedCounts": {
+        "enemies": {
+          "min": 190,
+          "max": 200
+        },
+        "healthbars": {
+          "min": 190,
+          "max": 200
+        },
+        "projectiles": {
+          "min": 23,
+          "max": 500
+        },
+        "waitingForBounce": {
+          "min": 0,
+          "max": 500
+        },
+        "hitMultipleEnemies": {
+          "min": 0,
+          "max": 500
+        },
+        "effects": {
+          "min": 100,
+          "max": 100
+        },
+        "sessionEntities": {
+          "min": 223,
+          "max": 712
+        }
+      },
+      "cleanup": {
+        "phase": "menu",
+        "sessionEntities": 0,
+        "healthbars": 0,
+        "sounds": 0
+      },
+      "screenshot": "output/playwright/stress-upgraded.png"
+    }
+  ]
+}

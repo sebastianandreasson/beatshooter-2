@@ -1,6 +1,11 @@
 import type { LocalTrackMetadata, Settings } from "../settings";
 import { DEMO_TRACK } from "../tracks";
+import type { UpgradeChoice } from "../upgrades";
+import type { SectionAnalysis } from "../analysis/sections";
+import { mountTrackPlayer } from "./track-player";
 import "./style.css";
+import "./track-player.css";
+import "./menus.css";
 
 export interface UIActions {
     startDemo(): void | Promise<unknown>;
@@ -18,10 +23,11 @@ export interface UIActions {
     resetDojo(): void;
     updateSettings(patch: Partial<Settings>): void;
     resetSettings(): void;
+    chooseUpgrade(id: string): void | Promise<unknown>;
 }
 
 export interface UIView {
-    phase: "menu" | "loading" | "playing" | "paused" | "results";
+    phase: "menu" | "loading" | "playing" | "paused" | "results" | "upgrade-slowing" | "upgrading";
     mode?: "demo" | "dojo" | "local";
     settings: Settings;
     title?: string;
@@ -32,12 +38,28 @@ export interface UIView {
     kills?: number;
     health?: number;
     maxHealth?: number;
+    level?: number;
+    xp?: number;
+    requiredXp?: number;
+    totalXp?: number;
+    upgrade?: {
+        choices: readonly UpgradeChoice[];
+        level: number;
+        pending: number;
+        progress: number;
+        ready: boolean;
+        busy: boolean;
+        resumePending?: boolean;
+    };
     position?: number;
+    structure?: SectionAnalysis;
+    previewPosition?: number;
     beat?: number;
     bar?: number;
     beatInBar?: number;
     beatsPerBar?: number;
     downbeat?: boolean;
+    dashState?: "ready" | "used" | "waiting" | "dashing";
     result?: "complete" | "defeat";
     bestScore?: number;
     error?: string;
@@ -58,6 +80,7 @@ export interface UIView {
         elapsedMs?: number;
         warnings?: string[];
         barSource?: "detected" | "synthetic";
+        structure?: SectionAnalysis;
     };
     demo?: { title: string; credit: string; duration: number; bpm: number; bestScore?: number };
 }
@@ -77,6 +100,13 @@ const icons = {
     upload: '<path d="M12 16V3m-5 5 5-5 5 5M4 15v5h16v-5"/>',
     reset: '<path d="M4 10a8 8 0 1 1 1 7M4 4v6h6"/>',
     target: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 1v4m0 14v4M1 12h4m14 0h4"/>',
+    damage: '<path d="m13 2-8 12h6l-1 8 9-13h-7l1-7Z"/>',
+    health: '<path d="m12 3 8 4v6c0 4-8 8-8 8s-8-4-8-8V7l8-4Z"/><path d="M8 12h8m-4-4v8"/>',
+    regeneration: '<path d="M20 10a8 8 0 1 0-1 7M20 4v6h-6M8 12h8m-4-4v8"/>',
+    projectiles: '<path d="M12 21V3m-3 3 3-3 3 3M8 20 3 8m0 4V8h4m9 12 5-12m0 4V8h-4"/>',
+    barrage: '<circle cx="12" cy="12" r="3"/><path d="M12 1v4m0 14v4M1 12h4m14 0h4M4 4l3 3m10 10 3 3M4 20l3-3M17 7l3-3"/>',
+    critical: '<path d="m12 2 2.5 6.5L21 11l-6.5 2.5L12 20l-2.5-6.5L3 11l6.5-2.5L12 2ZM20 18v4m-2-2h4"/>',
+    bounce: '<path d="M3 20 11 4l8 16m-5-3 5 3 2-5M4 3h15"/>',
 };
 
 function icon(name: keyof typeof icons): string {
@@ -95,44 +125,38 @@ function count(value: number | undefined): string {
 const template = `
     <div class="bs-menu" data-screen="menu">
         <header class="bs-topbar">
-            <a class="bs-brand" href="#" aria-label="Beatshooter home"><span class="bs-brand-mark"><i></i><i></i><i></i></span>beatshooter<span class="bs-brand-version">02</span></a>
-            <div class="bs-topbar-right"><span class="bs-status"><i></i>SYSTEM READY</span><button class="bs-icon-button" data-action="settings" aria-label="Open settings" title="Settings">${icon("settings")}</button></div>
+            <button class="bs-icon-button" data-action="settings" aria-label="Open settings" title="Settings">${icon("settings")}</button>
         </header>
         <main class="bs-menu-main">
             <section class="bs-intro">
-                <p class="bs-eyebrow"><span>01 / RHYTHM SURVIVAL</span><span class="bs-mini-rule"></span></p>
-                <h1>Find your rhythm.<br><span>Hold your ground.</span></h1>
-                <p class="bs-intro-copy">Move with intent. Aim with instinct.<br>Your weapon follows the beat.</p>
+                <h1>beatshooter</h1>
             </section>
-            <section class="bs-session-select" aria-labelledby="select-heading">
-                <div class="bs-section-heading"><h2 id="select-heading">Choose your session</h2><span>THREE WAYS TO PLAY</span></div>
+            <section class="bs-session-select" aria-label="Play">
                 <div class="bs-card-grid">
                     <article class="bs-track-card">
                         <div class="bs-track-art" aria-hidden="true">
                             <div class="bs-art-grid"></div><div class="bs-orbit bs-orbit-one"></div><div class="bs-orbit bs-orbit-two"></div>
                             <div class="bs-art-ship"><span></span></div><div class="bs-art-enemy bs-enemy-one"></div><div class="bs-art-enemy bs-enemy-two"></div>
-                            <span class="bs-art-label">ORIGINAL TRANSMISSION</span><span class="bs-art-number">001</span>
                             <svg class="bs-waveform" viewBox="0 0 400 42" preserveAspectRatio="none"><path d="M0 21h9l3-9 4 18 4-26 4 34 4-19 4 9 4-7h12l4-14 4 25 4-17 4 13 4-7h15l4-19 4 38 4-27 4 18 4-10h15l4-10 4 19 4-29 4 37 4-17h13l4-15 4 29 4-23 4 15 4-6h17l4-18 4 36 4-25 4 14 4-7h17l4-12 4 24 4-32 4 39 4-19h14l4-9 4 18 4-26 4 34 4-17h17l4-15 4 30 4-25 4 19 4-9h14l4-20 4 40 4-27 4 15 4-7h18l4-11 4 23 4-19 4 12 4-5h20"/></svg>
                         </div>
                         <div class="bs-track-body">
-                            <div class="bs-track-heading"><div><p class="bs-card-kicker">FEATURED TRACK</p><h3 data-value="demo-title">Neon Circuit</h3></div><span class="bs-pill">DEMO</span></div>
+                            <div class="bs-track-heading"><div><h3 data-value="demo-title">Neon Circuit</h3></div><span class="bs-pill">DEMO</span></div>
                             <p class="bs-credit" data-value="demo-credit">Beatshooter original</p>
                             <div class="bs-track-meta"><span><b data-value="demo-bpm">120</b> BPM</span><span data-value="demo-duration">1:04</span><span>4/4</span></div>
                             <button class="bs-button bs-button-primary bs-track-start" data-action="demo">${icon("play")}<span>Enter the arena</span>${icon("arrow")}</button>
-                            <div class="bs-track-bottom"><span>FULL TRACK · SURVIVE TO FINISH</span><span>BEST <b data-value="demo-best">—</b></span></div>
+                            <div class="bs-track-bottom"><span>BEST <b data-value="demo-best">—</b></span></div>
                         </div>
                     </article>
                     <div class="bs-side-cards">
                         <article class="bs-small-card bs-dojo-card">
-                            <div class="bs-card-top"><span class="bs-small-icon">${icon("target")}</span><span class="bs-card-kicker">PRACTICE / ENDLESS</span></div>
-                            <h3>The dojo</h3><p>Meet the beat on your own terms.<br>Practice your movement and aim.</p>
+                            <div class="bs-card-top"><span class="bs-small-icon">${icon("target")}</span></div>
+                            <h3>Practice</h3>
                             <div class="bs-dojo-controls"><label for="bs-dojo-bpm">TEMPO <span class="bs-number-wrap"><input id="bs-dojo-bpm" name="dojo-bpm" type="number" min="20" max="300" step="1" value="120" aria-label="Dojo tempo in beats per minute"><span>BPM</span></span></label><button class="bs-button bs-button-outline" data-action="dojo">Practice ${icon("arrow")}</button></div>
                         </article>
                         <article class="bs-small-card bs-local-card">
-                            <div class="bs-card-top"><span class="bs-small-icon">${icon("upload")}</span><span class="bs-card-kicker">YOUR MUSIC / YOUR ARENA</span></div>
-                            <h3>Bring your own beat</h3><p>Drop in a track, find its beat,<br>and make it your soundtrack.</p>
+                            <div class="bs-card-top"><span class="bs-small-icon">${icon("upload")}</span></div>
+                            <h3>Your music</h3>
                             <button class="bs-button bs-button-quiet" data-action="import">Import local audio ${icon("arrow")}</button>
-                            <span class="bs-private-note">Stays on your device. Always.</span>
                         </article>
                     </div>
                 </div>
@@ -141,56 +165,84 @@ const template = `
             <section class="bs-controls" aria-label="How to play">
                 <div><span class="bs-key-group"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><span>Move</span></div>
                 <div><span class="bs-mouse-icon" aria-hidden="true"></span><span>Aim</span></div>
-                <div><span class="bs-beat-control" aria-hidden="true">∿</span><span>Auto-fire on the beat</span></div>
+                <div><span class="bs-beat-control" aria-hidden="true">∿</span><span>Auto-fire</span></div>
+                <div><kbd>SPACE</kbd><span>Dash on first beat</span></div>
                 <div><kbd>ESC</kbd><span>Pause</span></div>
             </section>
         </main>
-        <footer class="bs-footer"><span>BUILT FOR THE MOMENT BETWEEN BEATS.</span><span>HEADPHONES RECOMMENDED ${icon("volume")}</span></footer>
     </div>
     <div class="bs-hud" data-screen="hud" hidden>
         <div class="bs-hud-top">
             <div class="bs-vitals"><div class="bs-hud-label"><span>HULL INTEGRITY</span><strong data-value="health-label">100 / 100</strong></div><progress class="bs-health" max="100" value="100" aria-label="Player health"></progress><p class="bs-track-playing"><span class="bs-live-dot"></span><span data-value="track-title">Neon Circuit</span><span class="bs-mode-label" data-value="mode-label">LIVE</span></p></div>
-            <div class="bs-hud-beat"><span class="bs-count-in" data-value="count-in" hidden></span><div class="bs-beat-dots" aria-label="Beat in bar"><i></i><i></i><i></i><i></i></div><p><span data-value="bpm">120</span> BPM <span class="bs-hud-divider">/</span> BAR <span data-value="bar">01</span></p></div>
             <div class="bs-hud-score"><span class="bs-hud-label">SCORE</span><strong data-value="score">0</strong><span class="bs-kills"><b data-value="kills">0</b> ELIMINATED</span></div>
             <button class="bs-icon-button" data-action="pause" aria-label="Pause game" title="Pause (Escape)">${icon("pause")}</button>
         </div>
-        <div class="bs-hud-bottom"><div class="bs-run-progress"><span data-value="position">0:00</span><progress value="0" max="1" aria-label="Track progress"></progress><span data-value="duration">1:04</span></div><div class="bs-hud-hint"><span><kbd>WASD</kbd> MOVE</span><span>POINTER AIM</span><span data-value="auto-label">BEAT AUTO-FIRE</span><button class="bs-text-button" data-action="reset-dojo" hidden>${icon("reset")} RESET DOJO <kbd>R</kbd></button></div></div>
+        <div class="bs-experience" role="group" aria-label="Player experience">
+            <div class="bs-experience-label"><span class="bs-level-badge">LV <strong data-value="level">1</strong></span><span><b data-value="xp">0</b> / <b data-value="xp-required">30</b> XP</span></div>
+            <progress class="bs-xp-progress" data-value="xp-progress" value="0" max="30" aria-label="Experience to next level"></progress>
+        </div>
+        <div class="bs-hud-bottom">
+            <div class="bs-hud-beat" role="group" aria-label="Beat and dash timing">
+                <span class="bs-count-in" data-value="count-in" hidden></span>
+                <div class="bs-beat-dots" role="img" aria-label="Beat in bar"><i></i><i></i><i></i><i></i></div>
+                <div class="bs-beat-meta">
+                    <p><span data-value="bpm">120</span> BPM <span class="bs-hud-divider">/</span> BAR <span data-value="bar">01</span></p>
+                    <div class="bs-dash-status" data-dash-state="waiting" title="Press Space within 100 ms of the accented first beat. One dash per bar."><kbd>SPACE</kbd><span data-value="dash-status">Dash on first beat</span></div>
+                </div>
+            </div>
+            <div class="bs-run-progress"></div>
+            <div class="bs-hud-hint"><span><kbd>WASD</kbd> MOVE</span><span>POINTER AIM</span><span data-value="auto-label">BEAT AUTO-FIRE</span><button class="bs-text-button" data-action="reset-dojo" hidden>${icon("reset")} RESET DOJO <kbd>R</kbd></button></div>
+        </div>
         <pre class="bs-diagnostics" data-value="diagnostics" hidden></pre>
     </div>
-    <div class="bs-cover" data-screen="loading" hidden><section class="bs-dialog bs-loading-dialog" role="status"><div class="bs-loading-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div><p class="bs-eyebrow">PREPARING TRANSMISSION</p><h2>Finding the frequency.</h2><p data-value="loading-message">Decoding audio and preparing your arena…</p><button class="bs-button bs-button-quiet" data-action="quit">Cancel</button></section></div>
-    <div class="bs-cover" data-screen="paused" hidden><section class="bs-dialog bs-pause-dialog" aria-labelledby="bs-pause-title"><p class="bs-eyebrow">TRANSMISSION ON HOLD</p><h2 id="bs-pause-title">Take a breath.</h2><p data-value="pause-reason">Your track and arena are paused.</p><div class="bs-message" data-value="session-error" role="alert" hidden></div><div class="bs-dialog-actions"><button class="bs-button bs-button-primary" data-action="resume">${icon("play")} Resume session</button><button class="bs-button bs-button-outline" data-action="settings">${icon("settings")} Settings</button><button class="bs-button bs-button-quiet" data-action="retry">${icon("reset")} Restart session</button><button class="bs-text-button" data-action="quit">Return to menu</button></div><p class="bs-dialog-footnote"><kbd>ESC</kbd> TO RESUME</p></section></div>
-    <div class="bs-cover" data-screen="results" hidden><section class="bs-dialog bs-results-dialog" aria-labelledby="bs-results-title"><p class="bs-eyebrow" data-value="result-kicker">TRANSMISSION COMPLETE</p><h2 id="bs-results-title" data-value="result-title">You held your ground.</h2><p data-value="result-copy">The track is over. The rhythm stays with you.</p><div class="bs-result-score"><span>FINAL SCORE</span><strong data-value="result-score">0</strong><span data-value="best-label">PERSONAL BEST</span></div><div class="bs-result-stats"><div><strong data-value="result-kills">0</strong><span>ELIMINATED</span></div><div><strong data-value="result-time">0:00</strong><span>SURVIVED</span></div><div><strong data-value="result-best">0</strong><span>BEST SCORE</span></div></div><div class="bs-dialog-actions"><button class="bs-button bs-button-primary" data-action="retry">${icon("reset")} Play again</button><button class="bs-button bs-button-outline" data-action="quit">Back to sessions ${icon("arrow")}</button></div><p class="bs-score-rule">100 points per elimination + 2 per beat survived.</p></section></div>
-    <div class="bs-modal" data-modal="settings" hidden><section class="bs-dialog bs-settings-dialog" role="dialog" aria-modal="true" aria-labelledby="bs-settings-title"><button class="bs-icon-button bs-dialog-close" data-action="close-settings" aria-label="Close settings">${icon("cross")}</button><p class="bs-eyebrow">MAKE IT YOURS</p><h2 id="bs-settings-title">Fine-tune.</h2><p class="bs-settings-intro">A good session starts with the right balance.</p><div class="bs-settings-section"><h3>Audio mix</h3><label class="bs-slider-label" for="bs-master">Master <output for="bs-master" data-output="masterVolume">75%</output></label><input id="bs-master" data-setting="masterVolume" type="range" min="0" max="1" step="0.01" value=".75"><label class="bs-slider-label" for="bs-music">Music <output for="bs-music" data-output="musicVolume">80%</output></label><input id="bs-music" data-setting="musicVolume" type="range" min="0" max="1" step="0.01" value=".8"><label class="bs-slider-label" for="bs-effects">Effects <output for="bs-effects" data-output="effectsVolume">55%</output></label><input id="bs-effects" data-setting="effectsVolume" type="range" min="0" max="1" step="0.01" value=".55"></div><div class="bs-settings-section"><h3>Timing</h3><label class="bs-slider-label" for="bs-offset">Visual timing offset <output for="bs-offset" data-output="timingOffsetMs">0 ms</output></label><input id="bs-offset" data-setting="timingOffsetMs" type="range" min="-250" max="250" step="5" value="0"><p class="bs-setting-help">Positive values move the visual pulse earlier; negative values move it later. Audio and combat timestamps stay unchanged. Use wired headphones for consistent timing.</p></div><div class="bs-settings-section"><h3>Visuals</h3><label class="bs-select-label" for="bs-intensity">Visual effects<select id="bs-intensity" data-setting="effectsIntensity"><option value="off">Off</option><option value="calm">Calm</option><option value="standard">Standard</option></select></label><p class="bs-setting-help bs-visual-help">Calm softens motion; Off keeps the arena static. Combat always follows the music. Your device’s reduced-motion preference is also respected.</p><label class="bs-select-label" for="bs-graphics">Graphics detail<select id="bs-graphics" data-setting="graphics"><option value="high">High</option><option value="low">Low</option></select></label><label class="bs-checkbox-label" for="bs-reduced"><span>Reduced flashes<small>Soften beat pulses and hit feedback.</small></span><input id="bs-reduced" data-setting="reducedFlash" type="checkbox"></label></div><div class="bs-settings-footer"><span>Saved on this device automatically.</span><button class="bs-text-button" data-action="reset-settings">Reset settings</button></div></section></div>
+    <div class="bs-cover" data-screen="loading" hidden><section class="bs-dialog bs-loading-dialog" role="status"><div class="bs-loading-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div><h2>Loading</h2><p data-value="loading-message">Loading audio…</p><button class="bs-button bs-button-quiet" data-action="quit">Cancel</button></section></div>
+    <div class="bs-cover" data-screen="paused" hidden><section class="bs-dialog bs-pause-dialog" aria-labelledby="bs-pause-title"><h2 id="bs-pause-title">Paused</h2><p data-value="pause-reason"></p><div class="bs-message" data-value="session-error" role="alert" hidden></div><div class="bs-dialog-actions"><button class="bs-button bs-button-primary" data-action="resume">${icon("play")} Resume session</button><button class="bs-button bs-button-outline" data-action="settings">${icon("settings")} Settings</button><button class="bs-button bs-button-quiet" data-action="retry">${icon("reset")} Restart session</button><button class="bs-text-button" data-action="quit">Return to menu</button></div><p class="bs-dialog-footnote"><kbd>ESC</kbd> TO RESUME</p></section></div>
+    <div class="bs-upgrade-cover" data-upgrade-screen hidden>
+        <section class="bs-upgrade-dialog" role="dialog" aria-modal="true" aria-labelledby="bs-upgrade-title" aria-describedby="bs-upgrade-description" tabindex="-1">
+            <header class="bs-upgrade-heading">
+                <div class="bs-upgrade-level" aria-hidden="true"><span>LV</span><strong data-value="upgrade-level">2</strong></div>
+                <div><p class="bs-eyebrow">LEVEL UP <span class="bs-mini-rule"></span></p><h2 id="bs-upgrade-title">Choose an upgrade</h2><p id="bs-upgrade-description">Select one for this run.</p></div>
+            </header>
+            <div class="bs-upgrade-cards" role="group" aria-label="Choose one of three upgrades"></div>
+            <div class="bs-message bs-upgrade-error" data-value="upgrade-error" role="alert" hidden></div>
+            <button class="bs-button bs-button-primary bs-upgrade-resume" data-action="resume-upgrade" hidden>${icon("play")} Resume upgraded run</button>
+            <footer class="bs-upgrade-footer">
+                <span class="bs-upgrade-transport">${icon("pause")}<span data-value="upgrade-status" role="status" aria-live="polite">Slowing music…</span></span>
+                <span class="bs-upgrade-pending" data-value="upgrade-pending" hidden></span>
+                <button class="bs-text-button" data-action="quit">Return to menu</button>
+            </footer>
+        </section>
+    </div>
+    <div class="bs-cover" data-screen="results" hidden><section class="bs-dialog bs-results-dialog" aria-labelledby="bs-results-title"><h2 id="bs-results-title" data-value="result-title">Track complete</h2><div class="bs-result-score"><span>FINAL SCORE</span><strong data-value="result-score">0</strong><span data-value="best-label">PERSONAL BEST</span></div><div class="bs-result-stats"><div><strong data-value="result-kills">0</strong><span>ELIMINATED</span></div><div><strong data-value="result-time">0:00</strong><span>SURVIVED</span></div><div><strong data-value="result-best">0</strong><span>BEST SCORE</span></div></div><p class="bs-result-experience"><span>LEVEL <b data-value="result-level">1</b></span><span><b data-value="result-xp">0</b> TOTAL XP</span></p><div class="bs-dialog-actions"><button class="bs-button bs-button-primary" data-action="retry">${icon("reset")} Play again</button><button class="bs-button bs-button-outline" data-action="quit">Back to sessions ${icon("arrow")}</button></div><p class="bs-score-rule">100 points per elimination + 2 per beat survived.</p></section></div>
+    <div class="bs-modal" data-modal="settings" hidden><section class="bs-dialog bs-settings-dialog" role="dialog" aria-modal="true" aria-labelledby="bs-settings-title"><button class="bs-icon-button bs-dialog-close" data-action="close-settings" aria-label="Close settings">${icon("cross")}</button><h2 id="bs-settings-title">Settings</h2><div class="bs-settings-section"><h3>Audio mix</h3><label class="bs-slider-label" for="bs-master">Master <output for="bs-master" data-output="masterVolume">75%</output></label><input id="bs-master" data-setting="masterVolume" type="range" min="0" max="1" step="0.01" value=".75"><label class="bs-slider-label" for="bs-music">Music <output for="bs-music" data-output="musicVolume">80%</output></label><input id="bs-music" data-setting="musicVolume" type="range" min="0" max="1" step="0.01" value=".8"><label class="bs-slider-label" for="bs-effects">Effects <output for="bs-effects" data-output="effectsVolume">55%</output></label><input id="bs-effects" data-setting="effectsVolume" type="range" min="0" max="1" step="0.01" value=".55"></div><div class="bs-settings-section"><h3>Timing</h3><label class="bs-slider-label" for="bs-offset">Visual timing offset <output for="bs-offset" data-output="timingOffsetMs">0 ms</output></label><input id="bs-offset" data-setting="timingOffsetMs" type="range" min="-250" max="250" step="5" value="0"><p class="bs-setting-help">Positive: earlier pulse. Negative: later pulse. Audio and combat timestamps stay unchanged.</p></div><div class="bs-settings-section"><h3>Visuals</h3><label class="bs-select-label" for="bs-intensity">Visual effects<select id="bs-intensity" data-setting="effectsIntensity"><option value="off">Off</option><option value="calm">Calm</option><option value="standard">Standard</option></select></label><p class="bs-setting-help bs-visual-help">Calm reduces motion. Off disables effects.</p><label class="bs-select-label" for="bs-graphics">Graphics detail<select id="bs-graphics" data-setting="graphics"><option value="high">High</option><option value="low">Low</option></select></label><label class="bs-checkbox-label" for="bs-reduced"><span>Reduced flashes<small>Soften beat pulses and hit feedback.</small></span><input id="bs-reduced" data-setting="reducedFlash" type="checkbox"></label></div><div class="bs-settings-footer"><span>Saved automatically.</span><button class="bs-text-button" data-action="reset-settings">Reset settings</button></div></section></div>
     <div class="bs-modal" data-modal="import" hidden>
         <section class="bs-dialog bs-import-dialog" role="dialog" aria-modal="true" aria-labelledby="bs-import-title">
             <button class="bs-icon-button bs-dialog-close" data-action="close-import" aria-label="Close audio import">${icon("cross")}</button>
-            <p class="bs-eyebrow">A PERSONAL TRANSMISSION</p><h2 id="bs-import-title">Your track. Your tempo.</h2>
-            <p>Find the beats in your audio, or set a steady tempo yourself. Preview the rhythm before you play.</p>
+            <h2 id="bs-import-title">Import audio</h2>
             <p class="bs-local-reselect" data-value="local-reselect" hidden></p>
-            <label class="bs-file-label" for="bs-audio-file">${icon("upload")}<span data-value="file-name">Choose an audio file</span><small>MP3, WAV, OGG, M4A · decoded by your browser</small><input id="bs-audio-file" type="file" accept="audio/*,.mp3,.wav,.ogg,.m4a,.flac"></label>
+            <label class="bs-file-label" for="bs-audio-file">${icon("upload")}<span data-value="file-name">Choose an audio file</span><small>MP3, WAV, OGG, M4A, FLAC</small><input id="bs-audio-file" type="file" accept="audio/*,.mp3,.wav,.ogg,.m4a,.flac"></label>
             <section class="bs-analysis" aria-label="Beat analysis" data-analysis-state="idle">
                 <div class="bs-analysis-actions">
                     <button class="bs-button bs-button-outline" data-action="analyze-local" disabled>${icon("target")}<span data-value="analyze-label">Analyze beats</span></button>
                     <button class="bs-text-button" data-action="cancel-analysis" hidden>Cancel analysis</button>
                 </div>
-                <p class="bs-setting-help" data-value="analysis-download">The first analysis downloads about 83 MB. Finding the beats may take a moment; your audio stays on this device.</p>
                 <div class="bs-analysis-status" role="status" aria-live="polite" aria-atomic="true">
                     <p data-value="analysis-message" hidden></p>
                     <p class="bs-analysis-summary" data-value="analysis-summary" hidden></p>
                 </div>
                 <progress class="bs-analysis-progress" aria-label="Finding beats" value="0" max="1" hidden></progress>
-                <p class="bs-analysis-warnings" data-value="analysis-warnings" hidden></p>
+                <div class="bs-section-preview" hidden></div>
             </section>
-            <label class="bs-select-label bs-beat-source" for="bs-local-grid" hidden>Rhythm source<select id="bs-local-grid"><option value="manual">Manual BPM</option><option value="detected">Detected beats</option></select></label>
-            <div class="bs-import-fields"><label for="bs-local-bpm">TEMPO<input id="bs-local-bpm" type="number" min="20" max="300" step=".1" value="120"><small>Beats per minute</small></label><label for="bs-local-offset">FIRST BEAT<input id="bs-local-offset" type="number" min="0" step=".01" value="0"><small>Seconds from the start</small></label></div>
-            <p class="bs-setting-help" data-value="grid-help">Manual BPM creates evenly spaced beats. Use Analyze beats to follow tempo changes.</p>
+            <details class="bs-timing-options" hidden>
+                <summary>Timing</summary>
+                <label class="bs-select-label bs-beat-source" for="bs-local-grid">Rhythm source<select id="bs-local-grid"><option value="detected">Detected beats</option><option value="manual">Manual BPM</option></select></label>
+                <div class="bs-import-fields" hidden><label for="bs-local-bpm">TEMPO<input id="bs-local-bpm" type="number" min="20" max="300" step="1" value="120"><small>Beats per minute</small></label><label for="bs-local-offset">FIRST BEAT<input id="bs-local-offset" type="number" min="0" step=".01" value="0"><small>Seconds from the start</small></label></div>
+            </details>
             <div class="bs-preview-section" hidden>
                 <label class="bs-select-label" for="bs-preview-section">Preview section<select id="bs-preview-section"><option value="start">Start</option><option value="middle">Middle</option><option value="end">End</option><option value="full">Full track</option></select></label>
-                <p class="bs-setting-help" data-value="preview-help">Listen for clicks that line up with the music. A higher click marks a detected bar start.</p>
             </div>
             <div class="bs-message" data-value="import-error" role="alert" hidden></div>
             <div class="bs-dialog-actions"><button class="bs-button bs-button-outline" data-action="preview-local">${icon("volume")}<span data-value="preview-label">Preview with metronome</span></button><button class="bs-button bs-button-primary" data-action="start-local">${icon("play")} Play this track ${icon("arrow")}</button></div>
-            <p class="bs-dialog-footnote">Your audio never leaves this device. Files are session-only;<br>choose the file again after reloading.</p>
         </section>
     </div>
 `;
@@ -206,6 +258,9 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
     root.innerHTML = template;
     container.append(root);
     const events = new AbortController();
+    const trackPlayer = mountTrackPlayer(root.querySelector<HTMLElement>(".bs-run-progress")!);
+    const previewElement = root.querySelector<HTMLElement>(".bs-section-preview")!;
+    const sectionPreview = mountTrackPlayer(previewElement, "Section preview progress");
     let view: UIView | undefined;
     let modal: "settings" | "import" | undefined;
     let previousFocus: HTMLElement | null = null;
@@ -216,6 +271,13 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
     let appliedLocalMetadata = false;
     let useAnalysis = false;
     let previousAnalysisState: NonNullable<UIView["analysis"]>["state"] = "idle";
+    let upgradeKey = "";
+    let upgradeActive = false;
+    let upgradeReady = false;
+    let upgradeSelectionLocked = false;
+    let upgradeResumePending = false;
+    let upgradeExternalError: string | undefined;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const refs = new Map<string, HTMLElement>();
     for (const element of root.querySelectorAll<HTMLElement>("[data-value]")) {
         refs.set(element.dataset.value!, element);
@@ -229,9 +291,119 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
         const element = refs.get(key);
         if (element) element.hidden = !value;
     };
+    const upgradeCover = root.querySelector<HTMLElement>(".bs-upgrade-cover")!;
+    const upgradePanel = root.querySelector<HTMLElement>(".bs-upgrade-dialog")!;
+    const upgradeCards = root.querySelector<HTMLElement>(".bs-upgrade-cards")!;
+    const upgradeArt: Record<string, keyof typeof icons> = {
+        damage: "damage", health: "health", regeneration: "regeneration",
+        projectiles: "projectiles", barrage: "barrage",
+        "crit-chance": "critical", "crit-damage": "critical", bounce: "bounce",
+    };
+    const setUpgradeDisabled = () => {
+        const disabled = view?.phase !== "upgrading" || !view.upgrade?.ready
+            || view.upgrade.busy || view.upgrade.resumePending || upgradeSelectionLocked;
+        for (const button of upgradeCards.querySelectorAll<HTMLButtonElement>("button")) button.disabled = disabled;
+        upgradePanel.setAttribute("aria-busy", String(!!view?.upgrade?.busy || (upgradeSelectionLocked && !view?.upgrade?.resumePending)));
+    };
+    const selectUpgrade = (id: string) => {
+        if (view?.phase !== "upgrading" || !view.upgrade?.ready || view.upgrade.busy
+            || view.upgrade.resumePending || upgradeSelectionLocked || !view.upgrade.choices.some((choice) => choice.id === id)) return;
+        upgradeSelectionLocked = true;
+        const selectedKey = upgradeKey;
+        message("upgrade-error", "");
+        setUpgradeDisabled();
+        const failed = (error: unknown) => {
+            if (!upgradeActive || upgradeKey !== selectedKey) return;
+            upgradeSelectionLocked = false;
+            message("upgrade-error", error instanceof Error ? error.message : "Unable to resume audio. Select an upgrade to try again.");
+            setUpgradeDisabled();
+            upgradeCards.querySelector<HTMLButtonElement>(`[data-upgrade-id="${id}"]`)?.focus();
+        };
+        try { Promise.resolve(actions.chooseUpgrade(id)).catch(failed); } catch (error) { failed(error); }
+    };
+    const renderUpgrade = (next: UIView) => {
+        const active = next.phase === "upgrade-slowing" || next.phase === "upgrading";
+        upgradeCover.hidden = !active;
+        for (const screen of root.querySelectorAll<HTMLElement>("[data-screen]")) screen.inert = active || !!modal;
+        if (!active) {
+            if (upgradeActive) {
+                upgradeSelectionLocked = false;
+                upgradeKey = "";
+                upgradeCards.replaceChildren();
+                message("upgrade-error", "");
+                // Do not leave focus on a hidden choice after the session resumes.
+                if (upgradePanel.contains(document.activeElement)) (document.activeElement as HTMLElement).blur();
+            }
+            upgradeActive = false;
+            upgradeReady = false;
+            upgradeResumePending = false;
+            upgradeExternalError = undefined;
+            return;
+        }
+        const choiceState = next.upgrade;
+        const choices = choiceState?.choices ?? [];
+        const key = `${choiceState?.level}:${choiceState?.pending}:${choices.map((choice) => `${choice.id}:${choice.nextRank}`).join(",")}`;
+        const changed = key !== upgradeKey;
+        if (changed) {
+            upgradeKey = key;
+            upgradeSelectionLocked = false;
+            message("upgrade-error", "");
+            upgradeCards.replaceChildren(...choices.slice(0, 3).map((choice, index) => {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = "bs-upgrade-card";
+                button.dataset.action = "choose-upgrade";
+                button.dataset.upgradeId = choice.id;
+                button.setAttribute("aria-keyshortcuts", String(index + 1));
+                button.innerHTML = `<span class="bs-upgrade-card-top"><span class="bs-upgrade-icon">${icon(upgradeArt[choice.id] ?? "target")}</span><span class="bs-upgrade-rank"></span></span><span class="bs-upgrade-copy"><strong class="bs-upgrade-name"></strong><span class="bs-upgrade-description"></span></span><span class="bs-upgrade-detail"></span><span class="bs-upgrade-select"><span><kbd>${index + 1}</kbd> SELECT UPGRADE</span>${icon("arrow")}</span>`;
+                button.querySelector<HTMLElement>(".bs-upgrade-rank")!.textContent = choice.rank === 0 ? "NEW" : `RANK ${choice.rank} → ${choice.nextRank}`;
+                button.querySelector<HTMLElement>(".bs-upgrade-name")!.textContent = choice.title;
+                button.querySelector<HTMLElement>(".bs-upgrade-description")!.textContent = choice.description;
+                button.querySelector<HTMLElement>(".bs-upgrade-detail")!.textContent = choice.detail ?? "";
+                button.setAttribute("aria-label", `${choice.title}. ${choice.detail ?? ""}. ${choice.description} Rank ${choice.nextRank}. Press ${index + 1} to choose.`);
+                return button;
+            }));
+        }
+        text("upgrade-level", count(choiceState?.level ?? next.level ?? 2));
+        const ready = next.phase === "upgrading" && !!choiceState?.ready;
+        const resumePending = !!choiceState?.resumePending;
+        const resume = root.querySelector<HTMLButtonElement>('[data-action="resume-upgrade"]')!;
+        resume.hidden = !resumePending;
+        resume.disabled = !!choiceState?.busy;
+        if (next.error || upgradeExternalError !== next.error) message("upgrade-error", next.error ?? "");
+        upgradeExternalError = next.error;
+        text("upgrade-status", choiceState?.busy ? "Resuming…"
+            : resumePending ? "Upgrade applied · music paused"
+            : upgradeSelectionLocked ? "Resuming…"
+            : ready ? "Music paused" : "Slowing music…");
+        const remaining = Math.max(0, (choiceState?.pending ?? 1) - 1);
+        message("upgrade-pending", remaining > 0 ? `${count(remaining)} more ${remaining === 1 ? "upgrade" : "upgrades"} waiting` : "");
+        const progress = ready ? 1 : Math.min(1, Math.max(0, choiceState?.progress ?? 0));
+        const motion = !reducedMotion.matches && !next.settings.reducedFlash && next.settings.effectsIntensity !== "off";
+        const headerProgress = Math.min(1, progress / 0.45);
+        upgradeCover.style.setProperty("--upgrade-reveal", String(progress));
+        const heading = root.querySelector<HTMLElement>(".bs-upgrade-heading")!;
+        heading.style.opacity = String(headerProgress);
+        heading.style.transform = motion ? `translateY(${(1 - headerProgress) * 12}px)` : "none";
+        for (const [index, button] of [...upgradeCards.querySelectorAll<HTMLButtonElement>("button")].entries()) {
+            const local = Math.min(1, Math.max(0, (progress - 0.1 - index * 0.12) / 0.66));
+            const eased = 1 - (1 - local) ** 3;
+            // All entrance values come from the music-position progress supplied by
+            // the session. Pausing that clock also freezes the cards, with no timers.
+            button.style.opacity = String(eased);
+            button.style.transform = motion ? `translateY(${(1 - eased) * 28}px) scale(${0.975 + eased * 0.025})` : "none";
+        }
+        setUpgradeDisabled();
+        if (!upgradeActive) upgradePanel.focus({ preventScroll: true });
+        if (resumePending && !upgradeResumePending) resume.focus({ preventScroll: true });
+        else if (ready && (!upgradeReady || changed)) upgradeCards.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus({ preventScroll: true });
+        upgradeActive = true;
+        upgradeReady = ready;
+        upgradeResumePending = resumePending;
+    };
     const setPreview = (value: boolean) => {
         previewing = value;
-        text("preview-label", value ? "Stop calibration preview" : "Preview with metronome");
+        text("preview-label", value ? "Stop preview" : "Preview with metronome");
     };
     const stopPreview = () => {
         actions.stopPreview();
@@ -245,46 +417,43 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
         if (!ready) useAnalysis = false;
         previousAnalysisState = ready ? "ready" : analysis?.state ?? "idle";
         const panel = root.querySelector<HTMLElement>(".bs-analysis")!;
+        panel.hidden = !selectedFile;
         panel.dataset.analysisState = analysis?.state ?? "idle";
         const analyze = root.querySelector<HTMLButtonElement>('[data-action="analyze-local"]')!;
         analyze.disabled = !selectedFile || running;
-        text("analyze-label", ready ? "Analyze again" : "Analyze beats");
+        analyze.hidden = running;
+        text("analyze-label", ready ? "Analyze again" : "Retry analysis");
         root.querySelector<HTMLElement>('[data-action="cancel-analysis"]')!.hidden = !running;
         const progress = root.querySelector<HTMLProgressElement>(".bs-analysis-progress")!;
         progress.hidden = !running;
         progress.value = Number.isFinite(analysis?.progress) ? Math.min(1, Math.max(0, analysis!.progress!)) : 0;
-        refs.get("analysis-download")!.hidden = ready;
-        message("analysis-message", analysis?.message ?? "");
+        message("analysis-message", running ? analysis.message
+            : analysis?.state === "error" ? "Analysis failed. Try again."
+            : selectedFile && !ready ? "Analysis cancelled." : "");
         const summary = ready ? [
-            analysis.beatCount === undefined ? "" : `${count(analysis.beatCount)} beats`,
-            analysis.downbeatCount === undefined ? "" : `${count(analysis.downbeatCount)} downbeats`,
-            analysis.bpm === undefined ? "" : `≈ ${Math.round(analysis.bpm * 10) / 10} BPM`,
+            analysis.bpm === undefined ? "" : `${Math.round(analysis.bpm)} BPM`,
             analysis.duration === undefined ? "" : clock(analysis.duration),
-            analysis.elapsedMs === undefined ? "" : `analyzed in ${(analysis.elapsedMs / 1000).toFixed(1)} s`,
+            analysis.structure ? `${analysis.structure.sections.length} sections` : "",
         ].filter(Boolean).join(" · ") : "";
         message("analysis-summary", summary);
-        message("analysis-warnings", [
-            ...(analysis?.warnings ?? []),
-            ready && analysis.barSource === "synthetic" ? "Waves use groups of four beats because bar starts could not be detected." : "",
-        ].filter(Boolean).join("\n"));
-        root.querySelector<HTMLElement>(".bs-beat-source")!.hidden = !ready;
+        previewElement.hidden = !ready || !analysis?.structure;
+        if (!previewElement.hidden) {
+            sectionPreview.render(view?.previewPosition ?? 0, analysis!.duration ?? 0, analysis!.structure);
+        }
+        root.querySelector<HTMLElement>(".bs-timing-options")!.hidden = !selectedFile || running;
         root.querySelector<HTMLElement>(".bs-preview-section")!.hidden = !ready;
         if (!ready) root.querySelector<HTMLSelectElement>("#bs-preview-section")!.value = "start";
         const source = root.querySelector<HTMLSelectElement>("#bs-local-grid")!;
         source.value = useAnalysis ? "detected" : "manual";
         source.disabled = running;
+        source.querySelector<HTMLOptionElement>('[value="detected"]')!.disabled = !ready;
+        root.querySelector<HTMLElement>(".bs-import-fields")!.hidden = useAnalysis;
         for (const input of root.querySelectorAll<HTMLInputElement>(".bs-import-fields input")) {
             input.disabled = useAnalysis || running;
         }
         for (const action of ["preview-local", "start-local"]) {
             root.querySelector<HTMLButtonElement>(`[data-action="${action}"]`)!.disabled = running;
         }
-        text("grid-help", useAnalysis
-            ? "Detected beats follow this track's timing. Listen to the preview; switch to Manual BPM if the rhythm needs correcting."
-            : "Manual BPM creates evenly spaced beats. Use Analyze beats to follow tempo changes.");
-        text("preview-help", useAnalysis
-            ? "Listen for clicks that line up with the music. A higher click marks a detected bar start."
-            : "Listen for clicks that line up with the music. A higher click marks each group of four manual beats.");
     };
     const closeModal = (stopAudio = true) => {
         if (!modal) return;
@@ -344,7 +513,11 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
         const button = target.closest<HTMLElement>("[data-action]");
         if (!button) return;
         const action = button.dataset.action;
-        if (action === "settings") openModal("settings");
+        if (action === "choose-upgrade") {
+            if (event.detail <= 1) selectUpgrade(button.dataset.upgradeId ?? "");
+        }
+        else if (action === "resume-upgrade") void run(() => actions.resume(), "upgrade-error");
+        else if (action === "settings") openModal("settings");
         else if (action === "import") openModal("import");
         else if (action === "close-settings" || action === "close-import") closeModal();
         else if (action === "demo") { stopPreview(); void run(() => actions.startDemo()); }
@@ -394,11 +567,19 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
             useAnalysis = false;
             previousAnalysisState = "idle";
             selectedFile = target.files?.[0];
+            root.querySelector<HTMLDetailsElement>(".bs-timing-options")!.open = false;
             root.querySelector<HTMLSelectElement>("#bs-preview-section")!.value = "start";
             text("file-name", selectedFile?.name ?? "Choose an audio file");
             refs.get("local-reselect")!.hidden = !!selectedFile || !view?.lastLocal;
             message("import-error", "");
             renderAnalysis({ state: "idle", message: "" });
+            if (selectedFile) {
+                const file = selectedFile;
+                void run(() => actions.analyzeLocal(file), "import-error");
+            }
+        }
+        if (target.id === "bs-dojo-bpm" || target.id === "bs-local-bpm") {
+            if (target.value && Number.isFinite(target.valueAsNumber)) target.value = String(Math.round(target.valueAsNumber));
         }
         if (target.id === "bs-local-bpm" || target.id === "bs-local-offset") stopPreview();
         if (target.id === "bs-preview-section") stopPreview();
@@ -417,6 +598,28 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
         actions.updateSettings({ [key]: value });
     }, { signal: events.signal });
     window.addEventListener("keydown", (event) => {
+        if (upgradeActive) {
+            if (event.code === "Escape") {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+            } else if (/^(Digit|Numpad)[123]$/.test(event.code)) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                const choice = view?.upgrade?.choices[Number(event.code.at(-1)) - 1];
+                if (!event.repeat && choice) selectUpgrade(choice.id);
+            } else if (event.code === "Tab") {
+                const controls = [...upgradePanel.querySelectorAll<HTMLElement>("button:not(:disabled)")]
+                    .filter((element) => !element.closest("[hidden]"));
+                const first = controls[0], last = controls[controls.length - 1];
+                if (event.shiftKey && (document.activeElement === first || document.activeElement === upgradePanel)) {
+                    event.preventDefault(); last?.focus();
+                } else if (!event.shiftKey && (document.activeElement === last || document.activeElement === upgradePanel)) {
+                    event.preventDefault(); first?.focus();
+                }
+                event.stopImmediatePropagation();
+            }
+            return;
+        }
         if (!modal) return;
         if (event.code === "Escape") {
             event.preventDefault();
@@ -424,8 +627,8 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
             closeModal();
         } else if (event.code === "Tab") {
             const panel = root.querySelector<HTMLElement>(`[data-modal="${modal}"]`)!;
-            const controls = [...panel.querySelectorAll<HTMLElement>("button, input, select, [tabindex='0']")]
-                .filter((element) => !element.matches(":disabled") && !element.closest("[hidden]"));
+            const controls = [...panel.querySelectorAll<HTMLElement>("button, input, select, summary, [tabindex='0']")]
+                .filter((element) => !element.matches(":disabled") && element.checkVisibility());
             const first = controls[0], last = controls[controls.length - 1];
             if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
             else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
@@ -446,9 +649,10 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
             for (const element of root.querySelectorAll<HTMLElement>("[data-screen]")) {
                 const screen = element.dataset.screen;
                 element.hidden = screen === "hud"
-                    ? !["playing", "paused"].includes(next.phase)
+                    ? !["playing", "paused", "upgrade-slowing", "upgrading"].includes(next.phase)
                     : screen !== next.phase;
             }
+            renderUpgrade(next);
             if (phaseChanged && next.phase === "paused") root.querySelector<HTMLElement>('[data-action="resume"]')?.focus();
             if (phaseChanged && next.phase === "results") root.querySelector<HTMLElement>('[data-screen="results"] [data-action="retry"]')?.focus();
             const demo = next.demo ?? (next.mode !== "local" && next.phase === "menu" ? {
@@ -458,7 +662,7 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
             if (demo) {
                 text("demo-title", demo.title);
                 text("demo-credit", demo.credit);
-                text("demo-bpm", String(demo.bpm));
+                text("demo-bpm", String(Math.round(demo.bpm)));
                 text("demo-duration", clock(demo.duration));
                 text("demo-best", demo.bestScore ? count(demo.bestScore) : "—");
             }
@@ -471,10 +675,10 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
             if (next.previewing !== undefined) setPreview(next.previewing);
             renderAnalysis();
             if (next.lastLocal) {
-                text("local-reselect", `Last imported: ${next.lastLocal.name}. Choose this file again to reconnect its saved tempo and offset.`);
+                text("local-reselect", `Last track: ${next.lastLocal.name}`);
                 refs.get("local-reselect")!.hidden = !!selectedFile;
                 if (!appliedLocalMetadata) {
-                    root.querySelector<HTMLInputElement>("#bs-local-bpm")!.value = String(next.lastLocal.bpm);
+                    root.querySelector<HTMLInputElement>("#bs-local-bpm")!.value = String(Math.round(next.lastLocal.bpm));
                     root.querySelector<HTMLInputElement>("#bs-local-offset")!.value = String(next.lastLocal.offset);
                     appliedLocalMetadata = true;
                 }
@@ -486,9 +690,19 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
             health.max = next.maxHealth ?? 100;
             health.value = Math.max(0, next.health ?? 100);
             health.classList.toggle("bs-health-low", health.value / health.max <= 0.3);
+            const level = Math.max(1, Math.floor(next.level ?? 1));
+            const requiredXp = Math.max(1, Math.floor(next.requiredXp ?? 30));
+            const xp = Math.min(requiredXp, Math.max(0, Math.floor(next.xp ?? 0)));
+            text("level", count(level));
+            text("xp", count(xp));
+            text("xp-required", count(requiredXp));
+            const experience = refs.get("xp-progress") as HTMLProgressElement;
+            experience.max = requiredXp;
+            experience.value = xp;
+            experience.setAttribute("aria-valuetext", `Level ${level}, ${xp} of ${requiredXp} experience to next level`);
             text("score", count(next.score));
             text("kills", count(next.kills));
-            text("bpm", String(next.bpm ?? 120));
+            text("bpm", String(Math.round(next.bpm ?? 120)));
             text("count-in", (next.position ?? 0) < 0
                 ? `COUNT IN · ${Math.max(1, Math.ceil(-(next.position ?? 0) * (next.bpm ?? 120) / 60))}`
                 : "");
@@ -504,22 +718,26 @@ export function mountUI(actions: UIActions, container: HTMLElement = document.bo
                 dot.classList.toggle("bs-active", index === beatInBar);
                 dot.classList.toggle("bs-downbeat", index === beatInBar && next.downbeat === true);
             }
-            text("position", clock(next.position ?? 0));
-            text("duration", next.mode === "dojo" ? "∞" : clock(next.duration ?? 0));
-            const progress = root.querySelector<HTMLProgressElement>(".bs-run-progress progress")!;
-            progress.value = next.duration ? Math.min(1, (next.position ?? 0) / next.duration) : 0;
+            const dashState = next.dashState ?? "waiting";
+            const dash = root.querySelector<HTMLElement>(".bs-dash-status")!;
+            dash.dataset.dashState = dashState;
+            root.querySelector<HTMLElement>(".bs-hud-beat")!.dataset.dashState = dashState;
+            text("dash-status", dashState === "ready" ? "Dash ready"
+                : dashState === "used" ? "Used · next bar"
+                : dashState === "dashing" ? "Dashing" : "Dash on first beat");
+            trackPlayer.render(next.position ?? 0, next.duration ?? 0, next.structure, next.mode === "dojo");
             const reset = root.querySelector<HTMLElement>('[data-action="reset-dojo"]')!;
             reset.hidden = next.mode !== "dojo";
-            text("loading-message", next.loadingMessage ?? "Decoding audio and preparing your arena…");
-            text("pause-reason", next.pauseReason ?? "Your track and arena are paused.");
-            text("result-kicker", next.result === "defeat" ? "SIGNAL LOST" : "TRANSMISSION COMPLETE");
-            text("result-title", next.result === "defeat" ? "One more beat." : "You held your ground.");
-            text("result-copy", next.result === "defeat" ? "Every run finds a new rhythm. Ready to try again?" : "The track is over. The rhythm stays with you.");
+            text("loading-message", next.loadingMessage ?? "Loading audio…");
+            text("pause-reason", next.pauseReason ?? "");
+            text("result-title", next.result === "defeat" ? "Game over" : "Track complete");
             text("result-score", count(next.score));
             text("result-kills", count(next.kills));
             text("result-time", clock(next.position ?? 0));
             text("result-best", count(next.bestScore));
-            text("best-label", (next.score ?? 0) >= (next.bestScore ?? 0) && (next.score ?? 0) > 0 ? "PERSONAL BEST" : "KEEP THE RHYTHM");
+            text("result-level", count(level));
+            text("result-xp", count(next.totalXp));
+            text("best-label", (next.score ?? 0) >= (next.bestScore ?? 0) && (next.score ?? 0) > 0 ? "PERSONAL BEST" : "");
             text("diagnostics", next.diagnostics ?? "");
             refs.get("diagnostics")!.hidden = !next.diagnostics;
             for (const input of root.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-setting]")) {

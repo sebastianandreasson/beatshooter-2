@@ -5,7 +5,7 @@ import {
 } from "@dylanebert/shallot";
 import { AudioOutput, play, registerClip } from "@dylanebert/shallot/audio";
 import { Shape, ShapeKind } from "@dylanebert/shallot/physics";
-import { Arena } from "../arena";
+import { Arena, enemyMaterial } from "../arena";
 import { advanceCombat, createCombat, onCombatBeat, type CombatState } from "../combat";
 import { enemyVelocity } from "../enemies";
 import { PLANAR_LOCKS, PlayerState, resetPlayer, SnapshotPlayer } from "../player";
@@ -21,8 +21,13 @@ import { analyzeAudio } from "../analysis";
 import { createAnalyzedChart } from "../analysis/chart";
 import type { BeatAnalysis } from "../analysis/types";
 import { publishVisualEvents, VisualEvents } from "../music-visuals/events";
+import { DashState } from "../dash/state";
+import { chooseUpgrade, prepareUpgradeChoices } from "../upgrades";
+import { levelUpPauseTarget } from "./upgrade-timing";
 
-export type Phase = "menu" | "loading" | "playing" | "paused" | "results";
+export type Phase = "menu" | "loading" | "playing" | "paused" | "upgrade-slowing" | "upgrading" | "results";
+export const isRunningPhase = (phase: Phase) => phase === "playing" || phase === "upgrade-slowing";
+export const isArenaPhase = (phase: Phase) => isRunningPhase(phase) || phase === "paused" || phase === "upgrading";
 export type Selection = { mode: "demo" } | { mode: "dojo"; bpm: number } | { mode: "local"; file: File; bpm: number; offset: number; useAnalysis?: boolean };
 export const SessionEntity = component("Beatshooter/SessionEntity", {});
 interface SessionData {
@@ -35,6 +40,7 @@ interface SessionData {
     preview: boolean; previewLoading: boolean; previewLoaded?: LoadedTrack; previewUntil: number; fps: number;
     analysis?: UIView["analysis"]; analysisController?: AbortController;
     analyzedFile?: File; analyzedTrack?: BeatAnalysis;
+    upgradeBusy: boolean; upgradeResumePending: boolean; upgradeFocusLost: boolean;
 }
 export const Session: Resource<SessionData> = {
     create: () => ({
@@ -43,6 +49,7 @@ export const Session: Resource<SessionData> = {
         pending: [], generation: 0, loadToken: 0, position: 0, visualPosition: 0,
         completePending: false, loadingLostFocus: false, diagnostics: false, shotClip: -1, hitClip: -1,
         preview: false, previewLoading: false, previewUntil: 0, fps: 60,
+        upgradeBusy: false, upgradeResumePending: false, upgradeFocusLost: false,
     }),
 };
 
@@ -53,6 +60,9 @@ function stopEffects(world: World): void {
 function clearSession(world: World): void {
     const session = world.resource(Session);
     session.transport?.stop();
+    world.setTimeScale(1);
+    session.upgradeBusy = session.upgradeResumePending = false;
+    session.upgradeFocusLost = false;
     session.pending.length = 0;
     world.resource(VisualEvents).pending.length = 0;
     session.completePending = false;
@@ -62,6 +72,9 @@ function clearSession(world: World): void {
     session.combat = createCombat(2026);
     session.position = session.visualPosition = 0;
     session.generation++;
+    const dash = world.resource(DashState);
+    dash.controller.reset();
+    dash.held = false;
     resetPlayer(world);
 }
 
@@ -167,7 +180,9 @@ export async function analyzeLocal(world: World, file: File): Promise<void> {
         session.analysis = {
             state: "ready", fileName: file.name, message: "Detected beats ready. Preview the timing before you play.",
             bpm: chart.bpm, beatCount: chart.summary.beatCount, downbeatCount: chart.summary.downbeatCount,
-            duration: analysis.duration, elapsedMs: analysis.elapsedMs, warnings: chart.warnings, barSource: chart.barSource,
+            duration: analysis.duration, elapsedMs: analysis.elapsedMs,
+            warnings: [...chart.warnings, ...(analysis.sectionWarning ? [analysis.sectionWarning] : [])],
+            barSource: chart.barSource, structure: analysis.structure,
         };
     } catch (error) {
         if (controller.signal.aborted) return;
@@ -247,20 +262,36 @@ export async function startSession(world: World, selection: Selection): Promise<
 
 export function pauseSession(world: World, reason = "Paused by you"): void {
     const session = world.resource(Session);
-    if (session.phase !== "playing") return;
+    if (session.phase === "upgrading") {
+        if (reason === "Window lost focus") {
+            session.upgradeFocusLost = true;
+            session.transport?.pause("hidden");
+        }
+        return;
+    }
+    if (!isRunningPhase(session.phase)) return;
+    const wasUpgrading = session.phase === "upgrade-slowing";
     session.transport?.pause(reason === "Window lost focus" ? "hidden" : "user");
-    session.phase = "paused";
+    // Observation already advanced the transport cursor. A high-refresh frame
+    // may not have reached its next fixed step yet, so commit accepted commands
+    // before freezing rather than losing that beat until the next one arrives.
+    if (session.pending.length) PrepareCombat.update!(world);
+    session.phase = wasUpgrading ? "upgrading" : "paused";
     session.pauseReason = reason;
-    session.pending.length = 0;
     world.resource(PlayerState).enabled = false;
     world.resource(PlayerState).keys.clear();
     stopEffects(world);
     world.pause();
+    world.setTimeScale(1);
     renderUI(world);
 }
 
 export async function resumeSession(world: World): Promise<void> {
     const session = world.resource(Session);
+    if (session.phase === "upgrading" && session.upgradeResumePending) {
+        await resumeAfterUpgrade(world);
+        return;
+    }
     if (session.phase !== "paused") return;
     const token = session.loadToken;
     try {
@@ -272,12 +303,93 @@ export async function resumeSession(world: World): Promise<void> {
         session.phase = "playing";
         session.error = undefined;
         world.resource(PlayerState).enabled = true;
+        world.setTimeScale(1);
         world.resume();
     } catch (error) {
         if (token !== session.loadToken || session.phase !== "paused") return;
         session.error = error instanceof Error ? error.message : "Allow audio, then try Resume again.";
     }
     renderUI(world);
+}
+
+function beginUpgrade(world: World): void {
+    const s = world.resource(Session);
+    if (s.phase !== "playing" || s.combat.upgrades.pending < 1) return;
+    prepareUpgradeChoices(s.combat);
+    s.combat.protectPlayer = true;
+    s.upgradeBusy = s.upgradeResumePending = false;
+    s.upgradeFocusLost = false;
+    const p = world.resource(PlayerState);
+    p.enabled = false;
+    p.keys.clear();
+    p.input = { x: 0, z: 0 };
+    p.dashVelocity = p.dashTarget = undefined;
+    p.wasDashing = false;
+    world.resource(DashState).controller.active = undefined;
+    world.resource(DashState).held = false;
+    setLinearVelocity(world, p.body, { x: 0, y: 0, z: 0 });
+    const position = s.transport?.position ?? s.position;
+    const target = levelUpPauseTarget(s.track.beats, position, s.track.duration);
+    if (s.transport?.beginSlowdown(target)) {
+        s.phase = "upgrade-slowing";
+    } else {
+        s.transport?.pause();
+        s.phase = "upgrading";
+        world.pause();
+    }
+    renderUI(world);
+}
+
+async function resumeAfterUpgrade(world: World): Promise<void> {
+    const s = world.resource(Session);
+    if (s.phase !== "upgrading" || s.upgradeBusy || !s.upgradeResumePending) return;
+    s.upgradeBusy = true;
+    s.upgradeFocusLost = false;
+    const token = s.loadToken;
+    renderUI(world);
+    try {
+        const { context, transport } = audio(world);
+        await context.resume();
+        if (token !== s.loadToken || s.phase !== "upgrading") return;
+        if (document.hidden || s.upgradeFocusLost) {
+            throw new Error("Return to this window, then resume your upgraded run.");
+        }
+        // Selection already supplies a user gesture and the arena is ready.
+        // Start the retained source immediately so repeated upgrades do not add
+        // the normal resume lead-in to physics while music is still held.
+        await transport.resume({ immediate: true });
+        if (token !== s.loadToken || s.phase !== "upgrading") return;
+        if (document.hidden || s.upgradeFocusLost) {
+            transport.pause("hidden");
+            throw new Error("Return to this window, then resume your upgraded run.");
+        }
+        s.upgradeResumePending = false;
+        s.combat.protectPlayer = false;
+        s.phase = "playing";
+        s.error = undefined;
+        world.resource(PlayerState).enabled = true;
+        world.setTimeScale(1);
+        world.resume();
+    } catch (error) {
+        if (token !== s.loadToken || s.phase !== "upgrading") return;
+        s.error = error instanceof Error ? error.message : "Allow audio, then resume your upgraded run.";
+    } finally {
+        if (token === s.loadToken) { s.upgradeBusy = false; renderUI(world); }
+    }
+}
+
+export async function selectUpgrade(world: World, id: string): Promise<void> {
+    const s = world.resource(Session);
+    if (s.phase !== "upgrading" || s.upgradeBusy || s.upgradeResumePending) return;
+    const choice = s.combat.upgrades.choices.find(item => item.id === id);
+    if (!choice || !chooseUpgrade(s.combat, choice.id, s.position)) return;
+    if (s.combat.upgrades.pending > 0) {
+        prepareUpgradeChoices(s.combat);
+        renderUI(world);
+        return;
+    }
+    s.upgradeResumePending = true;
+    await resumeAfterUpgrade(world);
 }
 
 export function quitSession(world: World): void {
@@ -300,11 +412,14 @@ export function quitSession(world: World): void {
 
 function finishSession(world: World, result: "complete" | "defeat"): void {
     const session = world.resource(Session);
-    if (session.phase !== "playing") return;
+    if (!isRunningPhase(session.phase)) return;
     session.transport?.stop();
     session.pending.length = 0;
     session.result = result;
     session.phase = "results";
+    session.combat.protectPlayer = false;
+    session.upgradeBusy = session.upgradeResumePending = false;
+    world.setTimeScale(1);
     session.preferences = updateBest(session.preferences, session.track.id, session.combat.score);
     savePreferences(session.preferences);
     world.resource(PlayerState).enabled = false;
@@ -367,6 +482,7 @@ export function mountGameUI(container: HTMLElement, world: World): () => void {
         retry: () => void startSession(world, session.selection),
         quit: () => quitSession(world),
         resetDojo: () => void startSession(world, session.selection),
+        chooseUpgrade: id => selectUpgrade(world, id),
         updateSettings: patch => applySettings(world, patch),
         resetSettings: () => { session.preferences = resetPreferences(); applySettings(world); },
     }, container);
@@ -388,9 +504,23 @@ export function renderUI(world: World): void {
         phase: s.phase, mode: s.selection.mode, settings: s.preferences.settings,
         title: s.track.title, credit: s.track.artist, duration: s.track.duration, bpm: s.track.bpm,
         score: s.combat.score, kills: s.combat.kills, health: s.combat.health,
-        maxHealth: s.combat.tuning.playerHealth, position: s.position,
+        level: s.combat.experience.level, xp: s.combat.experience.xp,
+        requiredXp: s.combat.experience.requiredXp, totalXp: s.combat.experience.totalXp,
+        maxHealth: s.combat.playerStats.effective.maxHealth, position: s.position,
+        structure: s.loaded?.structure,
+        previewPosition: s.preview ? s.transport?.position : 0,
+        upgrade: s.phase === "upgrade-slowing" || s.phase === "upgrading" ? {
+            choices: s.combat.upgrades.choices,
+            level: s.combat.upgrades.offeredLevel,
+            pending: s.combat.upgrades.pending,
+            progress: s.phase === "upgrading" ? 1 : s.transport?.slowdownProgress ?? 0,
+            ready: s.phase === "upgrading",
+            busy: s.upgradeBusy,
+            resumePending: s.upgradeResumePending,
+        } : undefined,
         beat: currentBeat?.index ?? -1, beatInBar: currentBeat?.beatInBar ?? -1,
         beatsPerBar, downbeat: currentBeat?.downbeat ?? false, analysis: s.analysis,
+        dashState: world.resource(DashState).controller.status(s.position),
         bar: Math.max(0, s.combat.lastBarIndex), result: s.result,
         bestScore: s.preferences.bestScores[s.track.id] ?? 0,
         error: s.error, pauseReason: s.pauseReason,
@@ -407,13 +537,13 @@ export const ObserveMusic: System = {
     name: "Beatshooter/ObserveMusic", group: "setup",
     update(world) {
         const s = world.resource(Session);
-        if (!s.transport || (s.phase !== "playing" && !s.preview)) return;
+        if (!s.transport || (!isRunningPhase(s.phase) && !s.preview)) return;
         const observation = s.transport.observe();
         if (s.preview) {
             if (observation.completed || observation.pausedReason || observation.position >= s.previewUntil) stopPreview(world);
             return;
         }
-        if (observation.pausedReason) {
+        if (observation.pausedReason && observation.pausedReason !== "upgrade") {
             pauseSession(world, observation.pausedReason === "stall" ? "Playback paused after a long frame. Resume when ready." : "Audio was suspended. Resume to continue.");
             return;
         }
@@ -421,6 +551,23 @@ export const ObserveMusic: System = {
         s.visualPosition = observation.visualPosition;
         s.pending.push(...observation.beats);
         s.completePending ||= observation.completed;
+        if (s.phase === "upgrade-slowing") {
+            world.setTimeScale(s.transport.playbackRate);
+            if (observation.completed) {
+                // Settle the final authored commands before completion wins.
+                PrepareCombat.update!(world);
+                finishSession(world, "complete");
+            } else if (observation.pausedReason === "upgrade") {
+                // The pause boundary may itself be a beat. Commit it exactly once
+                // before freezing, even if the slow fixed-step accumulator is short.
+                PrepareCombat.update!(world);
+                s.phase = "upgrading";
+                stopEffects(world);
+                world.pause();
+                world.setTimeScale(1);
+                renderUI(world);
+            }
+        }
     },
 };
 
@@ -429,9 +576,12 @@ export const PrepareCombat: System = {
     before: StandardPhysicsPlugin.systems?.filter(system => system.group === "fixed"),
     update(world) {
         const s = world.resource(Session), p = world.resource(PlayerState);
-        if (s.phase !== "playing") return;
+        if (!isRunningPhase(s.phase)) return;
         for (const beat of s.pending.splice(0)) {
-            const events = onCombatBeat(s.combat, { index: beat.index, barIndex: beat.bar, isDownbeat: beat.downbeat }, p.position, p.aim);
+            const events = onCombatBeat(s.combat, {
+                index: beat.index, barIndex: beat.bar, isDownbeat: beat.downbeat,
+                time: beat.time, nextBeatTime: s.track.beats[beat.index + 1]?.time ?? null,
+            }, p.position, p.aim);
             publishVisualEvents(world, events, s.position, s.visualPosition, s.generation, beat.time);
             const settings = s.preferences.settings;
             play(world, s.shotClip, { volume: settings.masterVolume * settings.effectsVolume * 0.35 });
@@ -447,7 +597,7 @@ export const PrepareCombat: System = {
                 world.add(eid, Body, { type: BodyType.Dynamic, motionLocks: PLANAR_LOCKS, enableSleep: 0, gravityScale: 0, linearVelocity: [velocity.x, 0, velocity.z] });
                 world.add(eid, Shape, { kind: ShapeKind.Sphere, radius: enemy.radius, friction: 0, filterCategoryLow: 2, filterMaskLow: 7, filterCategoryHigh: 0, filterMaskHigh: 0 });
                 world.add(eid, MeshInstance);
-                world.add(eid, MeshMaterial, world.resource(Arena).materials.enemy);
+                world.add(eid, MeshMaterial, enemyMaterial(world.resource(Arena), enemy.kind));
             }
             setLinearVelocity(world, eid, { x: velocity.x, y: 0, z: velocity.z });
         }
@@ -458,11 +608,12 @@ export const ResolveCombat: System = {
     name: "Beatshooter/ResolveCombat", group: "fixed", after: [StepPhysicsSystem, SnapshotPlayer],
     update(world) {
         const s = world.resource(Session);
-        if (s.phase !== "playing" || s.position < 0) return;
+        if (!isRunningPhase(s.phase) || s.position < 0) return;
         const positions = new Map<number, { x: number; z: number }>();
         const pose = world.storage(GlobalTransform).translation;
         for (const [id, eid] of s.enemyBodies) positions.set(id, { x: pose.x.get(eid), z: pose.z.get(eid) });
-        const result = advanceCombat(s.combat, world.time.deltaTime, world.resource(PlayerState).position, positions);
+        const player = world.resource(PlayerState);
+        const result = advanceCombat(s.combat, world.time.deltaTime, player.position, positions, player.previous);
         publishVisualEvents(world, result.events, s.position, s.visualPosition, s.generation);
         const live = new Set(s.combat.enemies.map(enemy => enemy.id));
         for (const [id, eid] of s.enemyBodies) {
@@ -474,6 +625,7 @@ export const ResolveCombat: System = {
         }
         if (result.defeated) finishSession(world, "defeat");
         else if (s.completePending) finishSession(world, "complete");
+        else if (s.combat.upgrades.pending > 0) beginUpgrade(world);
     },
 };
 

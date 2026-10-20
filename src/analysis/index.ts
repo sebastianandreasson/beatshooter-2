@@ -124,6 +124,7 @@ export async function analyzeAudio(
             pcm,
             duration: buffer.duration,
             modelUrl: new URL("/models/beat-this.onnx", location.href).href,
+            sectionModelUrl: new URL("/models/linkseg-7c.onnx", location.href).href,
             wasmPaths: new URL("/models/onnx-runtime/", location.href).href,
         };
         try {

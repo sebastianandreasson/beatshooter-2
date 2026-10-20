@@ -1,0 +1,82 @@
+{
+  "recordedAt": "2026-10-20T12:27:59.548Z",
+  "machine": {
+    "platform": "darwin",
+    "release": "24.6.0",
+    "architecture": "arm64",
+    "cpu": "Apple M1 Max",
+    "logicalCores": 10,
+    "memoryGiB": 64
+  },
+  "runtime": {
+    "bun": "1.4.3",
+    "browser": "Chromium 156.0.8078.4",
+    "mode": "headless",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+    "devicePixelRatio": 1,
+    "crossOriginIsolated": true,
+    "gpu": {
+      "vendor": "apple",
+      "architecture": "metal-3",
+      "device": "0x0000",
+      "description": "Apple M1 Max"
+    }
+  },
+  "scenario": {
+    "url": "http://127.0.0.1:4175/?test=1&stress=1",
+    "viewport": {
+      "width": 1200,
+      "height": 924
+    },
+    "warmupMilliseconds": 3000,
+    "measuredFrames": 600,
+    "refillBeforeEachFixedStep": {
+      "enemies": 200,
+      "projectiles": 500
+    },
+    "scope": "Real Shallot physics/rendering/audio and combat; read-only snapshot each animation frame.",
+    "note": "Counts are observed after collision/expiry and can be lower than the per-step refill target. Frame intervals include display pacing and snapshot overhead."
+  },
+  "frameIntervalsMilliseconds": {
+    "mean": 16.666,
+    "p50": 16.665,
+    "p95": 16.67,
+    "p99": 16.67,
+    "max": 16.67
+  },
+  "averageFramesPerSecond": 60.002,
+  "target60Fps": {
+    "frameBudgetMilliseconds": 16.667,
+    "timestampToleranceMilliseconds": 0.1,
+    "met": true
+  },
+  "observedCounts": {
+    "enemies": {
+      "min": 197,
+      "max": 200
+    },
+    "healthbars": {
+      "min": 197,
+      "max": 200
+    },
+    "projectiles": {
+      "min": 439,
+      "max": 489
+    },
+    "effects": {
+      "min": 100,
+      "max": 100
+    },
+    "sessionEntities": {
+      "min": 681,
+      "max": 854
+    }
+  },
+  "cleanup": {
+    "phase": "menu",
+    "sessionEntities": 0,
+    "healthbars": 0,
+    "sounds": 0
+  },
+  "screenshot": "output/playwright/stress.png"
+}

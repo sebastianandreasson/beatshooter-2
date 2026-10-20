@@ -6,12 +6,16 @@ import { PresentationPlugin } from "../presentation";
 import { installInspection } from "./inspection";
 import { StressPlugin } from "../stress";
 import { MusicVisualsPlugin } from "../music-visuals";
+import { DashPlugin } from "../dash";
+import { ExperiencePlugin } from "../experience";
+import { EnemySpawnPlugin } from "../enemy-spawn";
+import { SectionEffectsPlugin } from "../section-effects";
 
 export async function startApp(): Promise<void> {
     const bootstrap = document.querySelector<HTMLElement>("[data-shallot-bootstrap]") ?? undefined;
     const app = await runApp({
         plugins: [
-            StandardPhysicsPlugin, StandardAudioPlugin, ArenaPlugin, PlayerPlugin, SessionPlugin, MusicVisualsPlugin, PresentationPlugin,
+            StandardPhysicsPlugin, StandardAudioPlugin, ArenaPlugin, PlayerPlugin, SessionPlugin, DashPlugin, MusicVisualsPlugin, SectionEffectsPlugin, EnemySpawnPlugin, PresentationPlugin, ExperiencePlugin,
             ...(new URLSearchParams(location.search).get("stress") === "1" ? [StressPlugin] : []),
         ],
         loading: shallotDark({ bootstrap }),

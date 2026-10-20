@@ -25,7 +25,7 @@ async function boot(page: Page): Promise<void> {
 }
 
 test("the full 72-second demo can be won through normal movement and aiming", async ({ page }, testInfo) => {
-    test.setTimeout(100_000);
+    test.setTimeout(120_000);
     await page.setViewportSize({ width: 1280, height: 800 });
     const errors: string[] = [];
     page.on("pageerror", error => errors.push(error.message));
@@ -44,7 +44,7 @@ test("the full 72-second demo can be won through normal movement and aiming", as
     const held = new Set<string>();
     const checkpoints: object[] = [];
     let nextCheckpoint = 0;
-    const deadline = Date.now() + 85_000;
+    const deadline = Date.now() + 105_000;
     try {
         while (Date.now() < deadline) {
             const observed = await page.evaluate(() => {
@@ -72,6 +72,15 @@ test("the full 72-second demo can be won through normal movement and aiming", as
                 nextCheckpoint += 12;
             }
             if (state.phase === "results") break;
+            if (state.phase === "upgrade-slowing" || state.phase === "upgrading") {
+                for (const key of held) await page.keyboard.up(key);
+                held.clear();
+                if (state.phase === "upgrading") {
+                    // Make an ordinary card choice; no test API modifies XP/stats.
+                    await page.locator("[data-upgrade-id]").first().click();
+                } else await page.waitForTimeout(50);
+                continue;
+            }
             expect(state.phase, "normal play should remain active until the result").toBe("playing");
             const player = state.player.position;
             let target = route[waypoint]!;
@@ -107,7 +116,7 @@ test("the full 72-second demo can be won through normal movement and aiming", as
     await expect(page.locator('[data-screen="results"]')).toBeVisible();
     const result = await page.evaluate(() => (window as unknown as PlayWindow).__beatshooter.snapshot());
     console.log("Full demo result:", JSON.stringify({ position: result.position, ...result.combat, player: result.player.position }));
-    await expect(page.locator('[data-value="result-title"]')).toHaveText("You held your ground.");
+    await expect(page.locator('[data-value="result-title"]')).toHaveText("Track complete");
     await expect(page.locator(".damage-layer")).toBeHidden();
     expect(result.position).toBeCloseTo(72, 2);
     expect(result.combat.health).toBeGreaterThan(0);

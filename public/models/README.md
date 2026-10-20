@@ -24,3 +24,26 @@ files are not duplicated in the generated bundle.
 
 The browser worker uses WebGPU and mono PCM at exactly 22,050 Hz. It returns
 detected beat/downbeat timestamps; they remain estimates and can need correction.
+
+## LinkSeg section analysis
+
+`setup:audio` also prepares `linkseg-7c.onnx` using the same local runtime.
+
+- Original model: [LinkSeg](https://github.com/morgan76/LinkSeg), M. Buisson,
+  B. McFee and S. Essid, *Using Pairwise Link Prediction and Graph Attention
+  Networks for Music Structure Analysis*, ISMIR 2024.
+- [ONNX model card](https://huggingface.co/elicwhite/linkseg-7c-onnx):
+  CC-BY-4.0, attribution preserved here and in `LINKSEG-LICENSE.txt`.
+- Model repository revision: `b15f9d9f5f68409cbd2cc0e78beb208df497c6f5`.
+- File size: **1,574,039 bytes**.
+- SHA-256: `c1dac2e094d260678d0097b85da6f5189abfe87af4b9c6f7adebaf99f4896125`.
+- Browser frontend/decoder: [LinkSeg-web](https://github.com/elicwhite/LinkSeg-web),
+  MIT, pinned to `694d27356082712dc82a3e06dbf9c7d543c9e399`; selected numerical
+  files are vendored under `src/analysis/vendor/linkseg/`.
+
+The worker reuses 22,050 Hz mono PCM and existing detected beat timestamps.
+It releases Beat This before initializing LinkSeg. No audio is uploaded.
+LinkSeg returns intro, verse, chorus, bridge, instrumental, outro and silence
+estimates; these labels do not include EDM drops or buildups. Section metadata
+does not affect the beat chart, score identity, enemy behavior or transport.
+If section inference fails, the existing beat result remains playable.
